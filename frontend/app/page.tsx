@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { FaGraduationCap, FaClock, FaUserCog } from 'react-icons/fa';
+import ApiDemo from './components/ApiDemo';
 
 // 模拟数据
 const teachers = [
@@ -33,6 +34,11 @@ export default function Home() {
           <p className="text-xl mb-10 animate-fadeInUp">高质量外教，个性化课程，助你流利说英语！</p>
           <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold shadow-md hover:bg-gray-200 transition duration-300">立即免费试听</button>
         </div>
+      </section>
+
+      {/* API Demo Section */}
+      <section className="container mx-auto px-6">
+        <ApiDemo />
       </section>
 
       {/* Platform Highlights */}
