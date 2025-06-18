@@ -8,7 +8,7 @@ type UserInfo struct {
 	Email      string    `gorm:"column:email" json:"email"`
 	Name       string    `gorm:"column:name" json:"name"`
 	Password   string    `gorm:"column:password" json:"-"`
-	Country    string    `gorm:"column:Country" json:"Country"`
+	CountryID  uint64    `gorm:"column:country_id" json:"country_id"`
 	Language   string    `gorm:"column:language" json:"language"`
 	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
 	UpdateTime time.Time `gorm:"column:update_time" json:"update_time"`

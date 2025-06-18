@@ -2,10 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '../utils/api';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const schema = yup.object().shape({
   name: yup.string().required('请输入您的姓名'),
@@ -20,6 +23,8 @@ const schema = yup.object().shape({
 
 export default function RegisterPage() {
   const [countryOptions, setCountryOptions] = useState<{ value: string; label: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -42,7 +47,7 @@ export default function RegisterPage() {
       })) || [];
       setCountryOptions(options);
       // 默认选中China
-      const chinaOption = options.find(opt => opt.label.includes('China') || opt.label.includes('中国'));
+      const chinaOption = options.find((opt: any) => opt.label.includes('China') || opt.label.includes('中国'));
       if (chinaOption) {
         setValue('country', chinaOption.value);
       } else if (options.length > 0) {
@@ -51,13 +56,35 @@ export default function RegisterPage() {
     });
   }, [setValue]);
 
-  const onSubmit = (data: any) => {
-    // 处理注册逻辑
-    console.log('注册请求:', data);
+  const onSubmit = async (data: any) => {
+    setLoading(true);
+    const payload = {
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      country: Number(data.country),
+      // language 字段可根据需要添加
+    };
+    try {
+      const res = await apiClient.post('/spwapi/register', payload);
+      if (res && res.code === 0) {
+        toast.success('注册成功！');
+        setTimeout(() => {
+          router.push('/login');
+        }, 1500);
+      } else {
+        toast.error(res?.msg || '注册失败');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '注册失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="container mx-auto px-6 py-16">
+      <ToastContainer position="top-center" autoClose={2000} />
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
         <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">注册</h2>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -148,9 +175,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+            disabled={loading}
+            className={`w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
-            注册
+            {loading ? '注册中...' : '注册'}
           </button>
         </form>
 

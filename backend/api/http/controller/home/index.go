@@ -26,8 +26,8 @@ type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,min=5"`
 	Password string `json:"password" binding:"required,min=8"`
 	Name     string `json:"name" binding:"required,min=5"`
-	Country  string `json:"country"`
-	Language string `json:"language" binding:"required,min=2"`
+	Country  uint64 `json:"country"`
+	Language string `json:"language"`
 }
 
 func Welcome(c *gin.Context) {
@@ -56,7 +56,7 @@ func Register(c *gin.Context) {
 
 	var userInfo model.UserInfo
 	err := db.Model(&model.UserInfo{}).
-		Where("email = ?", req.Email, time.Now()).
+		Where("email = ?", req.Email).
 		First(&userInfo).Error
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,13 +66,31 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	if userInfo.ID > 0 {
+		res.Code = codes.CODE_ERR_EXIST_OBJ
+		res.Msg = "email repeated"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var countryObj model.DictCountry
+	if req.Country > 0 {
+		db.Model(&model.DictCountry{}).Where("id = ?", req.Country).First(&countryObj)
+	}
+	if countryObj.ID == 0 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please specify country code"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	if userInfo.ID == 0 {
 		userInfo = model.UserInfo{
 			Email:      req.Email,
 			Password:   req.Password,
 			Name:       req.Name,
-			Country:    req.Country,
-			Language:   req.Language,
+			CountryID:  countryObj.ID,
+			Language:   countryObj.LanguageCode,
 			AddTime:    time.Now(),
 			UpdateTime: time.Now(),
 			LoginId:    "",
