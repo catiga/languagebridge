@@ -1,4 +1,4 @@
-# EnglishBridge 平台 UI 设计规范
+# LangBridge 平台 UI 设计规范
 
 ## 1. 设计系统
 

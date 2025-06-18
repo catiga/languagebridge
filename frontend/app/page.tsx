@@ -12,7 +12,7 @@ const teachers = [
 ];
 
 const studentCases = [
-  { id: 1, title: '从零基础到流利交流', description: '学生 Amy 通过 EnglishBridge 课程...' },
+  { id: 1, title: '从零基础到流利交流', description: '学生 Amy 通过 LangBridge 课程...' },
   { id: 2, title: '成功通过雅思考试', description: '学生 Ben 在老师指导下，雅思成绩大幅提升...' },
   // 更多学生案例数据...
 ];
@@ -29,7 +29,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-24 text-center shadow-lg">
         <div className="container mx-auto px-6">
-          <h2 className="text-5xl font-extrabold mb-4 animate-fadeInDown">EnglishBridge - 连接世界的英语学习桥梁</h2>
+          <h2 className="text-5xl font-extrabold mb-4 animate-fadeInDown">LangBridge - 连接世界的英语学习桥梁</h2>
           <p className="text-xl mb-10 animate-fadeInUp">高质量外教，个性化课程，助你流利说英语！</p>
           <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold shadow-md hover:bg-gray-200 transition duration-300">立即免费试听</button>
         </div>
@@ -130,7 +130,7 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h4 className="text-xl font-semibold mb-4">EnglishBridge</h4>
+              <h4 className="text-xl font-semibold mb-4">LangBridge</h4>
               <p className="text-gray-400">连接世界的英语学习桥梁</p>
             </div>
             <div>
@@ -145,7 +145,7 @@ export default function Home() {
             <div>
               <h5 className="font-semibold mb-4">联系我们</h5>
               <ul className="space-y-2">
-                <li className="text-gray-400">邮箱: info@englishbridge.com</li>
+                <li className="text-gray-400">邮箱: info@langbridge.com</li>
                 <li className="text-gray-400">电话: +86 123 4567 8910</li>
               </ul>
             </div>
@@ -159,7 +159,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-gray-700 mt-8 pt-8 text-center">
-            <p className="text-gray-400">&copy; 2023 EnglishBridge. All rights reserved.</p>
+            <p className="text-gray-400">&copy; 2023 LangBridge. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-# EnglishBridge 平台原型图
+# LangBridge 平台原型图
 
 ## 1. 首页布局
 

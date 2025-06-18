@@ -10,8 +10,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "EnglishBridge - 连接世界的英语学习桥梁",
-  description: "EnglishBridge提供高质量外教，个性化课程，助您流利说英语！",
+  title: "LangBridge - 连接世界的英语学习桥梁",
+  description: "LangBridge提供高质量外教，个性化课程，助您流利说英语！",
 };
 
 export default function RootLayout({
