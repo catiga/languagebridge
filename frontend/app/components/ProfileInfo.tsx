@@ -166,7 +166,7 @@ export default function ProfileInfo() {
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
           disabled={loading}
         >
-          {loading ? '保存中...' : '保存'}
+          {loading ? 'Saving...' : 'Save'}
         </button>
       </form>
     </div>
