@@ -19,3 +19,20 @@ type UserInfo struct {
 func (UserInfo) TableName() string {
 	return "user_info"
 }
+
+type UserProfile struct {
+	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID            uint64    `gorm:"column:user_id" json:"user_id"`
+	NickName          string    `gorm:"column:nick_name" json:"nick_name"`
+	Avatar            string    `gorm:"column:avatar" json:"avatar"`
+	LivingCountryID   uint64    `gorm:"column:living_country_id" json:"living_country_id"`
+	LivingCountryName string    `gorm:"column:living_country_name" json:"living_country_name"`
+	LivingCountryCode string    `gorm:"column:living_country_code" json:"living_country_code"`
+	ContactPhone      string    `gorm:"column:contact_phone" json:"contact_phone"`
+	NativeLanguage    string    `gorm:"column:native_language" json:"native_language"`
+	UpdateTime        time.Time `gorm:"column:update_time" json:"update_time"`
+}
+
+func (UserProfile) TableName() string {
+	return "user_profile"
+}

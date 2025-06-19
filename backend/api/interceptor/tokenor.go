@@ -34,12 +34,12 @@ func TokenInterceptor() gin.HandlerFunc {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token check failed")
 			return
 		}
-		tokenArr := strings.Split(token, "|")
-		if len(tokenArr) != 4 {
+		tokenArr := strings.Split(token, ",")
+		if len(tokenArr) != 3 {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token length error")
 			return
 		}
-		expireTs, err := strconv.ParseInt(tokenArr[3], 10, 64)
+		expireTs, err := strconv.ParseInt(tokenArr[2], 10, 64)
 		if err != nil {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token format error")
 			return
@@ -49,7 +49,7 @@ func TokenInterceptor() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_wallet", tokenArr[1])
+		c.Set("user_no", tokenArr[1])
 		c.Set("user_id", tokenArr[0])
 
 		c.Next()

@@ -28,7 +28,7 @@ type HomeRequest struct {
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,min=5"`
 	Password string `json:"password" binding:"required,min=8"`
-	Name     string `json:"name" binding:"required,min=5"`
+	Name     string `json:"name" binding:"required,min=2"`
 	Country  uint64 `json:"country"`
 	Language string `json:"language"`
 }
@@ -94,28 +94,36 @@ func Register(c *gin.Context) {
 
 	passwordHash := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
 
-	if userInfo.ID == 0 {
-		userInfo = model.UserInfo{
-			Email:      req.Email,
-			Password:   passwordHash,
-			Name:       req.Name,
-			CountryID:  countryObj.ID,
-			Language:   countryObj.LanguageCode,
-			AddTime:    time.Now(),
-			UpdateTime: time.Now(),
-			LoginId:    "",
-			UserNo:     system.GenerateUserNoNumberOnly(),
-			Status:     "00", // waiting for email verification
-		}
-		err := db.Save(&userInfo).Error
-		if err != nil {
-			log.Error("create user info error: ", err)
-			res.Code = codes.CODE_ERR_DB_ERROR
-			res.Msg = err.Error()
-			c.JSON(http.StatusOK, res)
-			return
-		}
+	userInfo = model.UserInfo{
+		Email:      req.Email,
+		Password:   passwordHash,
+		Name:       req.Name,
+		CountryID:  countryObj.ID,
+		Language:   countryObj.LanguageCode,
+		AddTime:    time.Now(),
+		UpdateTime: time.Now(),
+		LoginId:    "",
+		UserNo:     system.GenerateUserNoNumberOnly(),
+		Status:     "00", // waiting for email verification
 	}
+	err = db.Save(&userInfo).Error
+	if err != nil {
+		log.Error("create user info error: ", err)
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	// create user profile
+	userProfile := model.UserProfile{
+		UserID:            userInfo.ID,
+		LivingCountryID:   countryObj.ID,
+		LivingCountryName: countryObj.Name,
+		LivingCountryCode: countryObj.PhoneCode,
+		UpdateTime:        time.Now(),
+	}
+	err = db.Save(&userProfile).Error
+	log.Error("save profile error", err)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
@@ -167,12 +175,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	if userInfo.Status != "20" {
-		res.Code = codes.CODE_STATUS_INVALID
-		res.Msg = "user status is invalid"
-		c.JSON(http.StatusOK, res)
-		return
-	}
+	// if userInfo.Status != "20" {
+	// 	res.Code = codes.CODE_STATUS_INVALID
+	// 	res.Msg = "user status is invalid"
+	// 	c.JSON(http.StatusOK, res)
+	// 	return
+	// }
 
 	originalStr := fmt.Sprintf("%d,%s,%d", userInfo.ID, userInfo.UserNo, time.Now().Unix())
 	token, err := security.Encrypt([]byte(originalStr))

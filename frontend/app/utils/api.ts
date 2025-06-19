@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import { getEnvConfig } from '../config/env';
+import Cookies from 'js-cookie';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>;
@@ -24,13 +25,22 @@ class ApiClient {
     const inputString = `${this.appId}${requestId}${timestamp}${version}${this.appKey}`;
     const signature = CryptoJS.SHA256(inputString).toString(CryptoJS.enc.Hex);
 
+    let token = '';
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('token') ||
+              sessionStorage.getItem('token') ||
+              Cookies.get('token') ||
+              '';
+    }
+
     return {
       'Content-Type': 'application/json',
       'APPID': this.appId,
       'TS': timestamp.toString(),
       'VER': version,
       'SIG': signature,
-      'REQUESTID': requestId
+      'REQUESTID': requestId,
+      'XAUTH': token
     };
   }
 
