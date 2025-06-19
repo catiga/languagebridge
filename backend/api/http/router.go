@@ -26,6 +26,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
 	authGroup.POST("/profile/retrieve", auth.RetrieveProfile)
 	authGroup.POST("/profile/update", auth.UpdateProfile)
+	authGroup.POST("/profile/member/list", auth.FetchMemberList)
+	authGroup.POST("/profile/member/add", auth.FetchMemberAdd)
 
 	// authGroup.POST("ref_uri", auth.Ref)
 	// authGroup.POST("/ref/stat", auth.RefCount)

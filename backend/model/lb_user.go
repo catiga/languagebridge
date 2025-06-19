@@ -36,3 +36,23 @@ type UserProfile struct {
 func (UserProfile) TableName() string {
 	return "user_profile"
 }
+
+type UserMember struct {
+	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint64    `gorm:"column:user_id" json:"user_id"`
+	Name        string    `gorm:"column:name" json:"name"`
+	Email       string    `gorm:"column:email" json:"email"`
+	RelType     string    `gorm:"column:rel_type" json:"rel_type"`
+	RelDesc     string    `gorm:"column:rel_desc" json:"rel_desc"`
+	UpdateTime  time.Time `gorm:"column:update_time" json:"update_time"`
+	AddTime     time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag        int       `gorm:"column:flag" json:"flag"`
+	Gender      int       `gorm:"column:gender" json:"gender"`
+	Birthday    string    `gorm:"column:birthday" json:"birthday"`
+	Personality string    `gorm:"column:personality" json:"personality"`
+	Character   string    `gorm:"column:character" json:"character"`
+}
+
+func (UserMember) TableName() string {
+	return "user_member"
+}
