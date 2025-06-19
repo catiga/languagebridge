@@ -58,7 +58,7 @@ export default function LoginPage() {
         toast.success('Login successfully！');
         saveLoginData(res.data.token, res.data, data.remember)
         setTimeout(() => {
-          router.push('/');
+          router.push('/profile');
         }, 1500);
       } else {
         toast.error(res?.msg || 'Login failed');
