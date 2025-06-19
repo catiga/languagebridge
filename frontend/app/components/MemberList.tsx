@@ -65,19 +65,21 @@ const memberSchema = yup.object().shape({
 export default function MemberList() {
   const [members, setMembers] = useState<Member[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editMember, setEditMember] = useState<Partial<Member> | null>(null);
+  const [editMember, setEditMember] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // 添加成员表单
+  // 表单
   const {
-    register: addRegister,
-    handleSubmit: handleAddSubmit,
-    reset: resetAddForm,
-    formState: { errors: addErrors, isSubmitting: addSubmitting }
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting }
   } = useForm({
     resolver: yupResolver(memberSchema),
     defaultValues: {
+      id: undefined,
       name: '',
       gender: 0,
       rel_type: "100",
@@ -111,13 +113,37 @@ export default function MemberList() {
     }
   };
 
+  // 打开新增
   const handleAdd = () => {
-    setEditMember({ ...defaultMember });
+    reset({
+      id: undefined,
+      name: '',
+      gender: 0,
+      rel_type: "100",
+      birthday: '',
+      email: '',
+      rel_desc: '',
+      personality: '',
+      character: '',
+    });
+    setEditMember(null);
     setShowModal(true);
   };
 
-  const handleEdit = (member: Member) => {
-    setEditMember({ ...member });
+  // 打开编辑
+  const handleEdit = (member: any) => {
+    // 保证 rel_type 是字符串
+    reset({
+      ...member,
+      rel_type: String(member.rel_type ?? "100"),
+      gender: member.gender ?? 0,
+      birthday: member.birthday || '',
+      email: member.email || '',
+      rel_desc: member.rel_desc || '',
+      personality: member.personality || '',
+      character: member.character || '',
+    });
+    setEditMember(member);
     setShowModal(true);
   };
 
@@ -142,16 +168,14 @@ export default function MemberList() {
     setEditMember(null);
   };
 
-  const handleModalSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editMember) return;
+  // 提交（新增/编辑共用）
+  const onSubmit = async (data: any) => {
     try {
-      // 新增或编辑接口
-      const api = editMember.id ? '/spwapi/member/update' : '/spwapi/member/add';
-      const res = await apiClient.post(api, editMember);
+      const res = await apiClient.post('/spwapi/auth/profile/member/add', data);
       if (res && res.code === 0) {
-        toast.success(editMember.id ? 'Updated successfully' : 'Added successfully');
-        handleModalClose();
+        toast.success(data.id ? 'Member updated successfully' : 'Member added successfully');
+        setShowModal(false);
+        reset();
         fetchMembers();
       } else {
         toast.error(res?.msg || 'Operation failed');
@@ -174,7 +198,7 @@ export default function MemberList() {
       if (res && res.code === 0) {
         toast.success('Member added successfully');
         setShowAddModal(false);
-        resetAddForm();
+        reset();
         fetchMembers();
       } else {
         toast.error(res?.msg || 'Add failed');
@@ -190,7 +214,7 @@ export default function MemberList() {
         <h2 className="text-2xl font-bold text-gray-800">Member Management</h2>
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-          onClick={() => setShowAddModal(true)}
+          onClick={handleAdd}
         >
           Add Member
         </button>
@@ -231,70 +255,72 @@ export default function MemberList() {
         </table>
       )}
 
-      {/* Add Member Modal */}
-      {showAddModal && (
+      {/* Modal for Add/Edit */}
+      {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Add Member</h3>
-            <form onSubmit={handleAddSubmit(onAddMember)}>
+            <h3 className="text-xl font-bold mb-4">{editMember ? 'Edit Member' : 'Add Member'}</h3>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              {/* 隐藏id字段 */}
+              <input type="hidden" {...register('id')} />
               <div className="mb-3">
                 <label className="block mb-1">Name<span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  {...addRegister('name')}
+                  {...register('name')}
                   className="w-full border px-3 py-2 rounded"
                   required
                 />
-                {addErrors.name && <p className="text-red-500 text-xs">{addErrors.name.message as string}</p>}
+                {errors.name && <p className="text-red-500 text-xs">{errors.name.message as string}</p>}
               </div>
               <div className="mb-3">
                 <label className="block mb-1">Gender<span className="text-red-500">*</span></label>
                 <select
-                  {...addRegister('gender')}
+                  {...register('gender')}
                   className="w-full border px-3 py-2 rounded"
                 >
                   {genderOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-                {addErrors.gender && <p className="text-red-500 text-xs">{addErrors.gender.message as string}</p>}
+                {errors.gender && <p className="text-red-500 text-xs">{errors.gender.message as string}</p>}
               </div>
               <div className="mb-3">
                 <label className="block mb-1">Relationship<span className="text-red-500">*</span></label>
                 <select
-                  {...addRegister('rel_type')}
+                  {...register('rel_type')}
                   className="w-full border px-3 py-2 rounded"
                 >
                   {relTypeOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-                {addErrors.rel_type && <p className="text-red-500 text-xs">{addErrors.rel_type.message as string}</p>}
+                {errors.rel_type && <p className="text-red-500 text-xs">{errors.rel_type.message as string}</p>}
               </div>
               <div className="mb-3">
                 <label className="block mb-1">Birthday</label>
                 <input
                   type="date"
-                  {...addRegister('birthday')}
+                  {...register('birthday')}
                   className="w-full border px-3 py-2 rounded"
                   pattern="\d{4}-\d{2}-\d{2}"
                 />
-                {addErrors.birthday && <p className="text-red-500 text-xs">{addErrors.birthday.message as string}</p>}
+                {errors.birthday && <p className="text-red-500 text-xs">{errors.birthday.message as string}</p>}
               </div>
               <div className="mb-3">
                 <label className="block mb-1">Email</label>
                 <input
                   type="email"
-                  {...addRegister('email')}
+                  {...register('email')}
                   className="w-full border px-3 py-2 rounded"
                 />
-                {addErrors.email && <p className="text-red-500 text-xs">{addErrors.email.message as string}</p>}
+                {errors.email && <p className="text-red-500 text-xs">{errors.email.message as string}</p>}
               </div>
               <div className="mb-3">
                 <label className="block mb-1">Relationship Description</label>
                 <input
                   type="text"
-                  {...addRegister('rel_desc')}
+                  {...register('rel_desc')}
                   className="w-full border px-3 py-2 rounded"
                 />
               </div>
@@ -302,7 +328,7 @@ export default function MemberList() {
                 <label className="block mb-1">Personality</label>
                 <input
                   type="text"
-                  {...addRegister('personality')}
+                  {...register('personality')}
                   className="w-full border px-3 py-2 rounded"
                 />
               </div>
@@ -310,7 +336,7 @@ export default function MemberList() {
                 <label className="block mb-1">Character</label>
                 <input
                   type="text"
-                  {...addRegister('character')}
+                  {...register('character')}
                   className="w-full border px-3 py-2 rounded"
                 />
               </div>
@@ -318,17 +344,17 @@ export default function MemberList() {
                 <button
                   type="button"
                   className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                  onClick={() => { setShowAddModal(false); resetAddForm(); }}
-                  disabled={addSubmitting}
+                  onClick={() => { setShowModal(false); reset(); }}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center"
-                  disabled={addSubmitting}
+                  disabled={isSubmitting}
                 >
-                  {addSubmitting ? (
+                  {isSubmitting ? (
                     <>
                       <svg className="animate-spin h-4 w-4 mr-2 text-white" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>

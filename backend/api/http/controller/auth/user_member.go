@@ -87,7 +87,7 @@ func FetchMemberAdd(c *gin.Context) {
 	var member model.UserMember
 
 	if req.ID > 0 {
-		db.Model(&model.UserMember{}).Where("user_id = ? and flag != ?", userID, -1).First(&member)
+		db.Model(&model.UserMember{}).Where("user_id = ? and flag != ? and id = ?", userID, -1, req.ID).First(&member)
 	}
 
 	if member.ID > 0 {
