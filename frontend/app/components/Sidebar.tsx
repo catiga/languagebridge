@@ -7,9 +7,9 @@ interface SidebarProps {
 }
 
 const menuList = [
-  { key: 'profile', label: '个人信息' },
-  { key: 'members', label: '成员管理' },
-  { key: 'courses', label: '课程管理' },
+  { key: 'profile', label: 'Profile' },
+  { key: 'members', label: 'Students' },
+  { key: 'courses', label: 'Courses' },
   // 可继续扩展
 ];
 
