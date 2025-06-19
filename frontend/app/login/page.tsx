@@ -10,6 +10,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SHA256 from 'crypto-js/sha256';
+import Cookies from 'js-cookie';
 
 const schema = yup.object().shape({
   loginName: yup.string().required('please input login id'),
@@ -36,6 +37,9 @@ export default function LoginPage() {
     const storage = remember ? localStorage : sessionStorage;
     storage.setItem('token', token);
     storage.setItem('userInfo', JSON.stringify(userInfo));
+    Cookies.set('token', token, { expires: remember ? 7 : undefined, path: '/' });
+    Cookies.set('userInfo', JSON.stringify(userInfo), { expires: remember ? 7 : undefined, path: '/' });
+    window.dispatchEvent(new Event('userChanged'));
   };
 
   const clearLoginData = () => {
@@ -43,6 +47,9 @@ export default function LoginPage() {
     localStorage.removeItem('userInfo');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('userInfo');
+    Cookies.remove('token', { path: '/' });
+    Cookies.remove('userInfo', { path: '/' });
+    window.dispatchEvent(new Event('userChanged'));
   };
 
   const onSubmit = async (data: any) => {
