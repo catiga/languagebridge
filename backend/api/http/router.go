@@ -28,6 +28,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/profile/update", auth.UpdateProfile)
 	authGroup.POST("/profile/member/list", auth.FetchMemberList)
 	authGroup.POST("/profile/member/add", auth.FetchMemberAdd)
+	authGroup.GET("/profile/member/del", auth.FetchMemberDelete)
 
 	// authGroup.POST("ref_uri", auth.Ref)
 	// authGroup.POST("/ref/stat", auth.RefCount)

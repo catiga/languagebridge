@@ -121,3 +121,52 @@ func FetchMemberAdd(c *gin.Context) {
 	res.Data = member
 	c.JSON(http.StatusOK, res)
 }
+
+func FetchMemberDelete(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	memberId, err := strconv.ParseInt(c.Query("member_id"), 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "empty member id"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var member model.UserMember
+
+	db.Model(&model.UserMember{}).Where("user_id = ? and flag != ? and id = ?", userID, -1, memberId).First(&member)
+	if member.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "member not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	member.Flag = -1
+	member.UpdateTime = time.Now()
+	db.Model(&model.UserMember{}).Where("id = ?", member.ID).Update("flag", -1)
+
+	res.Data = member
+	c.JSON(http.StatusOK, res)
+}

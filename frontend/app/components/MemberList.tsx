@@ -68,6 +68,9 @@ export default function MemberList() {
   const [editMember, setEditMember] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // 表单
   const {
@@ -147,25 +150,38 @@ export default function MemberList() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this member?')) return;
+  // 打开删除确认框
+  const handleDeleteClick = (member: Member) => {
+    setDeleteTarget(member);
+    setShowDeleteModal(true);
+  };
+
+  // 确认删除
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
     try {
-      // 假设接口 /spwapi/member/delete
-      const res = await apiClient.post('/spwapi/member/delete', { id });
+      const res = await apiClient.get('/spwapi/auth/profile/member/del', { member_id: deleteTarget.id });
       if (res && res.code === 0) {
         toast.success('Deleted successfully');
-        fetchMembers();
+        setMembers(members => members.filter(m => m.id !== deleteTarget.id));
+        setShowDeleteModal(false);
+        setDeleteTarget(null);
       } else {
         toast.error(res?.msg || 'Delete failed');
       }
     } catch (e: any) {
       toast.error(e?.message || 'Delete failed');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setEditMember(null);
+  // 取消删除
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
+    setDeleteLoading(false);
   };
 
   // 提交（新增/编辑共用）
@@ -247,7 +263,12 @@ export default function MemberList() {
                 <td className="py-2 px-4">{statusMap[member.flag] || 'Unknown'}</td>
                 <td className="py-2 px-4">
                   <button className="text-blue-600 hover:underline mr-2" onClick={() => handleEdit(member)}>Edit</button>
-                  <button className="text-red-500 hover:underline" onClick={() => handleDelete(member.id)}>Delete</button>
+                  <button
+                    className="text-red-500 hover:underline"
+                    onClick={() => handleDeleteClick(member)}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
@@ -366,6 +387,42 @@ export default function MemberList() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Delete Member</h3>
+            <p className="mb-6">Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>?</p>
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={handleCancelDelete}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 flex items-center"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 mr-2 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
