@@ -21,6 +21,8 @@ const (
 	CODE_ERR_REPEAT           = 17
 	CODE_ERR_OKX              = 18
 
+	CODE_STATUS_INVALID = 500
+
 	CODE_ERR_LAN        = 600
 	CODE_ERR_PROCESSING = 800
 	CODE_ERR_UNKNOWN    = 900

@@ -19,6 +19,7 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.GET("/public/countries", home.PublicCountries)
 	homeGroup.GET("/welcome", home.Welcome)
 	homeGroup.POST("/register", home.Register)
+	homeGroup.POST("/login", home.Login)
 
 	homeGroup.GET("/search/:key", home.Search)
 
