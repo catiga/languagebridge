@@ -143,7 +143,7 @@ func Login(c *gin.Context) {
 
 	var userInfo model.UserInfo
 	err := db.Model(&model.UserInfo{}).
-		Where("(email = ? or login_id = ?) and password = ?", req.LoginName, req.LoginName, req.Password).
+		Where("(email = ? or login_id = ? or user_no = ?)", req.LoginName, req.LoginName, req.LoginName).
 		First(&userInfo).Error
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,6 +160,13 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	if req.Password != userInfo.Password {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "user password is incorrect"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	if userInfo.Status != "20" {
 		res.Code = codes.CODE_STATUS_INVALID
 		res.Msg = "user status is invalid"
@@ -167,7 +174,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	originalStr := fmt.Sprintf("%d,%s", userInfo.ID, userInfo.UserNo)
+	originalStr := fmt.Sprintf("%d,%s,%d", userInfo.ID, userInfo.UserNo, time.Now().Unix())
 	token, err := security.Encrypt([]byte(originalStr))
 
 	if err != nil {
