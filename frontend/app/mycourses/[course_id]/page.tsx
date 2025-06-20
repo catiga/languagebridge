@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../utils/api';
+import { ToastContainer, toast } from 'react-toastify';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const payOptions = [
@@ -112,8 +113,64 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
       selectedTeacher === id ? 'scale-105 border-2 border-blue-500' : 'opacity-60 hover:scale-105'
     } cursor-pointer`;
 
+  const handleConfirm = async () => {
+    if (!selectedTeacher) {
+      toast.error('请选择老师');
+      return;
+    }
+    if (!periodStartDate) {
+      toast.error('请选择开始日期');
+      return;
+    }
+    if (!periodEndDate) {
+      toast.error('请选择结束日期');
+      return;
+    }
+    if (daysBetween(periodStartDate, periodEndDate) < 30) {
+      toast.error('课程周期至少为30天');
+      return;
+    }
+    const selected = Object.entries(selectedTimes).filter(([_, v]) => v);
+    if (selected.length === 0) {
+      toast.error('请至少选择一天的上课时间');
+      return;
+    }
+
+    // 组装 time_slots 数组
+    const time_slots = selected.map(([day, time]) => {
+      // time: "09:00 - 10:00"
+      const [start_time, end_time] = time.split(' - ');
+      // weekDays: ['Monday', ...]，week_day: 1~7
+      const week_day = weekDays.indexOf(day) + 1;
+      return {
+        week_day,
+        start_time,
+        end_time,
+      };
+    });
+
+    try {
+      const res = await apiClient.post('/spwapi/auth/course/confirm', {
+        course_id: course.course_id,
+        teacher_id: selectedTeacher,
+        start_date: periodStartDate,
+        end_date: periodEndDate,
+        time_slots,
+      });
+      if (res && res.code === 0) {
+        toast.success('预约成功！');
+        // 可选：跳转或刷新
+      } else {
+        toast.error(res?.msg || '预约失败');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || '预约失败');
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8 mt-8">
+      <ToastContainer position="top-center" autoClose={2000} />
       {/* 课程信息区块 */}
       <div className="mb-8 p-6 rounded-xl shadow bg-gray-50">
         <h2 className="text-3xl font-bold mb-2">{course?.course_name || 'Loading...'}</h2>
@@ -293,8 +350,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
         </button>
         <button
           className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-          onClick={() => setShowPay(true)}
-          disabled={Object.values(selectedTimes).every(v => !v)}
+          onClick={handleConfirm}
         >
           Confirm
         </button>

@@ -85,3 +85,46 @@ func ParseTimeZone(timeStr string, plus int, timeLayout string) (timeStr1 string
 	timeStr1 = parse.Format(timeLayout)
 	return timeStr1
 }
+
+func GetWeekdayNumber(dateStr string) (int, error) {
+	layout := "2006-01-02"
+	t, err := time.Parse(layout, dateStr)
+	if err != nil {
+		return 0, err
+	}
+	weekday := int(t.Weekday()) // time.Weekday: Sunday = 0, Monday = 1, ..., Saturday = 6
+	if weekday == 0 {
+		return 7, nil // Sunday
+	}
+	return weekday, nil
+}
+
+func GetNextDate(dateStr string) (string, error) {
+	layout := "2006-01-02"
+	t, err := time.Parse(layout, dateStr)
+	if err != nil {
+		return "", err
+	}
+	nextDay := t.AddDate(0, 0, 1)
+	return nextDay.Format(layout), nil
+}
+
+func CompareDate(date1, date2 string) (int, error) {
+	layout := "2006-01-02"
+	t1, err1 := time.Parse(layout, date1)
+	if err1 != nil {
+		return 0, err1
+	}
+	t2, err2 := time.Parse(layout, date2)
+	if err2 != nil {
+		return 0, err2
+	}
+
+	if t1.After(t2) {
+		return 1, nil
+	} else if t1.Before(t2) {
+		return -1, nil
+	} else {
+		return 0, nil
+	}
+}
