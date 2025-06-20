@@ -35,7 +35,7 @@ type Teacher struct {
 	NationalityID     uint64    `gorm:"column:nationality_id" json:"nationality_id"`
 	NationalityName   string    `gorm:"column:nationality_name" json:"nationality_name"`
 	LivingCountryID   uint64    `gorm:"column:living_country_id" json:"living_country_id"`
-	LivingCountryName uint64    `gorm:"column:living_country_name" json:"living_country_name"`
+	LivingCountryName string    `gorm:"column:living_country_name" json:"living_country_name"`
 	PhoneCode         string    `gorm:"column:phone_code" json:"phone_code"`
 	Phone             string    `gorm:"column:phone" json:"phone"`
 	UpdateTime        time.Time `gorm:"column:update_time" json:"update_time"`
@@ -46,4 +46,17 @@ type Teacher struct {
 
 func (Teacher) TableName() string {
 	return "teacher_info"
+}
+
+type UserCourse struct {
+	ID       uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID   uint64    `gorm:"column:user_id" json:"user_id"`
+	CourseID uint64    `gorm:"column:course_id" json:"course_id"`
+	AddTime  time.Time `gorm:"column:add_time" json:"add_time"`
+	Status   string    `gorm:"column:status" json:"status"`
+	Flag     int       `gorm:"column:flag" json:"flag"`
+}
+
+func (UserCourse) TableName() string {
+	return "user_course"
 }

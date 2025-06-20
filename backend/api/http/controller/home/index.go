@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -205,5 +206,121 @@ func Login(c *gin.Context) {
 		Name:   userInfo.Name,
 		Token:  token,
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseFetchList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	pageNo, _ := strconv.ParseInt(c.Query("pn"), 10, 64)
+	pageSize, _ := strconv.ParseInt(c.Query("ps"), 10, 64)
+
+	if pageNo <= 0 {
+		pageNo = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	db := system.GetDb()
+
+	var courseList []model.CourseInfo
+	var total int64
+
+	// 统计总数
+	db.Model(&model.CourseInfo{}).
+		Where("status = ? AND flag != ?", "100", -1).
+		Count(&total)
+
+	// 获取当前页数据
+	err := db.Model(&model.CourseInfo{}).
+		Where("status = ? AND flag != ?", "100", -1).
+		Order("id ASC").
+		Offset(int((pageNo - 1) * pageSize)).
+		Limit(int(pageSize)).
+		Find(&courseList).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = gin.H{
+		"list":        courseList,
+		"pn":          pageNo,
+		"ps":          pageSize,
+		"total":       total,
+		"total_pages": totalPages,
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseFetchDetail(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	courseId, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	db := system.GetDb()
+
+	var course model.CourseInfo
+
+	err := db.Model(&model.CourseInfo{}).Where("id = ?", courseId).First(&course).Error
+	if err != nil {
+		log.Error("[Course] fetch detail err", err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = course
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseFetchTeacherList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	courseId, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	db := system.GetDb()
+
+	var teacherList []model.Teacher
+
+	err := db.Table("teacher_info AS t").
+		Select("t.*").
+		Joins("JOIN course_teacher AS ct ON ct.teacher_id = t.id").
+		Where("ct.course_id = ? and t.flag != ?", courseId, -1).
+		Scan(&teacherList).Error
+
+	if err != nil {
+		log.Error("[Course] fetch teacher list err", err)
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = teacherList
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseFetchReviewList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	courseId, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = courseId
 	c.JSON(http.StatusOK, res)
 }

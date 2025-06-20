@@ -16,12 +16,10 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.GET("/welcome", home.Welcome)
 	homeGroup.POST("/register", home.Register)
 	homeGroup.POST("/login", home.Login)
-
-	// homeGroup.GET("/search/:key", home.Search)
-	// homeGroup.POST("/trans/quote", auth.Quote)
-	// preAuthGroup := e.Group("/preauth")
-	// preAuthGroup.POST("get_msg", preauth.GetAuthMsg)
-	// preAuthGroup.POST("verify_msg", preauth.VerifyMessage)
+	homeGroup.GET("/course/fetch", home.CourseFetchList)
+	homeGroup.GET("/course/detail", home.CourseFetchDetail)
+	homeGroup.GET("/course/teachers", home.CourseFetchTeacherList)
+	homeGroup.GET("/course/reviews", home.CourseFetchReviewList)
 
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
 	authGroup.POST("/profile/retrieve", auth.RetrieveProfile)
@@ -29,6 +27,13 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/profile/member/list", auth.FetchMemberList)
 	authGroup.POST("/profile/member/add", auth.FetchMemberAdd)
 	authGroup.GET("/profile/member/del", auth.FetchMemberDelete)
+	authGroup.GET("/course/join", auth.CourseJoin)
+
+	// homeGroup.GET("/search/:key", home.Search)
+	// homeGroup.POST("/trans/quote", auth.Quote)
+	// preAuthGroup := e.Group("/preauth")
+	// preAuthGroup.POST("get_msg", preauth.GetAuthMsg)
+	// preAuthGroup.POST("verify_msg", preauth.VerifyMessage)
 
 	// authGroup.POST("ref_uri", auth.Ref)
 	// authGroup.POST("/ref/stat", auth.RefCount)

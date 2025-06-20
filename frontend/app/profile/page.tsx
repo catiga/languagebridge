@@ -1,17 +1,49 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import ProfileInfo from '../components/ProfileInfo';
 import MemberList from '../components/MemberList';
 import CourseTabs from '../components/CourseTabs';
 
 export default function ProfilePage() {
-  const [menu, setMenu] = useState('profile');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get('tab');
+  // tab映射
+  const tabMap: Record<string, string> = {
+    profile: 'profile',
+    students: 'members',
+    courses: 'courses',
+    systemcourses: 'courses', // systemcourses 也是 courses tab
+  };
+
+  // 1. loading state
   const [loading, setLoading] = useState(false);
 
-  // 控制子组件加载时的 loading 状态
-  const handleLoading = (isLoading: boolean) => {
-    setLoading(isLoading);
+  // 2. tab state
+  const [menu, setMenu] = useState(() => {
+    if (tabParam === 'systemcourses') return 'courses';
+    return tabMap[tabParam || 'profile'] || 'profile';
+  });
+
+  // 2. 监听tab参数变化，自动切换tab
+  useEffect(() => {
+    if (tabParam === 'systemcourses') {
+      setMenu('courses');
+    } else if (tabParam && tabMap[tabParam]) {
+      setMenu(tabMap[tabParam]);
+    }
+  }, [tabParam]);
+
+  // 3. 切换tab时同步URL参数
+  const handleMenuChange = (newMenu: string) => {
+    setMenu(newMenu);
+    let tabValue = newMenu;
+    if (newMenu === 'courses' && tabParam === 'systemcourses') {
+      tabValue = 'systemcourses';
+    }
+    router.replace(`/profile?tab=${tabValue}`);
   };
 
   return (
@@ -28,11 +60,11 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-      <Sidebar menu={menu} setMenu={setMenu} />
+      <Sidebar menu={menu} setMenu={handleMenuChange} />
       <div className="flex-1 p-8">
-        {menu === 'profile' && <ProfileInfo onLoading={handleLoading} />}
-        {menu === 'members' && <MemberList onLoading={handleLoading} />}
-        {menu === 'courses' && <CourseTabs onLoading={handleLoading} />}
+        {menu === 'profile' && <ProfileInfo onLoading={setLoading} />}
+        {menu === 'members' && <MemberList onLoading={setLoading} />}
+        {menu === 'courses' && <CourseTabs onLoading={setLoading} tabParam={tabParam} />}
         {/* 其它菜单项可继续扩展 */}
       </div>
     </div>

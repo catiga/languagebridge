@@ -9,6 +9,7 @@ import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import enUS from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import SystemCourses from './SystemCourses'; // 导入新组件
 
 // 假数据
 const students = [
@@ -244,7 +245,7 @@ function CourseHistory() {
 }
 
 export default function CourseTabs() {
-  const [tab, setTab] = useState('mycourses');
+  const [tab, setTab] = useState('systemcourses');
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'week'>('list');
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
 
@@ -254,9 +255,10 @@ export default function CourseTabs() {
   return (
     <div>
       <div className="flex border-b mb-4 space-x-6">
-        <button className={tab==='mycourses' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={()=>setTab('mycourses')}>My Courses</button>
-        <button className={tab==='timetable' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={()=>setTab('timetable')}>Timetable</button>
-        <button className={tab==='history' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={()=>setTab('history')}>Course History</button>
+      <button className={tab === 'systemcourses' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={() => setTab('systemcourses')}>All Courses</button>
+        <button className={tab === 'mycourses' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={() => setTab('mycourses')}>My Courses</button>
+        <button className={tab === 'timetable' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={() => setTab('timetable')}>Timetable</button>
+        <button className={tab === 'history' ? 'border-b-2 border-blue-600 font-bold px-4 py-2' : 'px-4 py-2'} onClick={() => setTab('history')}>Course History</button>
       </div>
       {tab === 'timetable' && (
         <div className="mb-4 flex items-center space-x-4">
@@ -286,6 +288,7 @@ export default function CourseTabs() {
         </div>
       )}
       {tab === 'mycourses' && <MyCourses />}
+      {tab === 'systemcourses' && <SystemCourses />}
       {tab === 'timetable' && viewMode === 'list' && <TimetableListView filtered={filtered} />}
       {tab === 'timetable' && viewMode === 'calendar' && <TimetableCalendarView filtered={filtered} />}
       {tab === 'timetable' && viewMode === 'week' && <TimetableWeekView filtered={filtered} />}
