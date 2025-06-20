@@ -330,13 +330,18 @@ func CourseFetchTeacherTimeSlot(c *gin.Context) {
 	res.Timestamp = time.Now().Unix()
 
 	_, _ = strconv.ParseInt(c.Query("course_id"), 10, 64)
-	teacherId, _ := strconv.ParseInt(c.Query("tearcher_id"), 10, 64)
+	teacherId, _ := strconv.ParseInt(c.Query("teacher_id"), 10, 64)
+
+	log.Info("teacher requested id: ", teacherId)
 
 	db := system.GetDb()
 
 	var teacherSlotTpl []model.TeacherTimeSlotTemplate
 
-	db.Model(&model.TeacherTimeSlotTemplate{}).Where("teacher_id = ?", teacherId).Find(&teacherSlotTpl)
+	err := db.Model(&model.TeacherTimeSlotTemplate{}).Where("teacher_id = ?", teacherId).Find(&teacherSlotTpl).Error
+	if err != nil {
+		log.Error("teacher slot error:", err)
+	}
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

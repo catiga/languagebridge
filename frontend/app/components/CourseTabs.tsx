@@ -397,7 +397,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                         <button
                           className="text-blue-600 hover:underline"
                           onClick={() => {
-                            window.open(`/mycourses/${course.user_course_id}`, '_blank');
+                            window.open(`/mycourses/${course.course_id}`, '_blank');
                           }}
                         >
                           Details

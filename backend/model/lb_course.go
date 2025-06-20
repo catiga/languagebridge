@@ -90,8 +90,8 @@ type TeacherTimeSlotTemplate struct {
 	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	TeacherID  uint64    `gorm:"column:teacher_id" json:"teacher_id"`
 	WeekDay    int       `gorm:"column:week_day" json:"week_day"`
-	StartTime  time.Time `gorm:"column:start_time" json:"start_time"`
-	EndTime    time.Time `gorm:"column:end_time" json:"end_time"`
+	StartTime  string    `gorm:"column:start_time" json:"start_time"`
+	EndTime    string    `gorm:"column:end_time" json:"end_time"`
 	Enabled    bool      `gorm:"column:enabled" json:"enabled"`
 	UpdateTime time.Time `gorm:"column:update_time" json:"update_time"`
 }
