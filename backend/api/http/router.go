@@ -28,6 +28,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/profile/member/add", auth.FetchMemberAdd)
 	authGroup.GET("/profile/member/del", auth.FetchMemberDelete)
 	authGroup.GET("/course/join", auth.CourseJoin)
+	authGroup.GET("/course/list", auth.CourseList)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

@@ -60,3 +60,26 @@ type UserCourse struct {
 func (UserCourse) TableName() string {
 	return "user_course"
 }
+
+type UserCourseWithCourse struct {
+	// user_course 表字段
+	UserCourseID uint64    `gorm:"column:uc_id" json:"user_course_id"`
+	UserID       uint64    `gorm:"column:user_id" json:"user_id"`
+	CourseID     uint64    `gorm:"column:course_id" json:"course_id"`
+	UCStatus     string    `gorm:"column:uc_status" json:"user_course_status"`
+	UCAddTime    time.Time `gorm:"column:uc_add_time" json:"user_course_add_time"`
+
+	// course_info 表字段
+	CourseName    string          `gorm:"column:name" json:"course_name"`
+	Introduction  string          `gorm:"column:introduction" json:"introduction"`
+	Detail        string          `gorm:"column:detail" json:"detail"`
+	Language      string          `gorm:"column:language" json:"language"`
+	Level         int             `gorm:"column:level" json:"level"`
+	CostPrice     decimal.Decimal `gorm:"column:cost_price" json:"cost_price"`
+	DisplayPrice  decimal.Decimal `gorm:"column:display_price" json:"display_price"`
+	Goal          string          `gorm:"column:goal" json:"goal"`
+	CourseAddTime time.Time       `gorm:"column:course_add_time" json:"course_add_time"`
+	CourseUpdTime time.Time       `gorm:"column:course_update_time" json:"course_update_time"`
+	CourseStatus  string          `gorm:"column:course_status" json:"course_status"`
+	CourseFlag    int             `gorm:"column:course_flag" json:"course_flag"`
+}
