@@ -324,3 +324,22 @@ func CourseFetchReviewList(c *gin.Context) {
 	res.Data = courseId
 	c.JSON(http.StatusOK, res)
 }
+
+func CourseFetchTeacherTimeSlot(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	_, _ = strconv.ParseInt(c.Query("course_id"), 10, 64)
+	teacherId, _ := strconv.ParseInt(c.Query("tearcher_id"), 10, 64)
+
+	db := system.GetDb()
+
+	var teacherSlotTpl []model.TeacherTimeSlotTemplate
+
+	db.Model(&model.TeacherTimeSlotTemplate{}).Where("teacher_id = ?", teacherId).Find(&teacherSlotTpl)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = teacherSlotTpl
+	c.JSON(http.StatusOK, res)
+}

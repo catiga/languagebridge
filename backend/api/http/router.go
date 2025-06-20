@@ -20,6 +20,7 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.GET("/course/detail", home.CourseFetchDetail)
 	homeGroup.GET("/course/teachers", home.CourseFetchTeacherList)
 	homeGroup.GET("/course/reviews", home.CourseFetchReviewList)
+	homeGroup.GET("/course/teacher/slots", home.CourseFetchTeacherTimeSlot)
 
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
 	authGroup.POST("/profile/retrieve", auth.RetrieveProfile)
