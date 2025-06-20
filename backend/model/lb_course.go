@@ -7,19 +7,21 @@ import (
 )
 
 type CourseInfo struct {
-	ID           uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name         string          `gorm:"column:name" json:"name"`
-	Introduction string          `gorm:"column:introduction" json:"introduction"`
-	Detail       string          `gorm:"column:detail" json:"detail"`
-	Language     string          `gorm:"column:language" json:"language"`
-	Level        int             `gorm:"column:level" json:"level"`
-	CostPrice    decimal.Decimal `gorm:"column:cost_price" json:"cost_price"`
-	DisplayPrice decimal.Decimal `gorm:"column:display_price" json:"display_price"`
-	Goal         string          `gorm:"column:goal" json:"goal"`
-	UpdateTime   time.Time       `gorm:"column:update_time" json:"update_time"`
-	AddTime      time.Time       `gorm:"column:add_time" json:"add_time"`
-	Status       string          `gorm:"column:status" json:"status"`
-	Flag         int             `gorm:"column:flag" json:"flag"`
+	ID            uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name          string          `gorm:"column:name" json:"name"`
+	Introduction  string          `gorm:"column:introduction" json:"introduction"`
+	Detail        string          `gorm:"column:detail" json:"detail"`
+	Language      string          `gorm:"column:language" json:"language"`
+	Level         int             `gorm:"column:level" json:"level"`
+	CostPrice     decimal.Decimal `gorm:"column:cost_price" json:"cost_price"`
+	DisplayPrice  decimal.Decimal `gorm:"column:display_price" json:"display_price"`
+	Goal          string          `gorm:"column:goal" json:"goal"`
+	UpdateTime    time.Time       `gorm:"column:update_time" json:"update_time"`
+	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
+	Status        string          `gorm:"column:status" json:"status"`
+	Flag          int             `gorm:"column:flag" json:"flag"`
+	Duration      int             `gorm:"column:duration" json:"duration"`
+	SessionNumber int             `gorm:"column:session_number" json:"session_number"`
 }
 
 func (CourseInfo) TableName() string {

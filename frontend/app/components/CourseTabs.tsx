@@ -250,12 +250,21 @@ function CourseHistory() {
   );
 }
 
+const statusTabs = [
+  { key: 'all', label: 'All' },
+  { key: '00', label: 'Active' },
+  { key: '01', label: 'Inactive' },
+  { key: '02', label: 'Completed' },
+  // 你可以根据实际 user_course_status 增加更多
+];
+
 export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
   const [activeTab, setActiveTab] = useState<'mycourses' | 'timetable' | 'history' | 'systemcourses'>('mycourses');
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'week'>('list');
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [myCoursesLoading, setMyCoursesLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // 过滤数据
   const filtered = timetableData.filter(item => !selectedStudent || item.studentId === selectedStudent);
@@ -287,6 +296,10 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       onLoading && onLoading(false);
     }
   };
+
+  const filteredCourses = statusFilter === 'all'
+    ? myCourses
+    : myCourses.filter(c => c.user_course_status === statusFilter);
 
   return (
     <div>
@@ -331,6 +344,18 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       {activeTab === 'mycourses' && (
         <div className="bg-white rounded-xl shadow-md p-6 mt-4">
           <h2 className="text-xl font-bold mb-4">My Courses</h2>
+          {/* 状态筛选Tab */}
+          <div className="flex gap-4 mb-4">
+            {statusTabs.map(tab => (
+              <button
+                key={tab.key}
+                className={`px-3 py-1 rounded ${statusFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setStatusFilter(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
           {myCoursesLoading ? (
             <div className="py-8 text-center text-gray-500">Loading...</div>
           ) : myCourses.length === 0 ? (
@@ -351,7 +376,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                 </tr>
               </thead>
               <tbody>
-                {myCourses.map((course) => (
+                {filteredCourses.map((course) => (
                   <tr key={course.user_course_id} className="hover:bg-gray-50">
                     <td className="py-2 px-4">{course.course_name}</td>
                     <td className="py-2 px-4">{course.introduction}</td>
@@ -365,14 +390,14 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                         : '-'}
                     </td>
                     <td className="py-2 px-4">
-                      {course.user_course_status === '00' ? 'Active' : course.user_course_status}
+                      {course.user_course_status === '00' ? 'inactive' : course.user_course_status}
                     </td>
                     <td className="py-2 px-4">
                       <div className="flex gap-2">
                         <button
                           className="text-blue-600 hover:underline"
                           onClick={() => {
-                            window.location.href = `/courses/${course.course_id}`;
+                            window.open(`/mycourses/${course.user_course_id}`, '_blank');
                           }}
                         >
                           Details
