@@ -282,3 +282,52 @@ func CourseConfirm(c *gin.Context) {
 	res.Data = nil
 	c.JSON(http.StatusOK, res)
 }
+
+func CourseTimeList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	pageNo, _ := strconv.ParseInt(c.Query("pn"), 10, 64)
+	pageSize, _ := strconv.ParseInt(c.Query("ps"), 10, 64)
+
+	if pageNo <= 0 {
+		pageNo = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	db := system.GetDb()
+	var result []model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).
+		Where("user_id = ?", userID).
+		Order("lesson_date, start_time ASC").
+		Offset(int(pageNo) - 1).
+		Limit(int(pageSize)).
+		Find(&result).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = result
+	c.JSON(http.StatusOK, res)
+}
