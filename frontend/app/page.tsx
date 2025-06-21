@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { FaRobot, FaCubes, FaUsers, FaUserPlus, FaBrain, FaChalkboardTeacher, FaCertificate, FaUserTie, FaCogs, FaCheckCircle, FaHourglassHalf, FaCube } from 'react-icons/fa';
+import { FaRobot, FaCubes, FaUsers, FaUserPlus, FaBrain, FaChalkboardTeacher, FaCertificate, FaUserTie, FaCogs, FaCheckCircle, FaHourglassHalf, FaCube, FaArrowRight } from 'react-icons/fa';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 // New Mock Data reflecting the updated narrative
 const communityStories = [
@@ -266,6 +268,25 @@ export default function Home() {
     };
   }, []);
 
+  // Animation variants for sections
+  const sectionVariant = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } }
+  };
+
+  const cardVariant = {
+    hidden: { opacity: 0, y: 30 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.2,
+        duration: 0.6,
+        ease: 'easeOut'
+      }
+    })
+  };
+
   return (
     <div className="bg-gray-900 text-white">
       {/* --- Hero Section --- */}
@@ -286,93 +307,135 @@ export default function Home() {
 
       <div className="space-y-32 py-24 bg-gray-900 overflow-x-hidden">
         {/* --- Platform Strengths --- */}
-        <section className="container mx-auto px-6">
-           <AnimateOnScroll><h2 className="text-4xl font-bold text-center mb-16">The Most Effective Way to Fluency</h2></AnimateOnScroll>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                <AnimateOnScroll delay={0}>
-                  <div className="bg-gray-800 p-8 rounded-2xl text-center h-full">
-                      <div className="text-cyan-400 mb-5 inline-block"><FaUserTie size={40} /></div>
-                      <h3 className="text-2xl font-bold mb-3">Elite Educators</h3>
-                      <p className="text-gray-400">We connect you with the world's best teachers, vetted for experience and teaching excellence.</p>
-                  </div>
-                </AnimateOnScroll>
-                <AnimateOnScroll delay={200}>
-                  <div className="bg-gray-800 p-8 rounded-2xl text-center h-full">
-                      <div className="text-cyan-400 mb-5 inline-block"><FaBrain size={40} /></div>
-                      <h3 className="text-2xl font-bold mb-3">AI Learning Co-Pilot</h3>
-                      <p className="text-gray-400">Your AI partner provides instant feedback, personalized drills, and tracks every step of your progress.</p>
-                  </div>
-                </AnimateOnScroll>
-                <AnimateOnScroll delay={400}>
-                  <div className="bg-gray-800 p-8 rounded-2xl text-center h-full">
-                      <div className="text-cyan-400 mb-5 inline-block"><FaCogs size={40} /></div>
-                      <h3 className="text-2xl font-bold mb-3">Seamless Management</h3>
-                      <p className="text-gray-400">Focus on learning, not logistics. We handle scheduling, progress reports, and payments effortlessly.</p>
-                  </div>
-                </AnimateOnScroll>
-            </div>
-        </section>
+        <motion.section
+          className="container mx-auto px-6"
+          variants={sectionVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <h2 className="text-4xl font-bold text-center mb-16">The Most Effective Way to Fluency</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {[
+              { icon: FaUserTie, title: "Elite Educators", desc: "We connect you with the world's best teachers, vetted for experience and teaching excellence." },
+              { icon: FaBrain, title: "AI Learning Co-Pilot", desc: "Your AI partner provides instant feedback, personalized drills, and tracks every step of your progress." },
+              { icon: FaCogs, title: "Seamless Management", desc: "Focus on learning, not logistics. We handle scheduling, progress reports, and payments effortlessly." }
+            ].map((item, i) => (
+              <motion.div key={item.title} custom={i} variants={cardVariant} className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50">
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-cyan-500/10 text-cyan-400 mb-6">
+                  <item.icon className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                <p className="text-gray-400">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
 
         {/* --- Interactive AI Demo --- */}
-        <AnimateOnScroll className="container mx-auto px-6">
+        <motion.section
+          className="container mx-auto px-6"
+          variants={sectionVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
           <AIDemo />
-        </AnimateOnScroll>
+        </motion.section>
 
         {/* --- The Roadmap Section --- */}
-        <section className="container mx-auto px-6">
-            <AnimateOnScroll><h2 className="text-4xl font-bold text-center mb-20">Our Vision for the Future</h2></AnimateOnScroll>
-            <div ref={timelineRef} className="relative">
-                {/* The vertical line - animated */}
-                <div className={`absolute left-1/2 -translate-x-1/2 h-full w-1 bg-gray-700 rounded-full transition-transform duration-1000 ease-in-out origin-top ${timelineInView ? 'scale-y-100' : 'scale-y-0'}`}></div>
-                
-                <div className="space-y-24">
-                    {/* Step 1 */}
-                    <AnimateOnScroll delay={200} className="relative flex items-center justify-end">
-                       <div className="md:w-1/2 md:pr-8 text-right">
-                           <h3 className="text-2xl font-bold text-cyan-400">AI-Enhanced Learning</h3>
-                           <p className="text-gray-400 mt-2">Master English with your personal AI co-pilot and expert human tutors.</p>
-                        </div>
-                        <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-cyan-500 rounded-full flex items-center justify-center ring-8 ring-gray-900">
-                            <FaCheckCircle size={24} />
-                        </div>
-                        <div className="md:w-1/2 pl-8 hidden md:block"><span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full font-semibold">Live Now</span></div>
-                    </AnimateOnScroll>
-                     {/* Step 2 */}
-                    <AnimateOnScroll delay={400} className="relative flex items-center">
-                        <div className="md:w-1/2 pr-8 text-right hidden md:block"><span className="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full font-semibold">In Development</span></div>
-                         <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center ring-8 ring-gray-900">
-                            <FaHourglassHalf size={24} className="text-yellow-400"/>
-                        </div>
-                        <div className="md:w-1/2 md:pl-8">
-                           <h3 className="text-2xl font-bold">The Open Platform</h3>
-                           <p className="text-gray-400 mt-2">A vibrant marketplace where anyone can register to teach, share their skills, and earn.</p>
-                        </div>
-                    </AnimateOnScroll>
-                     {/* Step 3 */}
-                    <AnimateOnScroll delay={600} className="relative flex items-center justify-end">
-                        <div className="md:w-1/2 md:pr-8 text-right">
-                           <h3 className="text-2xl font-bold">Web3 Credentials</h3>
-                           <p className="text-gray-400 mt-2">Own your learning journey with a verifiable, on-chain portfolio of your achievements.</p>
-                        </div>
-                        <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center ring-8 ring-gray-900">
-                            <FaCube size={24} className="text-purple-400"/>
-                        </div>
-                        <div className="md:w-1/2 pl-8 hidden md:block"><span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full font-semibold">Planned</span></div>
-                    </AnimateOnScroll>
-                </div>
+        <motion.section
+          className="container mx-auto px-6"
+          variants={sectionVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <h2 className="text-4xl font-bold text-center mb-20">Our Vision for the Future</h2>
+          <div ref={timelineRef} className="relative">
+            {/* The vertical line - animated */}
+            <div className={`absolute left-1/2 -translate-x-1/2 h-full w-1 bg-gray-700 rounded-full transition-transform duration-1000 ease-in-out origin-top ${timelineInView ? 'scale-y-100' : 'scale-y-0'}`}></div>
+            
+            <div className="space-y-24">
+                {/* Step 1 */}
+                <motion.div custom={0} variants={cardVariant} className="relative flex items-center justify-end">
+                   <div className="md:w-1/2 md:pr-8 text-right">
+                       <h3 className="text-2xl font-bold text-cyan-400">AI-Enhanced Learning</h3>
+                       <p className="text-gray-400 mt-2">Master English with your personal AI co-pilot and expert human tutors.</p>
+                    </div>
+                    <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-cyan-500 rounded-full flex items-center justify-center ring-8 ring-gray-900">
+                        <FaCheckCircle size={24} />
+                    </div>
+                    <div className="md:w-1/2 pl-8 hidden md:block"><span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full font-semibold">Live Now</span></div>
+                </motion.div>
+                 {/* Step 2 */}
+                <motion.div custom={1} variants={cardVariant} className="relative flex items-center">
+                    <div className="md:w-1/2 pr-8 text-right hidden md:block"><span className="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full font-semibold">In Development</span></div>
+                     <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center ring-8 ring-gray-900">
+                        <FaHourglassHalf size={24} className="text-yellow-400"/>
+                    </div>
+                    <div className="md:w-1/2 md:pl-8">
+                       <h3 className="text-2xl font-bold">The Open Platform</h3>
+                       <p className="text-gray-400 mt-2">A vibrant marketplace where anyone can register to teach, share their skills, and earn.</p>
+                    </div>
+                </motion.div>
+                 {/* Step 3 */}
+                <motion.div custom={2} variants={cardVariant} className="relative flex items-center justify-end">
+                    <div className="md:w-1/2 md:pr-8 text-right">
+                       <h3 className="text-2xl font-bold">Web3 Credentials</h3>
+                       <p className="text-gray-400 mt-2">Own your learning journey with a verifiable, on-chain portfolio of your achievements.</p>
+                    </div>
+                    <div className="absolute left-1/2 -translate-x-1/2 w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center ring-8 ring-gray-900">
+                        <FaCube size={24} className="text-purple-400"/>
+                    </div>
+                    <div className="md:w-1/2 pl-8 hidden md:block"><span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full font-semibold">Planned</span></div>
+                </motion.div>
             </div>
-        </section>
+          </div>
+        </motion.section>
+
+        {/* --- Become a Teacher Section - NEW MODULE */}
+        <motion.section
+          className="container mx-auto px-6"
+          variants={sectionVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl grid md:grid-cols-2 items-center overflow-hidden">
+            <div className="p-10 md:p-12">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Share Your Expertise. <br/><span className="text-cyan-400">Teach on LangBridge.</span></h2>
+              <p className="mt-4 text-gray-300">
+                Reach a global audience of motivated learners, set your own schedule, and utilize our AI tools to deliver unparalleled lessons. We handle the logistics so you can focus on what you do best: teaching.
+              </p>
+              <Link href="/register/teacher">
+                <span className="mt-8 inline-flex items-center gap-3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                  Apply to Teach <FaArrowRight />
+                </span>
+              </Link>
+            </div>
+            <div className="hidden md:block h-full bg-cover bg-center" style={{backgroundImage: 'url(https://images.unsplash.com/photo-1573496773905-f5b17e76b254?q=80&w=800&auto=format&fit=crop)'}}>
+              {/* This div is for the background image */}
+            </div>
+          </div>
+        </motion.section>
 
         {/* --- Final CTA --- */}
-        <AnimateOnScroll className="container mx-auto px-6 text-center">
-           <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-12 rounded-2xl transform hover:scale-[1.02] transition-transform duration-500">
-              <h2 className="text-4xl font-bold mb-4">Ready to Begin?</h2>
-              <p className="text-xl max-w-2xl mx-auto mb-8 text-gray-200">Your journey to fluency starts with a single step. Let's find the perfect teacher for you.</p>
-              <button className="bg-white text-blue-700 px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-gray-200 transform hover:scale-105 transition-all duration-300">
-                Start Your Journey
-              </button>
-           </div>
-        </AnimateOnScroll>
+        <motion.section
+          className="container mx-auto px-6 text-center"
+          variants={sectionVariant}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-12 rounded-2xl transform hover:scale-[1.02] transition-transform duration-500">
+            <h2 className="text-4xl font-bold mb-4">Ready to Begin?</h2>
+            <p className="text-xl max-w-2xl mx-auto mb-8 text-gray-200">Your journey to fluency starts with a single step. Let's find the perfect teacher for you.</p>
+            <button className="bg-white text-blue-700 px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-gray-200 transform hover:scale-105 transition-all duration-300">
+              Start Your Journey
+            </button>
+          </div>
+        </motion.section>
       </div>
 
        {/* Footer */}
