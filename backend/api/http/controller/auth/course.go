@@ -315,13 +315,99 @@ func CourseTimeList(c *gin.Context) {
 	}
 
 	db := system.GetDb()
-	var result []model.CourseBookTrans
-	err = db.Model(&model.CourseBookTrans{}).
+
+	var total int64
+	db.Model(&model.CourseBookTrans{}).
 		Where("user_id = ?", userID).
+		Count(&total)
+
+	var result []model.CourseBookWithJoin
+
+	err = db.Table("course_book_trans").
+		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
+		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
+		Where("course_book_trans.user_id = ?", userID).
+		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
 		Order("lesson_date, start_time ASC").
-		Offset(int(pageNo) - 1).
+		Offset(int((pageNo - 1)) * int(pageSize)).
 		Limit(int(pageSize)).
-		Find(&result).Error
+		Scan(&result).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = gin.H{
+		"list":        result,
+		"pn":          pageNo,
+		"ps":          pageSize,
+		"total":       total,
+		"total_pages": totalPages,
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseTimeRange(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	layout := "2006-01-02"
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+
+	startDate, err1 := time.Parse(layout, startDateStr)
+	endDate, err2 := time.Parse(layout, endDateStr)
+
+	if err1 != nil || startDate.Format(layout) != startDateStr {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "start_date must be in yyyy-MM-dd format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if err2 != nil || endDate.Format(layout) != endDateStr {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "end_date must be in yyyy-MM-dd format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var total int64
+	db.Model(&model.CourseBookTrans{}).
+		Where("user_id = ? and lesson_date >= ? and lesson_date <= ?", userID, startDate, endDate).
+		Count(&total)
+
+	var result []model.CourseBookWithJoin
+
+	err = db.Table("course_book_trans").
+		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
+		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
+		Where("course_book_trans.user_id = ? and course_book_trans.lesson_date >= ? and course_book_trans.lesson_date <= ?", userID, startDate, endDate).
+		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
+		Order("lesson_date, start_time ASC").
+		Scan(&result).Error
 	if err != nil {
 		log.Error(err)
 	}

@@ -19,3 +19,9 @@ type CourseBookTrans struct {
 func (CourseBookTrans) TableName() string {
 	return "course_book_trans"
 }
+
+type CourseBookWithJoin struct {
+	CourseBookTrans
+	TeacherName string `json:"teacher_name"`
+	CourseName  string `json:"course_name"`
+}

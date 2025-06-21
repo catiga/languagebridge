@@ -13,11 +13,16 @@ interface CourseTimeItem {
   start_time: string;
   end_time: string;
   status: string;
+  teacher_name: string;
+  course_name: string;
 }
+
+const PAGE_SIZE = 10;
 
 export default function TimetableListView() {
   const [data, setData] = useState<CourseTimeItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0 });
   const [teacherMap, setTeacherMap] = useState<Record<number, string>>({});
   const [courseMap, setCourseMap] = useState<Record<number, string>>({});
   const [studentMap, setStudentMap] = useState<Record<number, string>>({});
@@ -31,12 +36,20 @@ export default function TimetableListView() {
 
   // 拉取主数据
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (page: number) => {
       setLoading(true);
       try {
-        const res = await apiClient.get('/spwapi/auth/course/time/list');
-        if (res && res.code === 0 && Array.isArray(res.data)) {
-          setData(res.data);
+        // 增加 pn, ps 分页参数
+        const res = await apiClient.get('/spwapi/auth/course/time/list', { pn: page, ps: PAGE_SIZE });
+        
+        // 按分页结构解析
+        if (res && res.code === 0 && res.data) {
+          setData(res.data.list || []);
+          setPagination({
+            currentPage: res.data.pn || page,
+            totalPages: res.data.total_pages || 1,
+            total: res.data.total || 0,
+          });
         } else {
           setData([]);
           toast.error(res?.msg || '获取课程时间表失败');
@@ -48,8 +61,9 @@ export default function TimetableListView() {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    fetchData(pagination.currentPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.currentPage]);
 
   // 拉取老师、课程、学生映射
   useEffect(() => {
@@ -71,44 +85,78 @@ export default function TimetableListView() {
     });
   }, []);
 
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > pagination.totalPages || page === pagination.currentPage) return;
+    setPagination(p => ({ ...p, currentPage: page }));
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md p-8 mb-6">
       <h3 className="text-xl font-bold mb-4">Timetable (List View)</h3>
       {loading ? (
         <div className="text-center py-10">Loading...</div>
       ) : (
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="py-2 px-4">Course</th>
-              <th className="py-2 px-4">Student</th>
-              <th className="py-2 px-4">Teacher</th>
-              <th className="py-2 px-4">Date</th>
-              <th className="py-2 px-4">Time</th>
-              <th className="py-2 px-4">Status</th>
-              <th className="py-2 px-4">Booking No</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-500">No data</td>
+        <>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="py-2 px-4">Booking No</th>
+                <th className="py-2 px-4">Course</th>
+                <th className="py-2 px-4">Teacher</th>
+                <th className="py-2 px-4">Date</th>
+                <th className="py-2 px-4">Time</th>
+                <th className="py-2 px-4">Status</th>
               </tr>
-            ) : (
-              data.map(item => (
-                <tr key={item.id}>
-                  <td className="py-2 px-4">{courseMap[item.course_id] || item.course_id}</td>
-                  <td className="py-2 px-4">{studentMap[item.user_id] || item.user_id}</td>
-                  <td className="py-2 px-4">{teacherMap[item.teacher_id] || item.teacher_id}</td>
-                  <td className="py-2 px-4">{item.lesson_date?.slice(0, 10)}</td>
-                  <td className="py-2 px-4">{item.start_time?.slice(0, 5)} - {item.end_time?.slice(0, 5)}</td>
-                  <td className="py-2 px-4">{statusMap[item.status] || item.status}</td>
-                  <td className="py-2 px-4">{item.booking_no}</td>
+            </thead>
+            <tbody>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-8 text-gray-500">No data</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                data.map(item => (
+                  <tr key={item.id}>
+                    <td className="py-2 px-4">{item.booking_no}</td>
+                    <td className="py-2 px-4">{item.course_name?.slice(0, 10)}...</td>
+                    <td className="py-2 px-4">{item.teacher_name}</td>
+                    <td className="py-2 px-4">{item.lesson_date?.slice(0, 10)}</td>
+                    <td className="py-2 px-4">{item.start_time?.slice(0, 5)} - {item.end_time?.slice(0, 5)}</td>
+                    <td className="py-2 px-4">{statusMap[item.status] || item.status}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          {/* Pagination */}
+          <div className="flex justify-center items-center mt-6">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={pagination.currentPage <= 1}
+              className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+            >
+              &laquo; Prev
+            </button>
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`px-3 py-1 mx-1 rounded ${pagination.currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={pagination.currentPage >= pagination.totalPages}
+              className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+            >
+              Next &raquo;
+            </button>
+            <span className="ml-4 text-gray-500 text-sm">
+              Total {pagination.total} items
+            </span>
+          </div>
+        </>
       )}
     </div>
   );
