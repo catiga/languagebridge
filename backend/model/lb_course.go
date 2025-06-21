@@ -99,3 +99,14 @@ type TeacherTimeSlotTemplate struct {
 func (TeacherTimeSlotTemplate) TableName() string {
 	return "teacher_timeslot_template"
 }
+
+type CourseLogRecord struct {
+	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	BookID     uint64    `gorm:"column:book_id" json:"book_id"`
+	MeetingURI string    `gorm:"column:meeting_uri" json:"meeting_uri"`
+	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
+}
+
+func (CourseLogRecord) TableName() string {
+	return "course_log_record"
+}

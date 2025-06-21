@@ -417,3 +417,96 @@ func CourseTimeRange(c *gin.Context) {
 	res.Data = result
 	c.JSON(http.StatusOK, res)
 }
+
+func CourseGetMeetingInfo(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course meeting invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var bookTran model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).Where("id = ? and user_id = ?", btid, userID).First(&bookTran).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
+
+	var courseLog model.CourseLogRecord
+	db.Model(&model.CourseLogRecord{}).Where("book_id = ?", bookTran.ID).First(&courseLog)
+
+	if courseLog.ID == 0 {
+		courseLog.AddTime = time.Now()
+		courseLog.BookID = bookTran.ID
+		courseLog.MeetingURI = roomURI
+		db.Model(&model.CourseLogRecord{}).Save(&courseLog)
+	}
+
+	var courseInfo model.CourseInfo
+	var teacherInfo model.Teacher
+	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
+	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = struct {
+		MeetingURI    string `json:"meeting_uri"`
+		BookID        uint64 `json:"book_id"`
+		CourseName    string `json:"course_name"`
+		CourseDetail  string `json:"course_detail"`
+		CourseID      uint64 `json:"course_id"`
+		TeacherName   string `json:"teacher_name"`
+		TeacherID     uint64 `json:"teacher_id"`
+		TeacherDetail string `json:"teacher_detail"`
+		LessonDate    string `json:"lesson_date"`
+		StartTime     string `json:"start_time"`
+		EndTime       string `json:"end_time"`
+	}{
+		MeetingURI:    roomURI,
+		BookID:        bookTran.ID,
+		CourseName:    courseInfo.Name,
+		CourseID:      courseInfo.ID,
+		CourseDetail:  courseInfo.Detail,
+		TeacherName:   teacherInfo.Name,
+		TeacherID:     teacherInfo.ID,
+		TeacherDetail: teacherInfo.Detail,
+		LessonDate:    bookTran.LessonDate.Format("2006-01-02"),
+		StartTime:     bookTran.StartTime,
+		EndTime:       bookTran.EndTime,
+	}
+	c.JSON(http.StatusOK, res)
+}

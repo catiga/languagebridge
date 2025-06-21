@@ -26,6 +26,7 @@ interface CourseTimeItem {
 }
 
 interface CustomEvent extends BigCalendarEvent {
+  id?: number | string;
   resource: {
     teacher: string;
     student: string;
@@ -75,8 +76,20 @@ const CustomToolbar = (toolbar: ToolbarProps) => {
   );
 };
 
-// --- Event Details Modal ---
+// --- UPDATED Event Details Modal ---
 const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: () => void; }) => {
+  
+  const handleJoinClassroom = () => {
+    if (!event.id) {
+      toast.error("Lesson ID is missing.");
+      return;
+    }
+    // Simply open the new dedicated meeting page in a new tab
+    const meetingPageUrl = `/course/meet/${event.id}`;
+    window.open(meetingPageUrl, '_blank', 'noopener,noreferrer');
+    onClose(); // Close the modal
+  };
+
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1 },
@@ -84,33 +97,21 @@ const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: ()
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-    >
-      <motion.div
-        variants={modalVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8"
-      >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="flex justify-between items-start">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">{event.resource.courseName}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><FaTimes size={20} /></button>
         </div>
         <p className="text-md text-gray-500 mb-6">{format(event.start!, "eeee, MMMM d, yyyy 'at' h:mm a")}</p>
-        
         <div className="space-y-4 text-gray-700">
           <div className="flex items-center"><FaChalkboardTeacher className="w-5 h-5 mr-3 text-blue-500" /> <span><strong>Teacher:</strong> {event.resource.teacher}</span></div>
           <div className="flex items-center"><FaUserGraduate className="w-5 h-5 mr-3 text-blue-500" /> <span><strong>Student:</strong> {event.resource.student}</span></div>
         </div>
-
-        <button className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-0.5">
+        <button
+          onClick={handleJoinClassroom}
+          className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-0.5"
+        >
           <FaVideo />
           Enter Classroom
         </button>
