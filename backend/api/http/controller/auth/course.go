@@ -404,7 +404,7 @@ func CourseTimeRange(c *gin.Context) {
 	err = db.Table("course_book_trans").
 		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
 		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
-		Where("course_book_trans.user_id = ? and course_book_trans.lesson_date >= ? and course_book_trans.lesson_date <= ?", userID, startDate, endDate).
+		Where("course_book_trans.user_id = ? and course_book_trans.lesson_date >= ? and course_book_trans.lesson_date <= ?", userID, startDateStr, endDateStr).
 		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
 		Order("lesson_date, start_time ASC").
 		Scan(&result).Error
