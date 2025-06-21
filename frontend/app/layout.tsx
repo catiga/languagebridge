@@ -1,31 +1,37 @@
-import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
-import "./globals.css";
-import Navbar from "./components/Navbar";
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import AppLayout from './components/AppLayout';
 
-const roboto = Roboto({
-  weight: ['400', '500', '700', '900'],
-  subsets: ["latin"],
-  display: "swap",
-});
+const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: "LangBridge - 连接世界的英语学习桥梁",
-  description: "LangBridge提供高质量外教，个性化课程，助您流利说英语！",
+export const metadata = {
+  title: 'LangBridge',
+  description: 'Your Bridge to Global English',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="zh-CN">
-      <body className={`${roboto.className} antialiased`}>
-        <Navbar />
-        <main>
-          {children}
-        </main>
+    <html lang="en">
+      <body>
+        <AppLayout>{children}</AppLayout>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
       </body>
     </html>
   );
