@@ -83,6 +83,32 @@ export default function TimetableWeekView() {
   const handleNavigate = (newDate: Date) => {
     setDate(newDate);
   };
+  
+  const eventPropGetter = useCallback((event: Event) => {
+    const now = new Date();
+    // 默认样式 (未来的课程)
+    const style: React.CSSProperties = {
+      backgroundColor: '#3b82f6', // blue-500
+      color: 'white',
+      borderRadius: '4px',
+      border: 'none',
+      padding: '2px 4px',
+    };
+
+    const isToday = event.start && event.start.toDateString() === now.toDateString();
+    const isPast = event.end && event.end < now;
+
+    if (isPast) {
+      // 已过去的课程
+      style.backgroundColor = '#9ca3af'; // gray-400
+      style.color = '#e5e7eb';
+    } else if (isToday) {
+      // 当天的课程
+      style.backgroundColor = '#16a34a'; // green-600
+    }
+
+    return { style };
+  }, []);
 
   return (
     <div className="bg-white rounded-xl shadow-md p-4 mb-6 relative">
@@ -104,15 +130,7 @@ export default function TimetableWeekView() {
         endAccessor="end"
         titleAccessor="title"
         tooltipAccessor={event => `${event.title}\nTeacher: ${event.resource.teacher}`}
-        eventPropGetter={() => ({
-          style: {
-            backgroundColor: '#2563eb',
-            color: 'white',
-            borderRadius: '4px',
-            border: 'none',
-            padding: '2px 4px',
-          },
-        })}
+        eventPropGetter={eventPropGetter}
       />
     </div>
   );

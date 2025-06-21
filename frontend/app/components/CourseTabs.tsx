@@ -13,7 +13,6 @@ import SystemCourses from './SystemCourses'; // 导入新组件
 import { apiClient } from '../utils/api';
 import { toast } from 'react-toastify';
 import TimetableListView from '../timetable/components/TimetableListView';
-import TimetableCalendarView from '../timetable/components/TimetableCalendarView';
 import TimetableWeekView from '../timetable/components/TimetableWeekView';
 
 // 假数据
@@ -132,7 +131,7 @@ const statusTabs = [
 
 export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
   const [activeTab, setActiveTab] = useState<'mycourses' | 'timetable' | 'history' | 'systemcourses'>('mycourses');
-  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'week'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [myCoursesLoading, setMyCoursesLoading] = useState(false);
@@ -208,10 +207,10 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
             className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => setViewMode('list')}
           >List View</button>
-          <button
+          {/* <button
             className={`px-3 py-1 rounded ${viewMode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => setViewMode('calendar')}
-          >Calendar View</button>
+          >Calendar View</button> */}
           <button
             className={`px-3 py-1 rounded ${viewMode === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => setViewMode('week')}
@@ -290,7 +289,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       )}
       {activeTab === 'systemcourses' && <SystemCourses />}
       {activeTab === 'timetable' && viewMode === 'list' && <TimetableListView />}
-      {activeTab === 'timetable' && viewMode === 'calendar' && <TimetableCalendarView />}
+      {/* {activeTab === 'timetable' && viewMode === 'calendar' && <TimetableCalendarView />} */}
       {activeTab === 'timetable' && viewMode === 'week' && <TimetableWeekView />}
       {activeTab === 'history' && <CourseHistory />}
     </div>
