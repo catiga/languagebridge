@@ -57,6 +57,92 @@ function WeekRangeTitle() {
   return <>{formatDisplayDate(monday)} - {formatDisplayDate(sunday)}</>;
 }
 
+function WelcomeBanner({ teacherName, avatarUrl }: { teacherName: string, avatarUrl?: string }) {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return (
+    <div className="flex items-center bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl p-6 mb-2 shadow">
+      <img src={avatarUrl || '/default-avatar.svg'} alt="avatar" className="w-16 h-16 rounded-full border-4 border-white shadow mr-4" />
+      <div>
+        <div className="text-lg text-gray-700 mb-1">Welcome back,</div>
+        <div className="text-2xl font-bold text-gray-900">{teacherName}</div>
+        <div className="text-sm text-gray-400 mt-1">{dateStr}</div>
+      </div>
+    </div>
+  );
+}
+
+function StatsCard({ label, value, icon: Icon, color }: any) {
+  return (
+    <div className={`flex items-center bg-white rounded-2xl shadow p-5 space-x-4 border-l-4 ${color}`}>
+      <div className="bg-blue-100 p-3 rounded-xl"><Icon className="w-6 h-6 text-blue-500" /></div>
+      <div>
+        <div className="text-2xl font-bold text-gray-900">{value}</div>
+        <div className="text-gray-500 text-sm font-medium">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function SchedulePreview({ lessons }: { lessons: any[] }) {
+  return (
+    <div className="bg-white rounded-2xl shadow p-6 h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-bold text-lg text-gray-800">This Week's Lessons</div>
+      </div>
+      {lessons.length === 0 ? (
+        <div className="text-gray-400 text-sm text-center py-8">No lessons scheduled this week.</div>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {lessons.slice(0, 5).map((lesson, i) => (
+            <li key={lesson.id || i} className="py-3 flex items-center space-x-3">
+              <div className="flex-1">
+                <div className="font-medium text-gray-800">{lesson.course_name}</div>
+                <div className="text-xs text-gray-500">{lesson.start_time} - {lesson.end_time} | {lesson.lesson_date?.slice(0, 10)}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function RecentActivities({ activities }: { activities: any[] }) {
+  return (
+    <div className="bg-white rounded-2xl shadow p-6 h-full">
+      <div className="font-bold text-lg text-gray-800 mb-4">Recent Activities</div>
+      {activities.length === 0 ? (
+        <div className="text-gray-400 text-sm text-center py-8">No recent activities.</div>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {activities.slice(0, 5).map((a, i) => (
+            <li key={a.id || i} className="py-3 flex items-center space-x-3">
+              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${a.color}`}>{a.icon}</span>
+              <div className="flex-1">
+                <div className="font-medium text-gray-800">{a.title}</div>
+                <div className="text-xs text-gray-500">{a.description}</div>
+                <div className="text-xs text-gray-400">{a.time}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function QuickActions({ onAction }: { onAction: (tab: Tab) => void }) {
+  return (
+    <div className="flex flex-wrap gap-4 mt-2">
+      <button onClick={() => onAction('courses')} className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow font-medium">Add Course</button>
+      <button onClick={() => onAction('schedule')} className="bg-purple-500 hover:bg-purple-600 text-white px-5 py-2 rounded-xl shadow font-medium">Set Time Slots</button>
+      <button onClick={() => onAction('certificates')} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl shadow font-medium">Manage Certificates</button>
+      <button onClick={() => onAction('profile')} className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl shadow font-medium">Go to Profile</button>
+    </div>
+  );
+}
+
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [stats] = useState<DashboardStats>({
@@ -130,6 +216,24 @@ export default function TeacherDashboard() {
       case 'settings':
         return <SettingPanel />;
       case 'overview':
+        return (
+          <div className="space-y-8">
+            <WelcomeBanner teacherName="catiga03" avatarUrl={undefined} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <StatsCard label="Total Students" value={stats.totalStudents} icon={FaUsers} color="border-blue-400" />
+              <StatsCard label="Total Lessons" value={stats.totalLessons} icon={FaBookOpen} color="border-green-400" />
+              <StatsCard label="Average Rating" value={stats.averageRating} icon={FaStarIcon} color="border-yellow-400" />
+              <StatsCard label="Total Earnings" value={`$${stats.totalEarnings}`} icon={FaPlayIcon} color="border-purple-400" />
+              <StatsCard label="Active Courses" value={stats.activeCourses} icon={FaPlayIcon} color="border-indigo-400" />
+              <StatsCard label="Pending Bookings" value={stats.pendingBookings} icon={FaCalendarAltIcon} color="border-pink-400" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <SchedulePreview lessons={[]} />
+              <RecentActivities activities={recentActivities} />
+            </div>
+            <QuickActions onAction={(tab) => setActiveTab(tab as Tab)} />
+          </div>
+        );
       default:
         return (
           <div className="space-y-8">
