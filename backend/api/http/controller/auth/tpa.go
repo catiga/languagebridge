@@ -554,3 +554,71 @@ func TeacherTimeslotTemplateUpdate(c *gin.Context) {
 	res.Msg = "success"
 	c.JSON(http.StatusOK, res)
 }
+
+func TeacherScheduleTimeRange(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentTeacher, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentTeacherStr, _ := currentTeacher.(string)
+	teacherID, err := strconv.ParseInt(currentTeacherStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	layout := "2006-01-02"
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+
+	startDate, err1 := time.Parse(layout, startDateStr)
+	endDate, err2 := time.Parse(layout, endDateStr)
+
+	if err1 != nil || startDate.Format(layout) != startDateStr {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "start_date must be in yyyy-MM-dd format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if err2 != nil || endDate.Format(layout) != endDateStr {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "end_date must be in yyyy-MM-dd format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var total int64
+	db.Model(&model.CourseBookTrans{}).
+		Where("teacher_id = ? and lesson_date >= ? and lesson_date <= ?", teacherID, startDate, endDate).
+		Count(&total)
+
+	var result []model.CourseBookWithJoin
+
+	err = db.Table("course_book_trans").
+		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
+		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
+		Where("course_book_trans.teacher_id = ? and course_book_trans.lesson_date >= ? and course_book_trans.lesson_date <= ?", teacherID, startDateStr, endDateStr).
+		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
+		Order("lesson_date, start_time ASC").
+		Scan(&result).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = result
+	c.JSON(http.StatusOK, res)
+}

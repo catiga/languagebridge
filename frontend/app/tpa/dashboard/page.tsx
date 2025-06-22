@@ -19,6 +19,7 @@ import ProfileManagement from './components/ProfileManagement';
 import CertificateManagement from './components/CertificateManagement';
 import CourseManagement from './components/CourseManagement';
 import TimeSlotManagement from './components/TimeSlotManagement';
+import TeacherScheduleWeekView from './components/TeacherScheduleWeekView';
 
 interface DashboardStats {
   totalStudents: number;
@@ -39,7 +40,21 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'notifications' | 'settings';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'notifications' | 'settings' | 'schedule2';
+
+function WeekRangeTitle() {
+  // 取本地时间的本周一
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day === 0 ? 7 : day) - 1));
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000);
+  function formatDisplayDate(date: Date) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  return <>{formatDisplayDate(monday)} - {formatDisplayDate(sunday)}</>;
+}
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -109,6 +124,8 @@ export default function TeacherDashboard() {
         return <CourseManagement />;
       case 'schedule':
         return <TimeSlotManagement />;
+      case 'schedule2':
+        return <TeacherScheduleWeekView />;
       case 'overview':
       default:
         return (
@@ -177,85 +194,12 @@ export default function TeacherDashboard() {
                       whileHover={{ x: 5 }}
                       className="flex items-center space-x-4 p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors"
                     >
-                      <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center`}>
-                        {activity.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                        <p className="text-sm text-gray-600">{activity.description}</p>
-                      </div>
-                      <span className="text-xs text-gray-500">{activity.time}</span>
+                      {/* 这里应有内容，暂时留空或补充实际内容 */}
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
-
-              {/* Quick Actions */}
-              <motion.div
-                initial={{ x: 50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {[
-                    { title: 'Create New Course', icon: FaPlus, color: 'from-green-500 to-emerald-500', action: () => console.log('Create new course function') },
-                    { title: 'View Students', icon: FaUsers, color: 'from-blue-500 to-cyan-500', action: () => console.log('View students function') },
-                    { title: 'Schedule Course', icon: FaCalendarAltIcon, color: 'from-purple-500 to-pink-500', action: () => console.log('Schedule course function') },
-                    { title: 'View Reviews', icon: FaStarIcon, color: 'from-yellow-500 to-orange-500', action: () => console.log('View reviews function') },
-                  ].map((action, index) => (
-                    <motion.button
-                      key={action.title}
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.1 * index + 0.4 }}
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={action.action}
-                      className="flex items-center p-4 bg-gradient-to-r text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all"
-                    >
-                      <action.icon className="w-5 h-5 mr-3" />
-                      {action.title}
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
             </div>
-
-            {/* Achievements */}
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Achievement Badges</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { name: 'Excellent Teacher', icon: FaTrophy, color: 'from-yellow-400 to-orange-500', earned: true },
-                  { name: '100 Lessons', icon: FaGraduationCap, color: 'from-blue-400 to-purple-500', earned: true },
-                  { name: '5-Star Rating', icon: FaStarIcon, color: 'from-yellow-400 to-orange-500', earned: true },
-                  { name: 'International Certified', icon: FaCertificate, color: 'from-green-400 to-emerald-500', earned: false },
-                ].map((badge, index) => (
-                  <motion.div
-                    key={badge.name}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.1 * index }}
-                    whileHover={{ scale: 1.05 }}
-                    className={`text-center p-4 rounded-xl transition-all duration-300 ${
-                      badge.earned 
-                        ? 'bg-gradient-to-r ' + badge.color + ' text-white shadow-lg' 
-                        : 'bg-gray-100 text-gray-400'
-                    }`}
-                  >
-                    <badge.icon className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm font-medium">{badge.name}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
           </div>
         );
     }
@@ -266,7 +210,16 @@ export default function TeacherDashboard() {
       activeTab={activeTab}
       onTabChange={(tab) => setActiveTab(tab as Tab)}
     >
+      {/* 顶部周范围标题，仅在schedule2时显示 */}
+      {activeTab === 'schedule2' && (
+        <div className="w-full flex justify-between items-center mb-4">
+          <span className="text-2xl font-bold text-gray-800">
+            {/* 这里动态获取本周范围 */}
+            <WeekRangeTitle />
+          </span>
+        </div>
+      )}
       {renderContent()}
     </DashboardLayout>
   );
-} 
+}

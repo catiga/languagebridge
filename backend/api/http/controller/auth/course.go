@@ -258,24 +258,33 @@ func CourseConfirm(c *gin.Context) {
 	var saveResult []model.CourseBookTrans
 
 	for _, r := range internalResult {
-		ledate, err := time.Parse("2025-01-02", r.LessonDate)
+		ledate, err := time.Parse("2006-01-02", r.LessonDate)
 		if err != nil {
-			saveResult = append(saveResult, model.CourseBookTrans{
-				BookingNo:  bookNo,
-				TeacherID:  req.TeacherID,
-				CourseID:   req.CourseID,
-				UserID:     uint64(userID),
-				LessonDate: ledate,
-				StartTime:  r.StartTime,
-				EndTime:    r.EndTime,
-				Status:     "000",
-				AddTime:    auTime,
-				UpdateTime: auTime,
-			})
+			res.Code = codes.CODE_ERR_BAD_PARAMS
+			res.Msg = fmt.Sprintf("booking date error %s", r.LessonDate)
+			c.JSON(http.StatusOK, res)
+			return
 		}
+
+		saveResult = append(saveResult, model.CourseBookTrans{
+			BookingNo:  bookNo,
+			TeacherID:  req.TeacherID,
+			CourseID:   req.CourseID,
+			UserID:     uint64(userID),
+			LessonDate: ledate,
+			StartTime:  r.StartTime,
+			EndTime:    r.EndTime,
+			Status:     "000",
+			AddTime:    auTime,
+			UpdateTime: auTime,
+		})
+
 	}
 
-	db.CreateInBatches(&saveResult, 200)
+	err = db.CreateInBatches(&saveResult, 200).Error
+	if err != nil {
+		log.Error(err)
+	}
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

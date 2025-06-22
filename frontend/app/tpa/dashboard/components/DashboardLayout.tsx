@@ -9,6 +9,7 @@ import {
   FaBook,
   FaUsers,
   FaCalendarAlt,
+  FaCalendarWeek,
   FaChartBar,
   FaCog,
   FaBell,
@@ -34,6 +35,7 @@ const menuItems = [
   { id: 'courses', label: 'Courses', icon: FaBook },
   { id: 'students', label: 'Students', icon: FaUsers },
   { id: 'schedule', label: 'Time Slots', icon: FaCalendarAlt },
+  { id: 'schedule2', label: 'Schedule', icon: FaCalendarWeek },
   { id: 'analytics', label: 'Analytics', icon: FaChartBar },
 ];
 
