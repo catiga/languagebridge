@@ -17,6 +17,7 @@ import Cookies from 'js-cookie';
 import DashboardLayout from './components/DashboardLayout';
 import ProfileManagement from './components/ProfileManagement';
 import CertificateManagement from './components/CertificateManagement';
+import CourseManagement from './components/CourseManagement';
 
 interface DashboardStats {
   totalStudents: number;
@@ -37,8 +38,10 @@ interface RecentActivity {
   color: string;
 }
 
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'notifications' | 'settings';
+
 export default function TeacherDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [stats] = useState<DashboardStats>({
     totalStudents: 127,
     totalLessons: 342,
@@ -101,6 +104,8 @@ export default function TeacherDashboard() {
         return <ProfileManagement />;
       case 'certificates':
         return <CertificateManagement />;
+      case 'courses':
+        return <CourseManagement />;
       case 'overview':
       default:
         return (
@@ -254,7 +259,10 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <DashboardLayout
+      activeTab={activeTab}
+      onTabChange={(tab) => setActiveTab(tab as Tab)}
+    >
       {renderContent()}
     </DashboardLayout>
   );

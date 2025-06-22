@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"gorm.io/gorm"
 )
 
 type UpdateTeacherProfileRequest struct {
@@ -308,6 +310,150 @@ func RemoveTeacherCertificate(c *gin.Context) {
 
 	if teacherCert.ID > 0 {
 		db.Model(&model.TeacherCertificate{}).Where("id = ?", id).Update("flag", -1)
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherBindCourse(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	course_id, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	db := system.GetDb()
+	var course model.CourseInfo
+	db.Model(&model.CourseInfo{}).Where("id = ?", course_id).First(&course)
+
+	if course.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var courseTeacherBind model.CourseTeacherBind
+	err = db.Model(&model.CourseTeacherBind{}).Where("course_id = ? and teacher_id = ?", course_id, userID).First(&courseTeacherBind).Error
+
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			res.Code = codes.CODE_ERR_UNKNOWN
+			res.Msg = "unknown " + err.Error()
+			c.JSON(http.StatusOK, res)
+			return
+		} else {
+			courseTeacherBind.CourseID = course.ID
+			courseTeacherBind.TeacherID = uint64(userID)
+			err = db.Save(&courseTeacherBind).Error
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherCourseList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var myCourses []model.CourseInfo
+	err = db.Table("course_info AS c").
+		Joins("JOIN course_teacher AS ct ON ct.course_id = c.id").
+		Where("ct.teacher_id = ?", userID).
+		Where("c.flag != ?", -1).
+		Order("c.update_time DESC").
+		Scan(&myCourses).Error
+
+	res.Data = myCourses
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherUnBindCourse(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	course_id, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	db := system.GetDb()
+	var course model.CourseInfo
+	db.Model(&model.CourseInfo{}).Where("id = ?", course_id).First(&course)
+
+	if course.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var courseTeacherBind model.CourseTeacherBind
+	err = db.Model(&model.CourseTeacherBind{}).Where("course_id = ? and teacher_id = ?", course_id, userID).First(&courseTeacherBind).Error
+
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			res.Code = codes.CODE_ERR_UNKNOWN
+			res.Msg = "unknown " + err.Error()
+			c.JSON(http.StatusOK, res)
+			return
+		} else {
+			db.Delete(&courseTeacherBind)
+		}
+	} else {
+		db.Delete(&courseTeacherBind)
 	}
 
 	c.JSON(http.StatusOK, res)

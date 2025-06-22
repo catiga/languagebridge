@@ -132,3 +132,13 @@ type TeacherCertificate struct {
 func (TeacherCertificate) TableName() string {
 	return "teacher_certificate"
 }
+
+type CourseTeacherBind struct {
+	CourseID  uint64 `gorm:"primaryKey;column:course_id"`
+	TeacherID uint64 `gorm:"primaryKey;column:teacher_id"`
+	Score     uint64 `gorm:"column:score"`
+}
+
+func (CourseTeacherBind) TableName() string {
+	return "course_teacher"
+}
