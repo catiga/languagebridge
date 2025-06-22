@@ -16,6 +16,7 @@ import {
 import Cookies from 'js-cookie';
 import DashboardLayout from './components/DashboardLayout';
 import ProfileManagement from './components/ProfileManagement';
+import CertificateManagement from './components/CertificateManagement';
 
 interface DashboardStats {
   totalStudents: number;
@@ -98,6 +99,8 @@ export default function TeacherDashboard() {
     switch (activeTab) {
       case 'profile':
         return <ProfileManagement />;
+      case 'certificates':
+        return <CertificateManagement />;
       case 'overview':
       default:
         return (

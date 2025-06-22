@@ -116,3 +116,19 @@ type CourseLogRecord struct {
 func (CourseLogRecord) TableName() string {
 	return "course_log_record"
 }
+
+type TeacherCertificate struct {
+	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	TeacherID   uint64    `gorm:"column:teacher_id" json:"teacher_id"`
+	Title       string    `gorm:"column:title" json:"title"`
+	Achievement string    `gorm:"column:achievement" json:"achievement"`
+	GetDate     string    `gorm:"column:get_date" json:"get_date"`
+	AddTime     time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag        int       `gorm:"column:flag" json:"flag"`
+	IssueOrg    string    `gorm:"column:issue_org" json:"issue_org"`
+	Document    string    `gorm:"column:document" json:"document"`
+}
+
+func (TeacherCertificate) TableName() string {
+	return "teacher_certificate"
+}

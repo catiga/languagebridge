@@ -25,6 +25,15 @@ type UpdateTeacherProfileRequest struct {
 	Avatar          string `json:"avatar"`
 }
 
+type UpdateTeacherCertificateRequest struct {
+	ID          uint64 `json:"id"`
+	Title       string `json:"title" binding:"required,min=2"`
+	Achievement string `json:"achievement" binding:"required,min=2"`
+	IssueOrg    string `json:"issue_org"`
+	GetDate     string `json:"get_date"`
+	Document    string `json:"document"`
+}
+
 func RetrieveTeacherProfile(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -168,5 +177,138 @@ func UpdateTeacherProfile(c *gin.Context) {
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
+	c.JSON(http.StatusOK, res)
+}
+
+func RetrieveTeacherCertificate(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var teacherCerts []model.TeacherCertificate
+	db.Model(&model.TeacherCertificate{}).Where("teacher_id = ? and flag != ?", userID, -1).Find(&teacherCerts)
+
+	res.Data = teacherCerts
+	c.JSON(http.StatusOK, res)
+}
+
+func UpdateTeacherCertificate(c *gin.Context) {
+	var req UpdateTeacherCertificateRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentTeacher, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentTeacherStr, _ := currentTeacher.(string)
+	teacherID, err := strconv.ParseInt(currentTeacherStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var teacherInfo model.Teacher
+	db.Model(&model.Teacher{}).Where("id = ?", teacherID).First(&teacherInfo)
+
+	var teacherCert model.TeacherCertificate
+	if req.ID > 0 {
+		db.Model(&model.TeacherCertificate{}).Where("id = ?", req.ID).First(&teacherCert)
+		if teacherCert.ID == 0 {
+			res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+			res.Msg = "certificate not found"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		teacherCert.Title = req.Title
+		teacherCert.Achievement = req.Achievement
+		teacherCert.IssueOrg = req.IssueOrg
+		teacherCert.GetDate = req.GetDate
+		teacherCert.Document = req.Document
+		err = db.Model(&model.TeacherCertificate{}).Where("id = ?", req.ID).Updates(&teacherCert).Error
+		if err != nil {
+			log.Error("save cert err", err)
+		}
+	} else {
+		teacherCert.Title = req.Title
+		teacherCert.Achievement = req.Achievement
+		teacherCert.IssueOrg = req.IssueOrg
+		teacherCert.GetDate = req.GetDate
+		teacherCert.Document = req.Document
+		teacherCert.TeacherID = teacherInfo.ID
+		teacherCert.AddTime = time.Now()
+		err = db.Model(&model.TeacherCertificate{}).Save(&teacherCert).Error
+		if err != nil {
+			log.Error("save cert err", err)
+		}
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	c.JSON(http.StatusOK, res)
+}
+
+func RemoveTeacherCertificate(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	id, _ := strconv.ParseInt(c.Query("id"), 10, 64)
+
+	db := system.GetDb()
+	var teacherCert model.TeacherCertificate
+	db.Model(&model.TeacherCertificate{}).Where("id = ? and teacher_id = ?", id, userID).First(&teacherCert)
+
+	if teacherCert.ID > 0 {
+		db.Model(&model.TeacherCertificate{}).Where("id = ?", id).Update("flag", -1)
+	}
+
 	c.JSON(http.StatusOK, res)
 }
