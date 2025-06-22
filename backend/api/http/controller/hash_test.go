@@ -9,6 +9,8 @@ import (
 	"math"
 	"net/http"
 	"testing"
+
+	"gopkg.in/gomail.v2"
 )
 
 func TestHash(t *testing.T) {
@@ -59,4 +61,19 @@ func TestGoPlus(t *testing.T) {
 
 	fmt.Println(result)
 
+}
+
+func TestMail(t *testing.T) {
+	m := gomail.NewMessage()
+	m.SetHeader("From", "catiga03@gmail.com")                                // 发件人
+	m.SetHeader("To", "catiga03@gmail.com")                                  // 收件人
+	m.SetHeader("Subject", "Gmail Test from Golang")                         // 主题
+	m.SetBody("text/plain", "This is a test email sent using Gmail and Go!") // 正文
+
+	d := gomail.NewDialer("smtp.gmail.com", 587, "catiga03@gmail.com", "gdgv hayb tykg mxcx")
+
+	// 发送
+	if err := d.DialAndSend(m); err != nil {
+		panic(err)
+	}
 }

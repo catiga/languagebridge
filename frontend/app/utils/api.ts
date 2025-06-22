@@ -32,6 +32,13 @@ class ApiClient {
               Cookies.get('token') ||
               '';
     }
+    let teacherToken = '';
+    if (typeof window !== 'undefined') {
+      teacherToken = localStorage.getItem('teacherToken') ||
+              sessionStorage.getItem('teacherToken') ||
+              Cookies.get('teacherToken') ||
+              '';
+    }
 
     return {
       'Content-Type': 'application/json',
@@ -40,7 +47,8 @@ class ApiClient {
       'VER': version,
       'SIG': signature,
       'REQUESTID': requestId,
-      'XAUTH': token
+      'XAUTH': token,
+      'TAUTH': teacherToken,
     };
   }
 

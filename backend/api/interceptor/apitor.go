@@ -115,6 +115,7 @@ func parse(h *http.Header) common.HeaderParam {
 		Ver:       h.Get("VER"),
 		RequestId: h.Get("REQUESTID"),
 		XAuth:     h.Get("XAUTH"),
+		TAuth:     h.Get("TAUTH"),
 	}
 	return headerParam
 }

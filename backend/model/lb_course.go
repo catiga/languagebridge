@@ -49,6 +49,7 @@ type Teacher struct {
 	Email             string    `gorm:"column:email" json:"email"`
 	Password          string    `gorm:"column:password" json:"-"`
 	TeacherNo         string    `gorm:"column:teacher_no" json:"teacher_no"`
+	Avatar            string    `gorm:"column:avatar" json:"avatar"`
 }
 
 func (Teacher) TableName() string {

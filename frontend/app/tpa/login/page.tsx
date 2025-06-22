@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/api';
@@ -26,16 +26,45 @@ export default function TeacherLoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
+    watch
   } = useForm({
     resolver: yupResolver(schema),
   });
+
+  // Load saved login data on component mount
+  useEffect(() => {
+    const savedLoginName = localStorage.getItem('teacherLoginName') || sessionStorage.getItem('teacherLoginName');
+    const savedRemember = localStorage.getItem('teacherRemember') === 'true' || sessionStorage.getItem('teacherRemember') === 'true';
+    
+    if (savedLoginName) {
+      setValue('loginName', savedLoginName);
+    }
+    if (savedRemember) {
+      setValue('remember', true);
+    }
+  }, [setValue]);
 
   const saveTeacherLoginData = (token: string, teacherInfo: any, remember: boolean) => {
     const storage = remember ? localStorage : sessionStorage;
     storage.setItem('teacherToken', token);
     storage.setItem('teacherInfo', JSON.stringify(teacherInfo));
     storage.setItem('userType', 'teacher');
+    
+    // Save login credentials if remember is checked
+    if (remember) {
+      const loginName = watch('loginName');
+      localStorage.setItem('teacherLoginName', loginName);
+      localStorage.setItem('teacherRemember', 'true');
+    } else {
+      // Clear saved credentials if remember is unchecked
+      localStorage.removeItem('teacherLoginName');
+      localStorage.removeItem('teacherRemember');
+      sessionStorage.removeItem('teacherLoginName');
+      sessionStorage.removeItem('teacherRemember');
+    }
+    
     Cookies.set('teacherToken', token, { expires: remember ? 7 : undefined, path: '/' });
     Cookies.set('teacherInfo', JSON.stringify(teacherInfo), { expires: remember ? 7 : undefined, path: '/' });
     Cookies.set('userType', 'teacher', { expires: remember ? 7 : undefined, path: '/' });
@@ -68,7 +97,7 @@ export default function TeacherLoginPage() {
         toast.success('Login successfully!');
         saveTeacherLoginData(res.data.token, res.data, data.remember)
         setTimeout(() => {
-          router.push('/tpa/dashboard'); // 跳转到教师仪表板
+          router.push('/tpa/dashboard'); // Redirect to teacher dashboard
         }, 1500);
       } else {
         toast.error(res?.msg || 'Login failed');
