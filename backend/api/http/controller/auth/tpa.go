@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/langbridge/backend/api/common"
 	"github.com/langbridge/backend/codes"
+	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
 )
@@ -19,6 +20,7 @@ type UpdateTeacherProfileRequest struct {
 	NationalityID   uint64 `json:"nationality_id"`
 	LivingCountryID uint64 `json:"living_country_id"`
 	Introduction    string `json:"introduction" binding:"required,min=6"`
+	Detail          string `json:"detail"`
 	FirstLanguage   string `json:"first_language" binding:"required"`
 	Avatar          string `json:"avatar"`
 }
@@ -99,7 +101,7 @@ func UpdateTeacherProfile(c *gin.Context) {
 		return
 	}
 
-	currentUser, exist := c.Get("teacher_id")
+	currentTeacher, exist := c.Get("teacher_id")
 
 	if !exist {
 		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
@@ -107,8 +109,8 @@ func UpdateTeacherProfile(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
-	currentUserStr, _ := currentUser.(string)
-	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	currentTeacherStr, _ := currentTeacher.(string)
+	teacherID, err := strconv.ParseInt(currentTeacherStr, 10, 64)
 	if err != nil {
 		res.Code = codes.CODE_ERR_REQFORMAT
 		res.Msg = "token invalid, please relogin"
@@ -117,40 +119,54 @@ func UpdateTeacherProfile(c *gin.Context) {
 	}
 
 	db := system.GetDb()
-	var userInfo model.Teacher
-	db.Model(&model.Teacher{}).Where("id = ?", userID).First(&userInfo)
-	if userInfo.ID == 0 {
-		res.Code = codes.CODE_ERR_TX
-		res.Msg = "please login"
+	var teacherInfo model.Teacher
+	db.Model(&model.Teacher{}).Where("id = ?", teacherID).First(&teacherInfo)
+	if teacherInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = "teacher not found"
 		c.JSON(http.StatusOK, res)
 		return
 	}
 
-	var livingCountry model.DictCountry
-	var nationality model.DictCountry
-	if req.LivingCountryID > 0 {
-		db.Model(&model.DictCountry{}).Where("id = ?", req.LivingCountryID).First(&livingCountry)
+	// Update fields
+	teacherInfo.Name = req.Name
+	teacherInfo.FirstName = req.FirstName
+	teacherInfo.LastName = req.LastName
+	teacherInfo.Introduction = req.Introduction
+	teacherInfo.Detail = req.Detail
+	teacherInfo.FirstLanguage = req.FirstLanguage
+
+	if len(req.Avatar) > 0 {
+		teacherInfo.Avatar = req.Avatar
 	}
+
 	if req.NationalityID > 0 {
+		var nationality model.DictCountry
 		db.Model(&model.DictCountry{}).Where("id = ?", req.NationalityID).First(&nationality)
+		if nationality.ID > 0 {
+			teacherInfo.NationalityID = nationality.ID
+			teacherInfo.NationalityName = nationality.Name
+		}
 	}
-	if nationality.ID == 0 {
-		res.Code = codes.CODE_ERR_BAD_PARAMS
-		res.Msg = "Please specify country code"
+
+	if req.LivingCountryID > 0 {
+		var livingCountry model.DictCountry
+		db.Model(&model.DictCountry{}).Where("id = ?", req.LivingCountryID).First(&livingCountry)
+		if livingCountry.ID > 0 {
+			teacherInfo.LivingCountryID = livingCountry.ID
+			teacherInfo.LivingCountryName = livingCountry.Name
+		}
+	}
+
+	if err := db.Save(&teacherInfo).Error; err != nil {
+		log.Error("failed to update teacher profile", err)
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = "failed to update profile"
 		c.JSON(http.StatusOK, res)
 		return
 	}
 
-	userInfo.Avatar = req.Avatar
-	userInfo.FirstName = req.FirstName
-	userInfo.LastName = req.LastName
-	userInfo.NationalityID = nationality.ID
-	userInfo.NationalityName = nationality.Name
-	userInfo.LivingCountryID = livingCountry.ID
-	userInfo.LivingCountryName = livingCountry.Name
-	userInfo.Introduction = req.Introduction
-	userInfo.FirstLanguage = req.FirstLanguage
-
-	db.Model(&model.Teacher{}).Where("id = ?", userInfo.ID).Updates(&userInfo)
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
 	c.JSON(http.StatusOK, res)
 }

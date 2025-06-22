@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { 
@@ -56,6 +56,8 @@ export default function ProfileManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
   const [profile, setProfile] = useState({
     name: '',
     firstName: '',
@@ -71,6 +73,7 @@ export default function ProfileManagement() {
     totalStudents: 0,
     totalLessons: 0,
     certificates: [] as string[],
+    detail: '',
   });
 
   const [formData, setFormData] = useState(profile);
@@ -98,6 +101,7 @@ export default function ProfileManagement() {
           livingCountryId: teacherData.living_country_id,
           languages: [teacherData.first_language],
           bio: teacherData.introduction,
+          detail: teacherData.detail,
           avatar: teacherData.avatar || '/default-avatar.svg',
         };
         setProfile(updatedProfile);
@@ -122,19 +126,44 @@ export default function ProfileManagement() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // If the avatar is a blob URL, it means a new file was selected. Upload it first.
+      let avatarUrl = formData.avatar;
+      if (avatarUrl.startsWith('blob:')) {
+        const imageFile = await fetch(avatarUrl).then(r => r.blob());
+        const uploadData = new FormData();
+        uploadData.append('image', imageFile);
+        // Note: You should replace this with your own ImgBB API key.
+        const apiKey = 'bbf086ea0c965eeb43bb982b048f1d1b'; 
+        
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+          method: 'POST',
+          body: uploadData,
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          avatarUrl = result.data.url;
+        } else {
+          throw new Error('Image upload failed: ' + result.error.message);
+        }
+      }
+
       const payload = {
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        name: formData.name,
         first_name: formData.firstName,
         last_name: formData.lastName,
         nationality_id: formData.nationalityId,
         living_country_id: formData.livingCountryId,
         introduction: formData.bio,
+        detail: formData.detail,
         first_language: formData.languages[0] || '',
-        avatar: formData.avatar,
+        avatar: avatarUrl,
       };
       await apiClient.post('/spwapi/tpa/auth/profile/update', payload);
       
-      setProfile(formData);
+      const newProfileState = { ...formData, avatar: avatarUrl };
+      setProfile(newProfileState);
+      setFormData(newProfileState);
       setIsEditing(false);
       toast.success('Profile updated successfully!');
     } catch (error) {
@@ -148,6 +177,15 @@ export default function ProfileManagement() {
   const handleCancel = () => {
     setFormData(profile);
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Create a local URL for preview
+      const newAvatarUrl = URL.createObjectURL(file);
+      setFormData({ ...formData, avatar: newAvatarUrl });
+    }
   };
 
   if (isLoading) {
@@ -203,7 +241,7 @@ export default function ProfileManagement() {
                   className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-r from-blue-400 to-purple-500 p-1"
                 >
                   <Image 
-                    src={profile.avatar} 
+                    src={isEditing ? formData.avatar : profile.avatar} 
                     alt={profile.name}
                     width={128}
                     height={128}
@@ -211,13 +249,23 @@ export default function ProfileManagement() {
                   />
                 </motion.div>
                 {isEditing && (
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="absolute bottom-2 right-2 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-                  >
-                    <FaCamera className="w-4 h-4" />
-                  </motion.button>
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="absolute bottom-2 right-2 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                    >
+                      <FaCamera className="w-4 h-4" />
+                    </motion.button>
+                    <input
+                      type="file"
+                      ref={avatarFileRef}
+                      onChange={handleAvatarChange}
+                      className="hidden"
+                      accept="image/png, image/jpeg, image/gif"
+                    />
+                  </>
                 )}
               </div>
               
@@ -275,6 +323,20 @@ export default function ProfileManagement() {
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <FaUser className="w-4 h-4 mr-2" />
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                />
+              </div>
+
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <FaUser className="w-4 h-4 mr-2" />
@@ -393,6 +455,21 @@ export default function ProfileManagement() {
                 onChange={(e) => setFormData({...formData, bio: e.target.value})}
                 disabled={!isEditing}
                 rows={4}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 resize-none"
+              />
+            </div>
+            
+            <div className="mt-6">
+              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <FaHeart className="w-4 h-4 mr-2" />
+                Detailed Introduction
+              </label>
+              <textarea
+                value={formData.detail}
+                onChange={(e) => setFormData({...formData, detail: e.target.value})}
+                disabled={!isEditing}
+                rows={6}
+                placeholder="Share more about your teaching philosophy, experience, or what students can expect from your classes."
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 resize-none"
               />
             </div>
