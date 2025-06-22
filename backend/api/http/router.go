@@ -46,6 +46,8 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.GET("/course/bind", auth.TeacherBindCourse)
 	teacherAuthGroup.GET("/course/mine", auth.TeacherCourseList)
 	teacherAuthGroup.GET("/course/unbind", auth.TeacherUnBindCourse)
+	teacherAuthGroup.GET("/schedule/retrieve", auth.TeacherScheduleTemplate)
+	teacherAuthGroup.POST("/schedule/update", auth.TeacherScheduleTemplateUpdate)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

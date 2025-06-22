@@ -36,6 +36,16 @@ type UpdateTeacherCertificateRequest struct {
 	Document    string `json:"document"`
 }
 
+type SelectTimeSlot struct {
+	WeekDay   int    `json:"week_day"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Enable    int    `json:"enable"`
+}
+type SetTimeSlotsRequest struct {
+	Slots []SelectTimeSlot `json:"slots"`
+}
+
 func RetrieveTeacherProfile(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -456,5 +466,91 @@ func TeacherUnBindCourse(c *gin.Context) {
 		db.Delete(&courseTeacherBind)
 	}
 
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherScheduleTemplate(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var teacherTimeslot []model.TeacherTimeSlotTemplate
+	db.Model(&model.TeacherTimeSlotTemplate{}).Where("teacher_id = ?", userID).Find(&teacherTimeslot)
+
+	res.Data = teacherTimeslot
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherScheduleTemplateUpdate(c *gin.Context) {
+	var req SetTimeSlotsRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentTeacher, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentTeacherStr, _ := currentTeacher.(string)
+	teacherID, err := strconv.ParseInt(currentTeacherStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var teacherSlots []model.TeacherTimeSlotTemplate
+
+	err = db.Where("teacher_id = ?", teacherID).
+		Delete(&model.TeacherTimeSlotTemplate{}).Error
+
+	for _, r := range req.Slots {
+		enable := false
+		if r.Enable == 1 {
+			enable = true
+		}
+		teacherSlots = append(teacherSlots, model.TeacherTimeSlotTemplate{
+			TeacherID:  uint64(teacherID),
+			WeekDay:    r.WeekDay,
+			StartTime:  r.StartTime,
+			EndTime:    r.EndTime,
+			Enabled:    enable,
+			UpdateTime: time.Now(),
+		})
+	}
+	db.CreateInBatches(teacherSlots, 7)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
 	c.JSON(http.StatusOK, res)
 }

@@ -153,7 +153,7 @@ export default function CourseManagement() {
       if (res.code === 0 && Array.isArray(res.data)) {
         setMyCourses(res.data);
       } else {
-        toast.error(`Error fetching my courses: ${res.msg || 'Unknown error'}`);
+        console.error(`API error fetching my courses: ${res.msg || 'Empty response'}`);
         setMyCourses([]);
       }
     } catch (error) {
