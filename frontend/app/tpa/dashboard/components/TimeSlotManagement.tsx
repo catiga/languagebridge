@@ -22,23 +22,22 @@ const weekDays = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 const formatTimeForInput = (time: string) => time.substring(0, 5);
 const formatTimeForApi = (time: string) => `${time}:00`;
 
-export default function ScheduleManagement() {
-  const [schedule, setSchedule] = useState<TimeSlot[]>([]);
+export default function TimeSlotManagement() {
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    fetchSchedule();
+    fetchTimeSlots();
   }, []);
 
-  const fetchSchedule = async () => {
+  const fetchTimeSlots = async () => {
     setIsLoading(true);
     try {
-      const res = await apiClient.get<ApiResponse<TimeSlot[]>>('/spwapi/tpa/auth/schedule/retrieve');
+      const res = await apiClient.get<ApiResponse<TimeSlot[]>>('/spwapi/tpa/auth/timeslot/retrieve');
       if (res.code === 0 && Array.isArray(res.data)) {
-        // Ensure we have a full 7-day template, even if API returns fewer
         const apiDataMap = new Map(res.data.map(slot => [slot.week_day, slot]));
-        const fullSchedule = Array.from({ length: 7 }, (_, i) => {
+        const fullTimeSlots = Array.from({ length: 7 }, (_, i) => {
           const weekDay = i + 1;
           const existingSlot = apiDataMap.get(weekDay);
           if (existingSlot) {
@@ -48,28 +47,28 @@ export default function ScheduleManagement() {
             id: 0, teacher_id: 0, week_day: weekDay, start_time: '09:00:00', end_time: '17:00:00', enabled: false, update_time: '' 
           };
         });
-        setSchedule(fullSchedule);
+        setTimeSlots(fullTimeSlots);
       } else {
-        toast.error(`Error fetching schedule: ${res.msg || 'Unknown error'}`);
+        toast.error(`Error fetching time slots: ${res.msg || 'Unknown error'}`);
       }
     } catch (error) {
-      toast.error('An unexpected network error occurred while fetching your schedule.');
+      toast.error('An unexpected network error occurred while fetching your time slots.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleTimeChange = (weekDay: number, type: 'start_time' | 'end_time', value: string) => {
-    setSchedule(currentSchedule =>
-      currentSchedule.map(slot =>
+    setTimeSlots(current =>
+      current.map(slot =>
         slot.week_day === weekDay ? { ...slot, [type]: formatTimeForApi(value) } : slot
       )
     );
   };
 
   const handleToggle = (weekDay: number) => {
-    setSchedule(currentSchedule =>
-      currentSchedule.map(slot =>
+    setTimeSlots(current =>
+      current.map(slot =>
         slot.week_day === weekDay ? { ...slot, enabled: !slot.enabled } : slot
       )
     );
@@ -79,7 +78,7 @@ export default function ScheduleManagement() {
     setIsSaving(true);
     
     const payload = {
-      slots: schedule.map(({ week_day, start_time, end_time, enabled }) => ({
+      slots: timeSlots.map(({ week_day, start_time, end_time, enabled }) => ({
         week_day,
         start_time,
         end_time,
@@ -88,12 +87,12 @@ export default function ScheduleManagement() {
     };
 
     try {
-      const res = await apiClient.post<ApiResponse<null>>('/spwapi/tpa/auth/schedule/update', payload);
+      const res = await apiClient.post<ApiResponse<null>>('/spwapi/tpa/auth/timeslot/update', payload);
       if (res.code === 0) {
-        toast.success('Your schedule has been updated successfully!');
-        fetchSchedule();
+        toast.success('Your time slots have been updated successfully!');
+        fetchTimeSlots();
       } else {
-        toast.error(`Failed to save schedule: ${res.msg || 'Unknown error'}`);
+        toast.error(`Failed to save time slots: ${res.msg || 'Unknown error'}`);
       }
     } catch (error) {
       toast.error('An unexpected network error occurred while saving.');
@@ -103,17 +102,17 @@ export default function ScheduleManagement() {
   };
 
   if (isLoading) {
-    return <div className="text-center p-8">Loading your schedule...</div>;
+    return <div className="text-center p-8">Loading your time slots...</div>;
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <div className="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Set Your Weekly Availability</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Set Your Weekly Time Slots</h2>
         <p className="text-gray-600 mb-8">This template will be used to generate available slots for students.</p>
         
         <div className="space-y-4">
-          {schedule.map(slot => (
+          {timeSlots.map(slot => (
             <div key={slot.week_day} className={`p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between transition-colors duration-300 ${slot.enabled ? 'bg-blue-50' : 'bg-gray-100'}`}>
               <div className="flex items-center mb-4 md:mb-0">
                 <span className="w-28 font-semibold text-gray-800">{weekDays[slot.week_day]}</span>

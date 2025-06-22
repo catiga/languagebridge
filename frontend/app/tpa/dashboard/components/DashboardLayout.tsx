@@ -33,7 +33,7 @@ const menuItems = [
   { id: 'certificates', label: 'Certificates', icon: FaCertificate },
   { id: 'courses', label: 'Courses', icon: FaBook },
   { id: 'students', label: 'Students', icon: FaUsers },
-  { id: 'schedule', label: 'Schedule', icon: FaCalendarAlt },
+  { id: 'schedule', label: 'Time Slots', icon: FaCalendarAlt },
   { id: 'analytics', label: 'Analytics', icon: FaChartBar },
 ];
 

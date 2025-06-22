@@ -469,7 +469,7 @@ func TeacherUnBindCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func TeacherScheduleTemplate(c *gin.Context) {
+func TeacherTimeSlotTemplate(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
 
@@ -499,7 +499,7 @@ func TeacherScheduleTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func TeacherScheduleTemplateUpdate(c *gin.Context) {
+func TeacherTimeslotTemplateUpdate(c *gin.Context) {
 	var req SetTimeSlotsRequest
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()

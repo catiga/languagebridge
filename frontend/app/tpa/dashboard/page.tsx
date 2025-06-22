@@ -18,7 +18,7 @@ import DashboardLayout from './components/DashboardLayout';
 import ProfileManagement from './components/ProfileManagement';
 import CertificateManagement from './components/CertificateManagement';
 import CourseManagement from './components/CourseManagement';
-import ScheduleManagement from './components/ScheduleManagement';
+import TimeSlotManagement from './components/TimeSlotManagement';
 
 interface DashboardStats {
   totalStudents: number;
@@ -108,7 +108,7 @@ export default function TeacherDashboard() {
       case 'courses':
         return <CourseManagement />;
       case 'schedule':
-        return <ScheduleManagement />;
+        return <TimeSlotManagement />;
       case 'overview':
       default:
         return (
