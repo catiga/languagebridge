@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { FaSearch, FaChalkboardTeacher, FaChevronLeft, FaChevronRight, FaSpinner, FaUnlink } from 'react-icons/fa';
+import { FaSearch, FaChalkboardTeacher, FaChevronLeft, FaChevronRight, FaSpinner, FaUnlink, FaPlus, FaUpload } from 'react-icons/fa';
 import { apiClient } from '@/app/utils/api';
 import { ApiResponse } from '@/app/utils/interfaces';
 import { toast } from 'react-toastify';
+import * as yup from 'yup';
+import { useRouter } from 'next/navigation';
 
 interface Course {
   id: number;
@@ -25,6 +27,7 @@ interface Course {
   duration: number;
   session_number: number;
   cover_image_url?: string; // This is not in the API response, making it optional
+  course_picture?: string; // This is not in the API response, making it optional
 }
 
 interface CourseListResponse {
@@ -49,6 +52,9 @@ function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant 
 
   const isLoading = isBinding || isUnbinding;
 
+  // 优先显示course_picture字段
+  const coverUrl = course.course_picture || course.cover_image_url;
+
   return (
     <motion.div
       className="bg-white rounded-2xl shadow-lg overflow-hidden group transform hover:-translate-y-2 transition-transform duration-300"
@@ -56,14 +62,12 @@ function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant 
       layout
     >
       <div className="relative h-40 w-full bg-gray-200 flex items-center justify-center">
-        {course.cover_image_url && !imgError ? (
-          <Image
-            src={course.cover_image_url}
+        {coverUrl && !imgError ? (
+          <img
+            src={coverUrl}
             alt={course.name}
-            layout="fill"
-            objectFit="cover"
+            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
             onError={() => setImgError(true)}
-            className="transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
           <FaChalkboardTeacher className="text-gray-400 text-5xl" />
@@ -94,7 +98,23 @@ function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant 
   )
 }
 
+// yup表单校验schema
+const addCourseSchema = yup.object().shape({
+  name: yup.string().required('Course name is required'),
+  introduction: yup.string().required('Introduction is required'),
+  detail: yup.string().required('Detail is required'),
+  language: yup.string().required('Language is required'),
+  level: yup.number().required('Level is required').typeError('Level is required'),
+  cost_price: yup.string().required('Cost price is required'),
+  display_price: yup.string().required('Display price is required'),
+  goal: yup.string().required('Goal is required'),
+  duration: yup.number().required('Duration is required').typeError('Duration is required'),
+  session_number: yup.number().required('Session number is required').typeError('Session number is required'),
+  course_picture: yup.string().required('Course picture is required'),
+});
+
 export default function CourseManagement() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('discover');
   
   // State for Discover Courses
@@ -114,6 +134,27 @@ export default function CourseManagement() {
   // State for Unbinding
   const [confirmingUnbindCourse, setConfirmingUnbindCourse] = useState<Course | null>(null);
   const [unbindingCourseId, setUnbindingCourseId] = useState<number | null>(null);
+
+  // 新增课程弹窗相关状态
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    introduction: '',
+    detail: '',
+    language: '',
+    level: 1,
+    cost_price: '',
+    display_price: '',
+    goal: '',
+    duration: 0,
+    session_number: 0,
+    course_picture: '', // 图片URL
+    pictureFile: null as File | null,
+  });
+  const [addLoading, setAddLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [addErrors, setAddErrors] = useState<{[k:string]:string}>({});
 
   useEffect(() => {
     if (activeTab === 'discover') {
@@ -220,6 +261,67 @@ export default function CourseManagement() {
     }
   };
 
+  // 图片上传处理（imgbb）
+  const handlePictureClick = () => fileInputRef.current?.click();
+  const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+      const apiKey = 'bbf086ea0c965eeb43bb982b048f1d1b';
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: uploadData,
+      });
+      const result = await response.json();
+      if (result.success) {
+        setAddForm(f => ({ ...f, course_picture: result.data.url, pictureFile: file }));
+        toast.success('Image uploaded!');
+      } else {
+        throw new Error('Image upload failed');
+      }
+    } catch (err) {
+      toast.error('Image upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+  const handleRemovePicture = () => {
+    setAddForm(f => ({ ...f, course_picture: '', pictureFile: null }));
+  };
+
+  // 新增课程提交
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddLoading(true);
+    setAddErrors({});
+    try {
+      await addCourseSchema.validate(addForm, { abortEarly: false });
+      // 这里应上传图片到图床，拿到真实URL
+      // const pictureUrl = await uploadToImgbb(addForm.pictureFile)
+      // 这里只演示本地URL
+      const payload = { ...addForm, course_picture: addForm.course_picture };
+      // TODO: 调用后端API保存课程
+      toast.success('Course added (mock)!');
+      setShowAddModal(false);
+      setAddForm({
+        name: '', introduction: '', detail: '', language: '', level: 1, cost_price: '', display_price: '', goal: '', duration: 0, session_number: 0, course_picture: '', pictureFile: null
+      });
+    } catch (e: any) {
+      if (e.name === 'ValidationError') {
+        const errors: {[k:string]:string} = {};
+        e.inner.forEach((err: any) => { if (err.path) errors[err.path] = err.message; });
+        setAddErrors(errors);
+      } else {
+        toast.error('Failed to add course');
+      }
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   const renderDiscoverCourses = () => {
     if (isDiscoverLoading) {
       return <div className="text-center p-8">Loading courses...</div>;
@@ -303,17 +405,14 @@ export default function CourseManagement() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="flex border-b border-gray-200">
-        <TabButton
-          title="Discover Courses"
-          isActive={activeTab === 'discover'}
-          onClick={() => selectTab('discover')}
-        />
-        <TabButton
-          title="My Courses"
-          isActive={activeTab === 'my-courses'}
-          onClick={() => selectTab('my-courses')}
-        />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex space-x-2">
+          <TabButton title="Discover Courses" isActive={activeTab === 'discover'} onClick={() => selectTab('discover')} />
+          <TabButton title="My Courses" isActive={activeTab === 'my-courses'} onClick={() => selectTab('my-courses')} />
+        </div>
+        <button onClick={() => router.push('/tpa/dashboard/courses/add')} className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl shadow font-medium">
+          <FaPlus className="mr-2" /> Add Course
+        </button>
       </div>
 
       <div className="mt-6">

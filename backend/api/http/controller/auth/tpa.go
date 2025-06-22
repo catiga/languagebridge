@@ -12,6 +12,7 @@ import (
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -42,8 +43,24 @@ type SelectTimeSlot struct {
 	EndTime   string `json:"end_time"`
 	Enable    int    `json:"enable"`
 }
+
 type SetTimeSlotsRequest struct {
 	Slots []SelectTimeSlot `json:"slots"`
+}
+
+type AddCourseRequest struct {
+	ID            uint64          `json:"id"`
+	Name          string          `json:"name" binding:"required"`
+	Introduction  string          `json:"introduction" binding:"required"`
+	Detail        string          `json:"detail" binding:"required"`
+	Language      string          `json:"language" binding:"required"`
+	Level         int             `json:"level" binding:"required"`
+	CostPrice     decimal.Decimal `json:"cost_price" binding:"required"`
+	DisplayPrice  decimal.Decimal `json:"display_price" binding:"required"`
+	Goal          string          `json:"goal" binding:"required"`
+	Duration      int             `json:"duration" binding:"required"`
+	SessionNumber int             `json:"session_number" binding:"required"`
+	CoursePicture string          `json:"course_picture" binding:"required"`
 }
 
 func RetrieveTeacherProfile(c *gin.Context) {
@@ -620,5 +637,74 @@ func TeacherScheduleTimeRange(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = result
+	c.JSON(http.StatusOK, res)
+}
+
+func AddCourse(c *gin.Context) {
+	var req AddCourseRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentTeacher, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentTeacherStr, _ := currentTeacher.(string)
+	teacherID, err := strconv.ParseInt(currentTeacherStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	newCourse := model.CourseInfo{
+		Name:          req.Name,
+		Introduction:  req.Introduction,
+		Detail:        req.Detail,
+		Language:      req.Language,
+		Level:         req.Level,
+		CostPrice:     req.CostPrice,
+		DisplayPrice:  req.DisplayPrice,
+		Goal:          req.Goal,
+		UpdateTime:    time.Now(),
+		AddTime:       time.Now(),
+		Flag:          0,
+		Duration:      req.Duration,
+		CoursePicture: req.CoursePicture,
+		SessionNumber: req.SessionNumber,
+		Status:        "000",
+	}
+
+	db := system.GetDb()
+	err = db.Save(&newCourse).Error
+
+	if err != nil {
+		log.Error("save course info fail", err)
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = "save course info failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	courseTeacher := model.CourseTeacherBind{
+		CourseID:  newCourse.ID,
+		TeacherID: uint64(teacherID),
+		Score:     0,
+	}
+
+	db.Save(&courseTeacher)
+
 	c.JSON(http.StatusOK, res)
 }
