@@ -20,6 +20,7 @@ import CertificateManagement from './components/CertificateManagement';
 import CourseManagement from './components/CourseManagement';
 import TimeSlotManagement from './components/TimeSlotManagement';
 import TeacherScheduleWeekView from './components/TeacherScheduleWeekView';
+import SettingPanel from './components/SettingPanel';
 
 interface DashboardStats {
   totalStudents: number;
@@ -40,7 +41,7 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'notifications' | 'settings' | 'schedule2';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2';
 
 function WeekRangeTitle() {
   // 取本地时间的本周一
@@ -126,6 +127,8 @@ export default function TeacherDashboard() {
         return <TimeSlotManagement />;
       case 'schedule2':
         return <TeacherScheduleWeekView />;
+      case 'settings':
+        return <SettingPanel />;
       case 'overview':
       default:
         return (

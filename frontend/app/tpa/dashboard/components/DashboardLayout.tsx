@@ -40,7 +40,6 @@ const menuItems = [
 ];
 
 const bottomMenuItems = [
-  { id: 'notifications', label: 'Notifications', icon: FaBell },
   { id: 'settings', label: 'Settings', icon: FaCog },
 ];
 
