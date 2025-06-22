@@ -31,6 +31,8 @@ func (CourseInfo) TableName() string {
 type Teacher struct {
 	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name              string    `gorm:"column:name" json:"name"`
+	FirstName         string    `gorm:"column:first_name" json:"first_name"`
+	LastName          string    `gorm:"column:last_name" json:"last_name"`
 	Introduction      string    `gorm:"column:introduction" json:"introduction"`
 	Detail            string    `gorm:"column:detail" json:"detail"`
 	FirstLanguage     string    `gorm:"column:first_language" json:"first_language"`
@@ -44,6 +46,9 @@ type Teacher struct {
 	AddTime           time.Time `gorm:"column:add_time" json:"add_time"`
 	Status            string    `gorm:"column:status" json:"status"`
 	Flag              int       `gorm:"column:flag" json:"flag"`
+	Email             string    `gorm:"column:email" json:"email"`
+	Password          string    `gorm:"column:password" json:"-"`
+	TeacherNo         string    `gorm:"column:teacher_no" json:"teacher_no"`
 }
 
 func (Teacher) TableName() string {

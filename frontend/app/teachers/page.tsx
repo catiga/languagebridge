@@ -146,7 +146,7 @@ export default function TeachersPage() {
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h2 className="text-3xl font-bold">Share Your Knowledge.</h2>
           <p className="mt-3 text-lg text-blue-100">Join our global community of educators and empower learners worldwide.</p>
-          <a href="/register/teacher" className="mt-8 inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors duration-300">
+          <a href="/tpa/register" className="mt-8 inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors duration-300">
             Apply to Teach
           </a>
         </div>

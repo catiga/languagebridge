@@ -35,3 +35,22 @@ func GenerateUserNoNumberOnly() string {
 	checkDigit := sum % 10
 	return base + fmt.Sprintf("%d", checkDigit)
 }
+
+func GenerateTeacherNo() string {
+	now := time.Now()
+	year := now.Year() % 100
+	month := int(now.Month())
+	randomPart := ""
+	for i := 0; i < 6; i++ {
+		randomPart += fmt.Sprintf("%d", rand.Intn(10))
+	}
+	base := fmt.Sprintf("T%02d%02d%s", year, month, randomPart)
+	sum := 0
+	for _, c := range base {
+		if c >= '0' && c <= '9' {
+			sum += int(c - '0')
+		}
+	}
+	checkDigit := sum % 10
+	return base + fmt.Sprintf("%d", checkDigit)
+}

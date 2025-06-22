@@ -408,7 +408,7 @@ export default function Home() {
               <p className="mt-4 text-gray-300">
                 Reach a global audience of motivated learners, set your own schedule, and utilize our AI tools to deliver unparalleled lessons. We handle the logistics so you can focus on what you do best: teaching.
               </p>
-              <Link href="/register/teacher">
+              <Link href="/tpa/register">
                 <span className="mt-8 inline-flex items-center gap-3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300">
                   Apply to Teach <FaArrowRight />
                 </span>

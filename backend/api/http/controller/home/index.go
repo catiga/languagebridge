@@ -39,6 +39,19 @@ type LoginRequest struct {
 	Password  string `json:"password"`
 }
 
+type TeacherRegisterRequest struct {
+	Email           string `json:"email" binding:"required,min=5"`
+	Password        string `json:"password" binding:"required,min=8"`
+	Name            string `json:"name" binding:"required,min=2"`
+	FirstName       string `json:"first_name" binding:"required,min=1"`
+	LastName        string `json:"last_name" binding:"required,min=1"`
+	NationalityID   uint64 `json:"nationality_id"`
+	LivingCountryID uint64 `json:"living_country_id"`
+	Introduction    string `json:"introduction" binding:"required,min=6"`
+	FirstLanguage   string `json:"first_language" binding:"required"`
+	TeachLanguage   string `json:"teach_language" binding:"required"`
+}
+
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -346,5 +359,164 @@ func CourseFetchTeacherTimeSlot(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = teacherSlotTpl
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherRegister(c *gin.Context) {
+	var req TeacherRegisterRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var teacherInfo model.Teacher
+	err := db.Model(&model.Teacher{}).
+		Where("email = ?", req.Email).
+		First(&teacherInfo).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if teacherInfo.ID > 0 {
+		res.Code = codes.CODE_ERR_EXIST_OBJ
+		res.Msg = "email repeated"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var livingCountry model.DictCountry
+	var nationality model.DictCountry
+	if req.LivingCountryID > 0 {
+		db.Model(&model.DictCountry{}).Where("id = ?", req.LivingCountryID).First(&livingCountry)
+	}
+	if req.NationalityID > 0 {
+		db.Model(&model.DictCountry{}).Where("id = ?", req.NationalityID).First(&nationality)
+	}
+	if nationality.ID == 0 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please specify country code"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	passwordHash := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
+
+	teacherInfo = model.Teacher{
+		Email:             req.Email,
+		Password:          passwordHash,
+		Name:              req.Name,
+		LivingCountryID:   livingCountry.ID,
+		LivingCountryName: livingCountry.Name,
+		NationalityID:     nationality.ID,
+		NationalityName:   nationality.Name,
+		FirstLanguage:     req.FirstLanguage,
+		Introduction:      req.Introduction,
+		AddTime:           time.Now(),
+		UpdateTime:        time.Now(),
+		TeacherNo:         system.GenerateTeacherNo(),
+		Status:            "00", // waiting for email verification
+		FirstName:         req.FirstName,
+		LastName:          req.LastName,
+	}
+	err = db.Save(&teacherInfo).Error
+	if err != nil {
+		log.Error("create teacher info error: ", err)
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = struct {
+		TeacherNo string `json:"teacher_no"`
+	}{
+		TeacherNo: teacherInfo.TeacherNo,
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherLogin(c *gin.Context) {
+	var req LoginRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var teacherInfo model.Teacher
+	err := db.Model(&model.Teacher{}).
+		Where("(email = ? or teacher_no = ?)", req.LoginName, req.LoginName).
+		First(&teacherInfo).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if teacherInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "teacher information is not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if req.Password != teacherInfo.Password {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "teacher password is incorrect"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// if teacherInfo.Status != "20" {
+	// 	res.Code = codes.CODE_STATUS_INVALID
+	// 	res.Msg = "teacher status is invalid"
+	// 	c.JSON(http.StatusOK, res)
+	// 	return
+	// }
+
+	originalStr := fmt.Sprintf("%d,%s,%d", teacherInfo.ID, teacherInfo.TeacherNo, time.Now().Unix())
+	token, err := security.Encrypt([]byte(originalStr))
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "build login token failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = struct {
+		TeacherNo string `json:"teacher_no"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		Token     string `json:"token"`
+	}{
+		TeacherNo: teacherInfo.TeacherNo,
+		Email:     teacherInfo.Email,
+		Name:      teacherInfo.Name,
+		Token:     token,
+	}
 	c.JSON(http.StatusOK, res)
 }
