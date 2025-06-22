@@ -22,6 +22,7 @@ type CourseInfo struct {
 	Flag          int             `gorm:"column:flag" json:"flag"`
 	Duration      int             `gorm:"column:duration" json:"duration"`
 	SessionNumber int             `gorm:"column:session_number" json:"session_number"`
+	CoursePicture string          `gorm:"column:course_picture" json:"course_picture"`
 }
 
 func (CourseInfo) TableName() string {
