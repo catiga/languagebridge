@@ -29,6 +29,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/profile/update", auth.UpdateProfile)
 	authGroup.POST("/profile/member/list", auth.FetchMemberList)
 	authGroup.POST("/profile/member/add", auth.FetchMemberAdd)
+	authGroup.GET("/settings/fetch", auth.FetchSettings)
+	authGroup.POST("/settings/update", auth.UpdateSettings)
 	authGroup.GET("/profile/member/del", auth.FetchMemberDelete)
 	authGroup.GET("/course/join", auth.CourseJoin)
 	authGroup.GET("/course/list", auth.CourseList)

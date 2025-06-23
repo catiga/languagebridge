@@ -24,6 +24,15 @@ type MemberFormRequest struct {
 	Character   string `json:"character"`
 }
 
+type UserSetting struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type UserSettingRequest struct {
+	Settings []UserSetting
+}
+
 func FetchMemberList(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -168,5 +177,94 @@ func FetchMemberDelete(c *gin.Context) {
 	db.Model(&model.UserMember{}).Where("id = ?", member.ID).Update("flag", -1)
 
 	res.Data = member
+	c.JSON(http.StatusOK, res)
+}
+
+func FetchSettings(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var settings []model.UserSetting
+
+	db.Model(&model.UserSetting{}).Where("user_id = ?", userID).Find(&settings)
+
+	var ret []UserSetting
+	if len(settings) > 0 {
+		for _, r := range settings {
+			ret = append(ret, UserSetting{
+				Key:   r.SpecName,
+				Value: r.SpecValue,
+			})
+		}
+	}
+
+	res.Data = ret
+	c.JSON(http.StatusOK, res)
+}
+
+func UpdateSettings(c *gin.Context) {
+	var req UserSettingRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	if len(req.Settings) > 0 {
+		for _, r := range req.Settings {
+			updates := map[string]interface{}{
+				"spec_value": r.Value,
+			}
+			result := db.Model(&model.UserSetting{}).Where("user_id = ? and spec_name = ?", userID, r.Key).Updates(updates)
+			if result.Error == nil && result.RowsAffected == 0 {
+				db.Create(&model.UserSetting{
+					UserID:    uint64(userID),
+					SpecName:  r.Key,
+					SpecValue: r.Value,
+				})
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, res)
 }
