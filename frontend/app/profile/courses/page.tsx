@@ -3,8 +3,11 @@ import ProfileLayout from '../ProfileLayout';
 import CourseTabs from '../../components/CourseTabs';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
 
 export default function ProfileCoursesPage() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || undefined;
   const [loading, setLoading] = useState(false);
   return (
     <ProfileLayout>
@@ -16,7 +19,7 @@ export default function ProfileCoursesPage() {
           transition={{ duration: 0.5, type: 'spring' }}
           className="w-full max-w-5xl mx-auto mt-0"
         >
-          <CourseTabs onLoading={setLoading} />
+          <CourseTabs initialTab={initialTab} onLoading={setLoading} />
         </motion.div>
       </div>
     </ProfileLayout>

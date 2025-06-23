@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../utils/api';
 import { ToastContainer, toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const payOptions = [
@@ -12,6 +13,7 @@ const payOptions = [
 ];
 
 export default function MyCourseDetailPage({ params }: { params: { course_id: string } }) {
+  const router = useRouter();
   const [course, setCourse] = useState<any>(null);
   const [courseLoading, setCourseLoading] = useState(false);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -170,6 +172,12 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
 
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8 mt-8">
+      <button
+        onClick={() => router.push('/profile/courses')}
+        className="mb-6 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+      >
+        ← 返回我的课程
+      </button>
       <ToastContainer position="top-center" autoClose={2000} />
       {/* 课程信息区块 */}
       <div className="mb-8 p-6 rounded-xl shadow bg-gray-50">

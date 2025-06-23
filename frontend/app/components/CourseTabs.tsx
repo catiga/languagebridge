@@ -14,6 +14,8 @@ import { apiClient } from '../utils/api';
 import { toast } from 'react-toastify';
 import TimetableListView from '../timetable/components/TimetableListView';
 import TimetableWeekView from '../timetable/components/TimetableWeekView';
+import { FaStar, FaChalkboardTeacher } from 'react-icons/fa';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // 假数据
 const students = [
@@ -129,13 +131,33 @@ const statusTabs = [
   // 你可以根据实际 user_course_status 增加更多
 ];
 
-export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
-  const [activeTab, setActiveTab] = useState<'mycourses' | 'timetable' | 'history' | 'systemcourses'>('mycourses');
+export default function CourseTabs({ initialTab, onLoading }: { initialTab?: string, onLoading?: (loading: boolean) => void }) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'mycourses' | 'timetable' | 'history' | 'systemcourses'>(
+    initialTab === 'systemcourses' ? 'systemcourses' :
+    initialTab === 'timetable' ? 'timetable' :
+    initialTab === 'history' ? 'history' :
+    'mycourses'
+  );
   const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [myCoursesLoading, setMyCoursesLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // 监听tab参数变化，动态切换tab
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(
+        tabParam === 'systemcourses' ? 'systemcourses' :
+        tabParam === 'timetable' ? 'timetable' :
+        tabParam === 'history' ? 'history' :
+        'mycourses'
+      );
+    }
+  }, [tabParam]);
 
   // 拉取我的课程
   useEffect(() => {
@@ -191,26 +213,10 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       </div>
       {activeTab === 'timetable' && (
         <div className="mb-4 flex items-center space-x-4">
-          {/* 这里可以保留学生筛选，如果后续需要 */}
-          {/* <label>Student:</label>
-          <select
-            className="border px-2 py-1 rounded"
-            value={selectedStudent ?? ''}
-            onChange={e => setSelectedStudent(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">All</option>
-            {students.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select> */}
           <button
             className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => setViewMode('list')}
           >List View</button>
-          {/* <button
-            className={`px-3 py-1 rounded ${viewMode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            onClick={() => setViewMode('calendar')}
-          >Calendar View</button> */}
           <button
             className={`px-3 py-1 rounded ${viewMode === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
             onClick={() => setViewMode('week')}
@@ -237,61 +243,43 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
           ) : myCourses.length === 0 ? (
             <div className="py-8 text-center text-gray-500">No courses found.</div>
           ) : (
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="py-2 px-4 text-left font-semibold">Course Name</th>
-                  <th className="py-2 px-4 text-left font-semibold">Introduction</th>
-                  <th className="py-2 px-4 text-left font-semibold">Language</th>
-                  <th className="py-2 px-4 text-left font-semibold">Level</th>
-                  <th className="py-2 px-4 text-left font-semibold">Price</th>
-                  <th className="py-2 px-4 text-left font-semibold">Goal</th>
-                  <th className="py-2 px-4 text-left font-semibold">Join Time</th>
-                  <th className="py-2 px-4 text-left font-semibold">Status</th>
-                  <th className="py-2 px-4 text-left font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCourses.map((course) => (
-                  <tr key={course.user_course_id} className="hover:bg-gray-50">
-                    <td className="py-2 px-4">{course.course_name}</td>
-                    <td className="py-2 px-4">{course.introduction}</td>
-                    <td className="py-2 px-4">{course.language}</td>
-                    <td className="py-2 px-4">{course.level}</td>
-                    <td className="py-2 px-4">${course.display_price}</td>
-                    <td className="py-2 px-4">{course.goal}</td>
-                    <td className="py-2 px-4">
-                      {course.user_course_add_time
-                        ? new Date(course.user_course_add_time).toLocaleString()
-                        : '-'}
-                    </td>
-                    <td className="py-2 px-4">
-                      {course.user_course_status === '00' ? 'inactive' : course.user_course_status}
-                    </td>
-                    <td className="py-2 px-4">
-                      <div className="flex gap-2">
-                        <button
-                          className="text-blue-600 hover:underline"
-                          onClick={() => {
-                            window.open(`/mycourses/${course.course_id}`, '_blank');
-                          }}
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {filteredCourses.map((course) => (
+                <div
+                  key={course.user_course_id}
+                  className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 group hover:shadow-green-200 hover:-translate-y-2 cursor-pointer flex flex-col"
+                  onClick={() => router.push(`/mycourses/${course.course_id}`)}
+                >
+                  <div className="relative w-full h-40">
+                    <img src={'/default-avatar.svg'} alt={course.course_name} className="w-full h-full object-cover" />
+                    <span className="absolute top-3 right-3 text-xs font-bold text-white bg-green-500 px-2 py-1 rounded-full shadow">Joined</span>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{course.course_name}</h4>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course.introduction}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <span className="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">{course.language}</span>
+                      <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Level {course.level}</span>
+                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{course.user_course_status}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="text-base font-bold text-blue-600">${course.display_price}</span>
+                      <span className="text-xs text-gray-500">{course.goal}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                      <span>Joined: {course.user_course_add_time ? new Date(course.user_course_add_time).toLocaleDateString() : '-'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
       {activeTab === 'systemcourses' && <SystemCourses />}
       {activeTab === 'timetable' && viewMode === 'list' && <TimetableListView />}
-      {/* {activeTab === 'timetable' && viewMode === 'calendar' && <TimetableCalendarView />} */}
       {activeTab === 'timetable' && viewMode === 'week' && <TimetableWeekView />}
       {activeTab === 'history' && <CourseHistory />}
     </div>
   );
-} 
+}

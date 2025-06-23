@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../utils/api';
 import { toast } from 'react-toastify';
+import { FaStar, FaChalkboardTeacher } from 'react-icons/fa';
+import { ApiResponse } from '../utils/interfaces';
 
 // 课程数据结构
 interface SystemCourse {
@@ -29,7 +31,7 @@ export default function SystemCourses() {
   const fetchCourses = async (page: number) => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/spwapi/course/fetch', { pn: page, ps: PAGE_SIZE });
+      const res = await apiClient.get<ApiResponse<any>>('/spwapi/course/fetch', { pn: page, ps: PAGE_SIZE });
       if (res && res.code === 0 && res.data) {
         setCourses(res.data.list || []);
         setPagination({
@@ -59,7 +61,7 @@ export default function SystemCourses() {
   const handleSignUp = async (courseId: number) => {
     setSignUpLoadingId(courseId);
     try {
-      const res = await apiClient.post('/spwapi/courses/signup', { courseId });
+      const res = await apiClient.post<ApiResponse<any>>('/spwapi/courses/signup', { courseId });
       if (res && res.code === 0) {
         toast.success('Signed up successfully! The course has been added to "My Courses".');
       } else {
@@ -79,51 +81,37 @@ export default function SystemCourses() {
 
   return (
     <div className="bg-white rounded-xl shadow-md p-8 mb-6">
-      <h3 className="text-xl font-bold mb-4">System Courses</h3>
+      <h3 className="text-xl font-bold mb-4">All Courses</h3>
       {loading ? (
         <div className="text-center py-10">Loading...</div>
       ) : (
         <>
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4">Course Name</th>
-                <th className="py-2 px-4">Introduction</th>
-                <th className="py-2 px-4">Language</th>
-                <th className="py-2 px-4">Level</th>
-                <th className="py-2 px-4">Price</th>
-                <th className="py-2 px-4">Goal</th>
-                <th className="py-2 px-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {courses.map(course => (
-                <tr key={course.id}>
-                  <td className="py-2 px-4">{course.name}</td>
-                  <td className="py-2 px-4">{course.introduction}</td>
-                  <td className="py-2 px-4">{course.language}</td>
-                  <td className="py-2 px-4">{course.level}</td>
-                  <td className="py-2 px-4">${course.display_price}</td>
-                  <td className="py-2 px-4">{course.goal}</td>
-                  <td className="py-2 px-4">
-                    <button className="text-gray-600 hover:underline mr-4" onClick={() => handleDetails(course.id)}>Details</button>
-                    <button
-                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:bg-blue-300 flex items-center"
-                      onClick={() => handleSignUp(course.id)}
-                      disabled={signUpLoadingId === course.id}
-                    >
-                      {signUpLoadingId === course.id ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 mr-1" viewBox="0 0 24 24">...</svg>
-                          Signing Up...
-                        </>
-                      ) : 'Sign Up'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {courses.map(course => (
+              <div
+                key={course.id}
+                className="relative bg-gradient-to-br from-blue-50 to-pink-50 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 group hover:shadow-blue-200 hover:-translate-y-2 cursor-pointer flex flex-col"
+                onClick={() => handleDetails(course.id)}
+              >
+                <div className="relative w-full h-40">
+                  <img src={'/default-avatar.svg'} alt={course.name} className="w-full h-full object-cover" />
+                  <span className="absolute top-3 right-3 text-xs font-bold text-white bg-blue-500 px-2 py-1 rounded-full shadow">ALL</span>
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{course.name}</h4>
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course.introduction}</p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                    <span className="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">{course.language}</span>
+                    <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Level {course.level}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="text-base font-bold text-blue-600">${course.display_price}</span>
+                    <span className="text-xs text-gray-500">{course.goal}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           {/* Pagination */}
           <div className="flex justify-center items-center mt-6">
             <button
