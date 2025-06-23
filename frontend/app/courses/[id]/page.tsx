@@ -12,7 +12,6 @@ import {
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import LoginModal from '../../components/LoginModal';
-import Cookies from 'js-cookie';
 import { motion } from 'framer-motion';
 
 export default function CourseDetailPage() {
@@ -26,6 +25,7 @@ export default function CourseDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -62,15 +62,28 @@ export default function CourseDetailPage() {
     }
   }, [id]);
 
-  const handleJoinCourse = () => {
-    const token = Cookies.get('userToken');
-    if (token) {
-      toast.success("Great! You're ready to join. Redirecting to your dashboard...");
-      setTimeout(() => {
-        router.push('/mycourses');
-      }, 2000);
-    } else {
+  const handleJoinCourse = async () => {
+    const token = (typeof window !== 'undefined') ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
+    if (!token) {
       setIsLoginModalOpen(true);
+      return;
+    }
+    if (!course) return;
+    setIsJoining(true);
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/spwapi/auth/course/join?course_id=${course.id}`);
+      if (res.code === 0) {
+        toast.success('Successfully joined the course! Redirecting...');
+        setTimeout(() => {
+          router.push('/profile?tab=courses');
+        }, 1500);
+      } else {
+        toast.error(res.msg || 'Failed to join the course.');
+      }
+    } catch (e) {
+      toast.error('Network error, please try again.');
+    } finally {
+      setIsJoining(false);
     }
   };
   
@@ -234,9 +247,11 @@ export default function CourseDetailPage() {
 
                         <button
                             onClick={handleJoinCourse}
-                            className="w-full px-6 py-4 bg-blue-600 text-white text-lg rounded-xl font-bold hover:bg-blue-700 transition-transform transform hover:scale-105"
+                            className="w-full px-6 py-4 bg-blue-600 text-white text-lg rounded-xl font-bold hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:bg-blue-300 flex items-center justify-center"
+                            disabled={isJoining}
                         >
-                            Join Course
+                            {isJoining && <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>}
+                            {isJoining ? 'Joining...' : 'Join Course'}
                         </button>
                         
                         <ul className="mt-6 space-y-3 text-gray-600">
