@@ -3,241 +3,276 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/api';
+import { CourseDetail, Teacher, Review, ApiResponse } from '../../utils/interfaces';
+import Image from 'next/image';
+import {
+  FaArrowLeft, FaChalkboardTeacher, FaClock, FaDollarSign, FaLanguage, FaStar, FaUserGraduate,
+  FaBullseye, FaBookOpen, FaComments, FaGlobeAmericas, FaMapMarkerAlt
+} from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
-import { FaStar } from 'react-icons/fa';
-
-// 数据结构定义
-interface CourseDetail {
-  id: number;
-  name: string;
-  introduction: string;
-  detail: string;
-  language: string;
-  level: number;
-  display_price: string;
-  goal: string;
-}
-interface Teacher {
-  id: number;
-  name: string;
-  avatar: string;
-  bio: string;
-}
-interface Review {
-  id: number;
-  user: string;
-  avatar: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
+import 'react-toastify/dist/ReactToastify.css';
+import LoginModal from '../../components/LoginModal';
+import Cookies from 'js-cookie';
+import { motion } from 'framer-motion';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const courseId = params.id as string;
+  const { id } = params;
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
-  const [joinLoading, setJoinLoading] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
-    if (!courseId) return;
+    if (id) {
+      const fetchCourseData = async () => {
+        setIsLoading(true);
+        try {
+          const [courseRes, teachersRes, reviewsRes] = await Promise.all([
+            apiClient.get<ApiResponse<CourseDetail>>(`/spwapi/course/detail?course_id=${id}`),
+            apiClient.get<ApiResponse<Teacher[]>>(`/spwapi/course/teachers?course_id=${id}`),
+            apiClient.get<ApiResponse<Review[]>>(`/spwapi/course/reviews?course_id=${id}`),
+          ]);
 
-    const fetchCourseData = async () => {
-      setLoading(true);
-      try {
-        // 并发请求
-        const [courseRes, teachersRes, reviewsRes] = await Promise.all([
-          apiClient.get(`/spwapi/course/detail`, { course_id: courseId }),
-          apiClient.get(`/spwapi/course/teachers`, { course_id: courseId }),
-          apiClient.get(`/spwapi/course/reviews`, { course_id: courseId }),
-        ]);
+          if (courseRes.code === 0 && courseRes.data) {
+            setCourse(courseRes.data);
+          } else {
+            toast.error(courseRes.msg || 'Failed to fetch course details.');
+          }
 
-        if (
-          courseRes &&
-          courseRes.code === 0 &&
-          courseRes.data &&
-          courseRes.data.id
-        ) {
-          setCourse(courseRes.data);
-        } else {
-          setCourse(null);
-          toast.error(courseRes?.msg || 'Failed to fetch course details.');
+          if (teachersRes.code === 0 && teachersRes.data) {
+            setTeachers(teachersRes.data);
+          }
+          
+          if (reviewsRes.code === 0 && reviewsRes.data) {
+            setReviews(reviewsRes.data);
+          }
+          
+        } catch (error) {
+          toast.error('An error occurred while fetching course data.');
+        } finally {
+          setIsLoading(false);
         }
+      };
+      fetchCourseData();
+    }
+  }, [id]);
 
-        if (teachersRes && teachersRes.code === 0) {
-          setTeachers(Array.isArray(teachersRes.data) ? teachersRes.data : []);
-        }
-
-        if (reviewsRes && reviewsRes.code === 0) {
-          setReviews(Array.isArray(reviewsRes.data) ? reviewsRes.data : []);
-        }
-
-      } catch (error: any) {
-        toast.error(error.message || "An error occurred while fetching data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCourseData();
-  }, [courseId]);
-
-  // 返回到系统课程tab
-  const handleBack = () => {
-    router.push('/profile?tab=systemcourses');
-  };
-
-  // 加入课程处理
-  const handleJoinCourse = async () => {
-    setJoinLoading(true);
-    try {
-      const res = await apiClient.get('/spwapi/auth/course/join', { course_id: course?.id });
-      if (res && res.code === 0) {
-        toast.success('Successfully joined the course!');
-      } else {
-        toast.error(res?.msg || 'Failed to join the course.');
-      }
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to join the course.');
-    } finally {
-      setJoinLoading(false);
-      setShowJoinModal(false);
+  const handleJoinCourse = () => {
+    const token = Cookies.get('userToken');
+    if (token) {
+      toast.success("Great! You're ready to join. Redirecting to your dashboard...");
+      setTimeout(() => {
+        router.push('/mycourses');
+      }, 2000);
+    } else {
+      setIsLoginModalOpen(true);
     }
   };
+  
+  const handleLoginSuccess = () => {
+    toast.info('Welcome! Please click "Join Course" again to enroll.');
+  };
 
-  if (loading) {
-    return <div className="text-center py-20">Loading course details...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   if (!course) {
-    return <div className="text-center py-20">Course not found.</div>;
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <ToastContainer position="top-center" autoClose={2000} />
-      {/* 返回按钮和加入我的课程按钮 */}
-      <div className="flex justify-between items-center mb-6">
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-50 text-center px-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Course Not Found</h2>
+        <p className="text-gray-600 mb-8">We couldn't find the course you were looking for. It might have been removed or the link is incorrect.</p>
         <button
-          className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-          onClick={handleBack}
+          onClick={() => router.push('/courses')}
+          className="flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
         >
-          &larr; Back to System Courses
-        </button>
-        <button
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-          onClick={() => setShowJoinModal(true)}
-          disabled={joinLoading}
-        >
-          {joinLoading ? 'Joining...' : 'Join Course'}
+          <FaArrowLeft className="mr-2" />
+          Back to All Courses
         </button>
       </div>
+    );
+  }
 
-      {/* 加入课程确认弹窗 */}
-      {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm">
-            <h2 className="text-xl font-semibold mb-4">Confirm Join</h2>
-            <p className="mb-6">Are you sure you want to join this course?</p>
-            <div className="flex justify-end gap-4">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                onClick={() => setShowJoinModal(false)}
-                disabled={joinLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                onClick={handleJoinCourse}
-                disabled={joinLoading}
-              >
-                {joinLoading ? 'Joining...' : 'Confirm'}
-              </button>
+  const tabContent = {
+    details: (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">About this course</h3>
+        <p className="text-gray-600 whitespace-pre-line leading-relaxed">{course.detail}</p>
+        <h3 className="text-2xl font-bold text-gray-800 mt-8 mb-4">What you will learn</h3>
+        <p className="text-gray-600 whitespace-pre-line leading-relaxed">{course.goal}</p>
+      </motion.div>
+    ),
+    teachers: (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h3 className="text-2xl font-bold text-gray-800 mb-6">Meet Your Instructors</h3>
+        <div className="space-y-8">
+          {teachers.length > 0 ? teachers.map(teacher => (
+            <div key={teacher.id} className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+              <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                <Image src={teacher.avatar || '/default-avatar.svg'} alt={teacher.name} width={80} height={80} className="rounded-full flex-shrink-0"/>
+                <div className="flex-1">
+                  <h4 className="font-bold text-xl text-gray-900">{teacher.first_name} {teacher.last_name}</h4>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                      <span className="flex items-center"><FaGlobeAmericas className="mr-1.5 text-gray-400"/>From {teacher.nationality_name}</span>
+                      <span className="flex items-center"><FaMapMarkerAlt className="mr-1.5 text-gray-400"/>Lives in {teacher.living_country_name}</span>
+                  </div>
+                  <p className="text-gray-700 mt-3 text-sm">{teacher.detail}</p>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                  <h5 className="font-semibold text-gray-800 mb-3 text-sm">Certificates</h5>
+                  {teacher.certificates && teacher.certificates.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {teacher.certificates.map((cert, index) => (
+                              <div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50 flex items-center space-x-3 hover:shadow-sm transition-shadow">
+                                  <a href={cert.document} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                     <Image src={cert.document} alt={cert.title} width={48} height={48} className="rounded-md object-cover"/>
+                                  </a>
+                                  <div>
+                                      <p className="font-bold text-sm text-gray-800">{cert.title}</p>
+                                      <p className="text-xs text-gray-600">{cert.issue_org} ({new Date(cert.get_date).getFullYear()})</p>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-sm text-gray-500 italic">No certificates provided.</p>
+                  )}
+              </div>
+            </div>
+          )) : <p className="text-gray-500">Teacher information is not available yet.</p>}
+        </div>
+      </motion.div>
+    ),
+    reviews: (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h3 className="text-2xl font-bold text-gray-800 mb-6">Student Feedback</h3>
+        <div className="space-y-6">
+            {reviews.length > 0 ? reviews.map(review => (
+            <div key={review.id} className="border-b border-gray-200 pb-4">
+                <div className="flex items-center mb-2">
+                <Image src={review.avatar || '/default-avatar.svg'} alt={review.user} width={40} height={40} className="rounded-full mr-3"/>
+                <div>
+                    <p className="font-semibold text-gray-800">{review.user}</p>
+                    <p className="text-xs text-gray-500">{new Date(review.date).toLocaleDateString()}</p>
+                </div>
+                </div>
+                <div className="flex items-center my-2">
+                {[...Array(5)].map((_, i) => (
+                    <FaStar key={i} className={i < review.rating ? 'text-yellow-400' : 'text-gray-300'} />
+                ))}
+                </div>
+                <p className="text-gray-600">{review.comment}</p>
+            </div>
+            )) : <p className="text-gray-500">There are no reviews for this course yet.</p>}
+        </div>
+        </motion.div>
+    ),
+  };
+
+  return (
+    <>
+      <ToastContainer position="top-center" autoClose={3000} hideProgressBar={false} />
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLoginSuccess={handleLoginSuccess} />
+      
+      <div className="bg-gray-50 min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-6">
+            <button
+              onClick={() => router.push('/courses')}
+              className="flex items-center text-gray-600 hover:text-blue-600 font-medium"
+            >
+              <FaArrowLeft className="mr-2" />
+              Back to Courses
+            </button>
+          </div>
+
+          <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                    <h1 className="text-4xl font-extrabold text-gray-900 mb-3">{course.name}</h1>
+                    <p className="text-lg text-gray-600 mb-8">{course.introduction}</p>
+
+                    <div className="border-b border-gray-200 mb-6">
+                        <nav className="-mb-px flex space-x-6">
+                            <TabButton icon={<FaBookOpen/>} text="Details" active={activeTab === 'details'} onClick={() => setActiveTab('details')} />
+                            <TabButton icon={<FaChalkboardTeacher/>} text="Teachers" active={activeTab === 'teachers'} onClick={() => setActiveTab('teachers')} />
+                            <TabButton icon={<FaComments/>} text="Reviews" active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} />
+                        </nav>
+                    </div>
+                    <div>{tabContent[activeTab as keyof typeof tabContent]}</div>
+                </div>
+            </div>
+
+            {/* Sticky Sidebar */}
+            <div className="lg:col-span-1 mt-8 lg:mt-0">
+                <div className="sticky top-8 bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div className="relative h-56 w-full">
+                        <Image
+                        src={course.course_picture || '/default-course-image.svg'}
+                        alt={course.name}
+                        layout="fill"
+                        objectFit="cover"
+                        />
+                    </div>
+                    <div className="p-6">
+                        <div className="flex items-baseline justify-center mb-6">
+                            <span className="text-4xl font-bold text-gray-900">${course.display_price}</span>
+                            <span className="ml-2 text-gray-500">/ course</span>
+                        </div>
+
+                        <button
+                            onClick={handleJoinCourse}
+                            className="w-full px-6 py-4 bg-blue-600 text-white text-lg rounded-xl font-bold hover:bg-blue-700 transition-transform transform hover:scale-105"
+                        >
+                            Join Course
+                        </button>
+                        
+                        <ul className="mt-6 space-y-3 text-gray-600">
+                            <InfoRow icon={<FaClock/>} text={`${course.duration} minutes per session`} />
+                            <InfoRow icon={<FaUserGraduate/>} text={`${course.session_number} sessions included`} />
+                            <InfoRow icon={<FaLanguage/>} text={`Conducted in ${course.language}`} />
+                            <InfoRow icon={<FaBullseye/>} text={`Level ${course.level}`} />
+                        </ul>
+                    </div>
+                </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* 1. 课程基本信息 */}
-      <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-        <h1 className="text-4xl font-bold mb-4">{course.name}</h1>
-        <p className="text-lg text-gray-600 mb-6">{course.introduction}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <InfoCard title="Language" value={course.language} />
-          <InfoCard title="Level" value={course.level.toString()} />
-          <InfoCard title="Price" value={`$${course.display_price}`} />
-          <InfoCard title="Goal" value={course.goal} />
-        </div>
-        <div className="prose max-w-none">
-          <h3 className="text-2xl font-semibold mb-2">Course Details</h3>
-          <p>{course.detail}</p>
-        </div>
       </div>
-
-      {/* 2. 老师列表 */}
-      <TeacherList teachers={teachers} />
-
-      {/* 3. 评价列表 */}
-      <ReviewList reviews={reviews} />
-    </div>
+    </>
   );
 }
 
-// 小组件，用于展示单项信息
-const InfoCard = ({ title, value }: { title: string, value: string }) => (
-  <div className="bg-gray-50 p-4 rounded-lg text-center">
-    <p className="text-sm text-gray-500">{title}</p>
-    <p className="text-xl font-semibold">{value}</p>
-  </div>
+const InfoRow = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
+    <li className="flex items-center">
+      <div className="text-blue-500 mr-3">{icon}</div>
+      <span>{text}</span>
+    </li>
 );
 
-// 老师列表组件
-const TeacherList = ({ teachers }: { teachers: Teacher[] }) => (
-  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-    <h3 className="text-2xl font-semibold mb-4">Meet Your Teachers</h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {(Array.isArray(teachers) ? teachers : []).map(teacher => (
-        <div key={teacher.id} className="flex items-center space-x-4 bg-gray-50 p-4 rounded-lg">
-          <img src={teacher.avatar || '/default-avatar.svg'} alt={teacher.name} className="w-16 h-16 rounded-full"/>
-          <div>
-            <h4 className="font-bold">{teacher.name}</h4>
-            <p className="text-sm text-gray-600">{teacher.bio}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// 评价列表组件
-const ReviewList = ({ reviews }: { reviews: Review[] }) => (
-  <div className="bg-white rounded-xl shadow-md p-8">
-    <h3 className="text-2xl font-semibold mb-4">Student Reviews</h3>
-    <div className="space-y-6">
-      {(Array.isArray(reviews) ? reviews : []).map(review => (
-        <div key={review.id} className="border-b pb-4">
-          <div className="flex items-center mb-2">
-            <img src={review.avatar || '/default-avatar.svg'} alt={review.user} className="w-10 h-10 rounded-full mr-3"/>
-            <div>
-              <p className="font-semibold">{review.user}</p>
-              <p className="text-xs text-gray-500">{new Date(review.date).toLocaleDateString()}</p>
-            </div>
-          </div>
-          <div className="flex items-center mb-2">
-            {[...Array(5)].map((_, i) => (
-              <FaStar key={i} className={i < review.rating ? 'text-yellow-400' : 'text-gray-300'} />
-            ))}
-          </div>
-          <p className="text-gray-700">{review.comment}</p>
-        </div>
-      ))}
-    </div>
-  </div>
+const TabButton = ({ icon, text, active, onClick }: { icon: React.ReactNode; text: string; active: boolean; onClick: () => void; }) => (
+    <button
+      onClick={onClick}
+      className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm transition-colors
+        ${
+          active
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+    >
+      <div className="mr-2">{icon}</div>
+      {text}
+    </button>
 ); 

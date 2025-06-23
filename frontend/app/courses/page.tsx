@@ -1,127 +1,158 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaStar, FaSearch, FaChalkboardTeacher, FaUserGraduate, FaPenFancy } from 'react-icons/fa';
+import { FaStar, FaChalkboardTeacher, FaUserGraduate, FaPenFancy, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { apiClient } from '@/app/utils/api';
+import { ApiResponse } from '@/app/utils/interfaces';
+import { useRouter } from 'next/navigation';
 
-// Mock data to represent courses from your backend
-const mockCourses = [
-  { id: 1, title: 'IELTS Academic English', teacher: { name: 'Dr. Angela Yu', avatar: 'https://i.pravatar.cc/40?u=1' }, rating: 4.9, reviewCount: 1250, price: 30, level: 'Advanced', category: 'Exam Prep', imageUrl: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&q=80&w=400' },
-  { id: 2, title: 'Conversational Business English', teacher: { name: 'John Smith', avatar: 'https://i.pravatar.cc/40?u=2' }, rating: 4.7, reviewCount: 890, price: 25, level: 'Intermediate', category: 'Business', imageUrl: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&q=80&w=400' },
-  { id: 3, title: 'Beginner English: Zero to Hero', teacher: { name: 'Maria Garcia', avatar: 'https://i.pravatar.cc/40?u=3' }, rating: 4.8, reviewCount: 2100, price: 20, level: 'Beginner', category: 'General', imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&q=80&w=400' },
-  { id: 4, title: 'Public Speaking & Pronunciation', teacher: { name: 'Kenji Tanaka', avatar: 'https://i.pravatar.cc/40?u=4' }, rating: 4.9, reviewCount: 950, price: 35, level: 'Advanced', category: 'Speaking', imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&q=80&w=400' },
-  // ... add more mock courses
-];
+interface Course {
+  id: number;
+  name: string;
+  introduction: string;
+  teacher_name?: string;
+  teacher_avatar?: string;
+  rating?: number;
+  reviewCount?: number;
+  display_price: string;
+  level: number | string;
+  course_picture?: string;
+}
+
+interface CourseListResponse {
+  list: Course[];
+  pn: number;
+  ps: number;
+  total: number;
+  total_pages: number;
+}
 
 // --- Course Card Component ---
-const CourseCard = ({ course }: { course: typeof mockCourses[0] }) => {
+const CourseCard = ({ course }: { course: Course }) => {
+  const router = useRouter();
+  const levelMap: { [key: number]: string } = {
+    1: 'Beginner', 2: 'Intermediate', 3: 'Advanced',
+  };
+
   return (
     <motion.div
-      className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+      className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 group hover:shadow-cyan-500/30 hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+      onClick={() => router.push(`/courses/${course.id}`)}
     >
-      <img src={course.imageUrl} alt={course.title} className="w-full h-40 object-cover" />
+      <div className="relative w-full h-48">
+        <img src={course.course_picture || '/default-avatar.svg'} alt={course.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <span className="absolute top-3 right-3 text-sm font-semibold text-gray-900 bg-yellow-300 px-3 py-1 rounded-full">${course.display_price}</span>
+      </div>
       <div className="p-5">
-        <div className="flex items-center mb-3">
-          <img src={course.teacher.avatar} alt={course.teacher.name} className="w-8 h-8 rounded-full mr-3" />
-          <span className="text-sm font-medium text-gray-700">{course.teacher.name}</span>
-        </div>
-        <h3 className="text-lg font-bold text-gray-900 truncate mb-2">{course.title}</h3>
-        <div className="flex items-center text-sm text-gray-600 mb-4">
-          <span className="font-bold text-yellow-500 mr-1">{course.rating.toFixed(1)}</span>
-          <FaStar className="text-yellow-400 mr-2" />
-          <span>({course.reviewCount} reviews)</span>
-        </div>
+        <h3 className="text-lg font-bold text-gray-900 truncate mb-2">{course.name}</h3>
+        <p className="text-sm text-gray-500 h-10 overflow-hidden mb-4">{course.introduction}</p>
         <div className="flex justify-between items-center border-t pt-3">
-          <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{course.level}</span>
-          <span className="text-xl font-bold text-blue-600">${course.price}</span>
+          <span className="text-sm font-semibold text-cyan-700 bg-cyan-100 px-2 py-1 rounded-md">{typeof course.level === 'number' ? levelMap[course.level] : course.level}</span>
+           <div className="flex items-center text-sm text-gray-600">
+            <FaStar className="text-yellow-400 mr-1" />
+            <span className="font-bold text-gray-800">5.0</span>
+          </div>
         </div>
       </div>
     </motion.div>
   );
 };
 
-// --- Main Courses Page ---
-export default function CoursesPage() {
-  const [courses, setCourses] = useState(mockCourses);
+const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void}) => {
+  if (totalPages <= 1) return null;
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (
-    <div className="bg-gray-50">
+    <div className="flex justify-center items-center space-x-2 mt-12">
+      <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-full bg-white shadow-md hover:bg-gray-100 disabled:opacity-50">
+        <FaChevronLeft/>
+      </button>
+      {pages.map(p => (
+        <button key={p} onClick={() => onPageChange(p)} className={`w-10 h-10 rounded-full font-medium transition-colors ${currentPage === p ? 'bg-blue-600 text-white shadow-lg' : 'bg-white hover:bg-gray-100'}`}>
+          {p}
+        </button>
+      ))}
+      <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-full bg-white shadow-md hover:bg-gray-100 disabled:opacity-50">
+        <FaChevronRight/>
+      </button>
+    </div>
+  )
+}
+
+// --- Main Courses Page ---
+export default function CoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+
+  useEffect(() => {
+    const fetchCourses = async (page = 1) => {
+      setIsLoading(true);
+      try {
+        const res = await apiClient.get<ApiResponse<CourseListResponse>>('/spwapi/course/fetch', { pn: page });
+        if (res.code === 0 && res.data) {
+          setCourses(res.data.list || []);
+          setCurrentPage(res.data.pn);
+          setTotalPages(res.data.total_pages);
+        } else {
+          setCourses([]);
+          setTotalPages(0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses", error);
+        setCourses([]);
+        setTotalPages(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCourses(currentPage);
+  }, [currentPage]);
+
+  return (
+    <div className="bg-slate-50">
       {/* Header Section */}
-      <header className="bg-white pt-24 pb-16">
-        <div className="max-w-4xl mx-auto text-center px-4">
+      <header className="bg-white pt-24 pb-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-50 to-blue-100 opacity-50"></div>
+        <div className="max-w-4xl mx-auto text-center px-4 relative">
           <motion.h1 
-            className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight"
+            className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent tracking-tight"
             initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
           >
-            Explore Our Open Learning Marketplace
+            Explore Our Curated Courses
           </motion.h1>
           <motion.p 
             className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.7 }}
           >
-            Every course is taught by a member of our global community. Rate, review, and help shape the future of learning.
+            New courses are added every week. Find the perfect one to achieve your goals.
           </motion.p>
-          <motion.div 
-            className="mt-8 max-w-xl mx-auto relative"
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.7 }}
-          >
-            <FaSearch className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search for any course..." className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500" />
-          </motion.div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
-          <aside className="lg:col-span-1 bg-white p-6 rounded-xl shadow-md h-fit">
-            <h3 className="text-xl font-bold mb-6">Filter Courses</h3>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>All</option>
-                  <option>Business</option>
-                  <option>Exam Prep</option>
-                  <option>General</option>
-                  <option>Speaking</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>Any</option>
-                  <option>Beginner</option>
-                  <option>Intermediate</option>
-                  <option>Advanced</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>Any</option>
-                  <option>4.5 & up</option>
-                  <option>4.0 & up</option>
-                  <option>3.5 & up</option>
-                </select>
-              </div>
-            </div>
-          </aside>
-
-          {/* Courses Grid */}
-          <main className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {courses.map(course => (
-              <CourseCard key={course.id} course={course} />
-            ))}
-          </main>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {isLoading ? (
+          <div className="text-center text-gray-500 py-10">Loading courses...</div>
+        ) : (
+          <>
+            <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {courses.map(course => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </main>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          </>
+        )}
       </div>
       
-      {/* How It Works Section */}
+      {/* How It Works & CTA sections remain the same */}
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-12">How Our Ecosystem Works</h2>
@@ -143,12 +174,11 @@ export default function CoursesPage() {
         </div>
       </section>
 
-      {/* Become a Teacher CTA */}
       <section className="bg-blue-600 text-white">
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h2 className="text-3xl font-bold">Share Your Knowledge.</h2>
           <p className="mt-3 text-lg text-blue-100">Become a teacher on LangBridge and reach a global audience of eager learners.</p>
-          <a href="/register/teacher" className="mt-8 inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors duration-300">
+          <a href="/tpa/register" className="mt-8 inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors duration-300">
             Apply to Teach
           </a>
         </div>

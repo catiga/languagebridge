@@ -52,6 +52,31 @@ type TeacherRegisterRequest struct {
 	TeachLanguage   string `json:"teach_language" binding:"required"`
 }
 
+type TeacherCertificateResponse struct {
+	Title       string `json:"title"`
+	Achievement string `json:"achievement"`
+	GetDate     string `json:"get_date"`
+	Document    string `json:"document"`
+	IssueOrg    string `json:"issue_org"`
+}
+
+type TeacherResponse struct {
+	ID                uint64                       `json:"id"`
+	Name              string                       `json:"name"`
+	FirstName         string                       `json:"first_name"`
+	LastName          string                       `json:"last_name"`
+	Introduction      string                       `json:"introduction"`
+	Detail            string                       `json:"detail"`
+	FirstLanguage     string                       `json:"first_language"`
+	NationalityID     uint64                       `json:"nationality_id"`
+	NationalityName   string                       `json:"nationality_name"`
+	LivingCountryID   uint64                       `json:"living_country_id"`
+	LivingCountryName string                       `json:"living_country_name"`
+	TeacherNo         string                       `json:"teacher_no"`
+	Avatar            string                       `json:"avatar"`
+	Certificates      []TeacherCertificateResponse `json:"certificates"`
+}
+
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -320,9 +345,51 @@ func CourseFetchTeacherList(c *gin.Context) {
 		return
 	}
 
+	var teachers []TeacherResponse
+	var ids []uint64
+	for _, r := range teacherList {
+		ids = append(ids, r.ID)
+	}
+
+	var teacherDbCerts []model.TeacherCertificate
+	if len(ids) > 0 {
+		db.Model(&model.TeacherCertificate{}).Where("teacher_id IN ?", ids).Find(&teacherDbCerts)
+	}
+
+	for _, r := range teacherList {
+		var tdcs []TeacherCertificateResponse
+		for _, s := range teacherDbCerts {
+			if r.ID == s.TeacherID {
+				tdcs = append(tdcs, TeacherCertificateResponse{
+					Title:       s.Title,
+					Achievement: s.Achievement,
+					GetDate:     s.GetDate,
+					Document:    s.Document,
+					IssueOrg:    s.IssueOrg,
+				})
+			}
+		}
+		teachers = append(teachers, TeacherResponse{
+			ID:                r.ID,
+			Name:              r.Name,
+			FirstName:         r.FirstName,
+			LastName:          r.LastName,
+			Introduction:      r.Introduction,
+			Detail:            r.Detail,
+			FirstLanguage:     r.FirstLanguage,
+			NationalityID:     r.NationalityID,
+			NationalityName:   r.NationalityName,
+			LivingCountryID:   r.LivingCountryID,
+			LivingCountryName: r.LivingCountryName,
+			TeacherNo:         r.TeacherNo,
+			Avatar:            r.Avatar,
+			Certificates:      tdcs,
+		})
+	}
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
-	res.Data = teacherList
+	res.Data = teachers
 	c.JSON(http.StatusOK, res)
 }
 
