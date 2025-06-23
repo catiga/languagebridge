@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { FaUserCircle } from 'react-icons/fa';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
 
   const isHomePage = pathname === '/';
 
@@ -29,6 +32,17 @@ export default function Navbar() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [isHomePage]);
+
+  // 检查token
+  useEffect(() => {
+    const checkLogin = () => {
+      const token = (typeof window !== 'undefined') ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
+      setIsLoggedIn(!!token);
+    };
+    checkLogin();
+    window.addEventListener('userChanged', checkLogin);
+    return () => window.removeEventListener('userChanged', checkLogin);
+  }, []);
 
   const navLinks = [
     { href: '/', label: 'Home' },
@@ -60,6 +74,21 @@ export default function Navbar() {
     </Link>
   );
 
+  // 退出登录逻辑
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userInfo');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('userInfo');
+    if (typeof window !== 'undefined' && window.Cookies) {
+      window.Cookies.remove('token', { path: '/' });
+      window.Cookies.remove('userInfo', { path: '/' });
+    }
+    setMenuOpen(false);
+    window.dispatchEvent(new Event('userChanged'));
+    router.push('/');
+  };
+
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ease-in-out ${navClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,9 +106,35 @@ export default function Navbar() {
             ))}
           </div>
           <div className="hidden md:flex items-center">
-            <Link href="/profile">
-              <FaUserCircle className={`transition-colors duration-300 ${iconColor}`} size={28} />
-            </Link>
+            {isLoggedIn ? (
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="focus:outline-none"
+                  aria-label="User menu"
+                >
+                  <FaUserCircle className={`transition-colors duration-300 ${iconColor}`} size={28} />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg py-2 z-50 animate-fade-in">
+                    <Link href="/profile/overview" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 rounded-t-xl" onClick={() => setMenuOpen(false)}>
+                      Profile
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-xl"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link href="/login" className={`px-4 py-2 rounded-lg font-bold transition-colors duration-200 ${scrolled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white/80 text-blue-600 hover:bg-blue-700 hover:text-white'}`}>Login</Link>
+                <Link href="/register" className={`ml-2 px-4 py-2 rounded-lg font-bold transition-colors duration-200 ${scrolled ? 'bg-pink-500 text-white hover:bg-pink-600' : 'bg-white/80 text-pink-500 hover:bg-pink-600 hover:text-white'}`}>Register</Link>
+              </>
+            )}
           </div>
         </div>
       </div>
