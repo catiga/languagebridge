@@ -25,7 +25,9 @@ rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 echo "📁 拷贝运行所需文件到目标目录..."
-cp -r .next/ public/ package.json next.config.js "$OUTPUT_DIR/"
+for item in .next public package.json next.config.js; do
+  [ -e "$item" ] && cp -r "$item" "$OUTPUT_DIR/"
+done
 cp -r node_modules "$OUTPUT_DIR/"
 
 echo "✅ 构建完成，运行所需文件已复制至 $OUTPUT_DIR"
