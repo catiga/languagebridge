@@ -131,14 +131,14 @@ const statusTabs = [
   // 你可以根据实际 user_course_status 增加更多
 ];
 
-export default function CourseTabs({ initialTab, onLoading }: { initialTab?: string, onLoading?: (loading: boolean) => void }) {
+export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'mycourses' | 'timetable' | 'history' | 'systemcourses'>(
-    initialTab === 'systemcourses' ? 'systemcourses' :
-    initialTab === 'timetable' ? 'timetable' :
-    initialTab === 'history' ? 'history' :
+    tabParam === 'systemcourses' ? 'systemcourses' :
+    tabParam === 'timetable' ? 'timetable' :
+    tabParam === 'history' ? 'history' :
     'mycourses'
   );
   const [viewMode, setViewMode] = useState<'list' | 'week'>('list');

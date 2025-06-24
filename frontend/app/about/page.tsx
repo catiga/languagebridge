@@ -1,13 +1,14 @@
 'use client';
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, easeOut } from 'framer-motion';
 import { FaBrain, FaChalkboardTeacher, FaCube } from 'react-icons/fa';
+import Link from 'next/link';
 
 export default function AboutUsPage() {
   const fadeIn = {
     initial: { opacity: 0, y: 30 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, ease: 'easeOut' }
+    transition: { duration: 0.7, ease: easeOut }
   };
 
   return (
@@ -28,7 +29,7 @@ export default function AboutUsPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            We're Rebuilding Language Education.
+            We&apos;re Rebuilding Language Education.
           </motion.h1>
           <motion.p
             className="mt-6 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto"
@@ -36,7 +37,7 @@ export default function AboutUsPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
           >
-            At LangBridge, we believe learning should be personal, effective, and empowering. We're fusing advanced AI with expert human instruction to create a platform that adapts to you.
+            At LangBridge, we believe learning should be personal, effective, and empowering. We&apos;re fusing advanced AI with expert human instruction to create a platform that adapts to you.
           </motion.p>
         </div>
       </motion.section>
@@ -44,8 +45,18 @@ export default function AboutUsPage() {
       {/* Our Mission Section */}
       <section className="py-20 md:py-28 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <motion.h2 {...fadeIn} className="text-3xl md:text-4xl font-bold mb-4">Our Mission</motion.h2>
-          <motion.p {...fadeIn} transition={{...fadeIn.transition, delay: 0.2}} className="text-lg text-gray-600 mb-16 max-w-3xl mx-auto">
+          <motion.h2
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            transition={fadeIn.transition}
+            className="text-3xl md:text-4xl font-bold mb-4"
+          >Our Mission</motion.h2>
+          <motion.p
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            transition={{ ...fadeIn.transition, delay: 0.2, ease: easeOut }}
+            className="text-lg text-gray-600 mb-16 max-w-3xl mx-auto"
+          >
             Our goal is to democratize language education by building a transparent, intelligent, and accessible global learning ecosystem.
           </motion.p>
           <div className="grid md:grid-cols-3 gap-12">
@@ -76,24 +87,33 @@ export default function AboutUsPage() {
       {/* Final CTA Section */}
       <section className="py-20 md:py-28 bg-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <motion.h2 {...fadeIn} className="text-3xl md:text-4xl font-bold text-gray-900">
+          <motion.h2
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            transition={fadeIn.transition}
+            className="text-3xl md:text-4xl font-bold text-gray-900"
+          >
             Join Our Journey
           </motion.h2>
           <motion.p
-            {...fadeIn}
-            transition={{...fadeIn.transition, delay: 0.2}}
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            transition={{ ...fadeIn.transition, delay: 0.2, ease: easeOut }}
             className="mt-4 text-lg text-gray-600"
           >
-            Experience the future of learning today. Whether you're a student or an educator, there's a place for you at LangBridge.
+            Experience the future of learning today. Whether you&apos;re a student or an educator, there&apos;s a place for you at LangBridge.
           </motion.p>
           <motion.div
-            {...fadeIn}
-            transition={{...fadeIn.transition, delay: 0.4}}
+            initial={fadeIn.initial}
+            animate={fadeIn.animate}
+            transition={{ ...fadeIn.transition, delay: 0.4, ease: easeOut }}
             className="mt-10"
           >
-            <a href="/courses" className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-full hover:bg-blue-700 transition-transform hover:scale-105 duration-300">
-              Find Your Perfect Course
-            </a>
+            <Link href="/courses" legacyBehavior>
+              <a className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-full hover:bg-blue-700 transition-transform hover:scale-105 duration-300">
+                Find Your Perfect Course
+              </a>
+            </Link>
           </motion.div>
         </div>
       </section>
