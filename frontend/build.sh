@@ -4,27 +4,28 @@ set -e
 PROJECT_DIR="/data/langbridge/source/languagebridge/frontend"
 OUTPUT_DIR="/data/langbridge/frontend/dist"
 
-echo "📁 enter project directory: $PROJECT_DIR"
+echo "📁 进入项目目录: $PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-echo "🔄 pull code for update..."
+echo "🔄 拉取最新代码..."
 git pull
 
-echo "📦 install dependency..."
+echo "📦 安装依赖..."
 if [ -f "yarn.lock" ]; then
   yarn install
 else
   npm install
 fi
 
-echo "⚙️ start to compile..."
+echo "⚙️ 编译构建..."
 npm run build
 
-echo "🧹 clean the previous cached file..."
+echo "🧹 清理目标目录: $OUTPUT_DIR"
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-echo "📁 move app to target directory..."
-cp -r build/* "$OUTPUT_DIR/"
+echo "📁 拷贝运行所需文件到目标目录..."
+cp -r .next/ public/ package.json next.config.js "$OUTPUT_DIR/"
+cp -r node_modules "$OUTPUT_DIR/"
 
-echo "✅ successfully deploy to $OUTPUT_DIR"
+echo "✅ 构建完成，运行所需文件已复制至 $OUTPUT_DIR"
