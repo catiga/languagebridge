@@ -66,18 +66,19 @@ type AddCourseRequest struct {
 }
 
 type SimpleCourseBookObject struct {
-	BookID     uint64 `json:"book_id"`
-	BookNo     string `json:"book_no"`
-	LessonDate string `json:"lesson_date"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
-	CourseID   uint64 `json:"course_id"`
-	CourseName string `json:"course_name"`
-	TeacherID  uint64 `json:"teacher_id"`
-	UserID     uint64 `json:"user_id"`
+	BookID      uint64 `json:"book_id"`
+	BookNo      string `json:"book_no"`
+	LessonDate  string `json:"lesson_date"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	CourseID    uint64 `json:"course_id"`
+	CourseName  string `json:"course_name"`
+	TeacherID   uint64 `json:"teacher_id"`
+	UserID      uint64 `json:"user_id"`
+	TeacherName string `json:"teacher_name"`
 }
 
-func Overview(c *gin.Context) {
+func TeacherOverview(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
 	res.Code = codes.CODE_SUCCESS

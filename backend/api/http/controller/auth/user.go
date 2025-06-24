@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/langbridge/backend/api/common"
 	"github.com/langbridge/backend/codes"
+	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"github.com/langbridge/backend/utils"
 )
 
 type UpdateProfileRequest struct {
@@ -18,6 +20,85 @@ type UpdateProfileRequest struct {
 	LivingCountryID uint64 `json:"living_country_id"`
 	Phone           string `json:"phone"`
 	NativeLanguage  string `json:"native_language"`
+}
+
+func Overview(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var myCourseCount int64
+	var lessonUpcomingCount int64
+	var lessonPastCount int64
+
+	var currentWeekCourseList []SimpleCourseBookObject
+
+	err = db.Model(&model.UserCourse{}).
+		Where("user_id = ?", userID).
+		Count(&myCourseCount).Error
+	if err != nil {
+		log.Error("overview-fetch total course error", err)
+	}
+
+	err = db.Model(&model.CourseBookTrans{}).Where("user_id = ? and lesson_date >= ?", userID, time.Now()).Count(&lessonUpcomingCount).Error
+	if err != nil {
+		log.Error("overview-fetch upcoming lession error", err)
+	}
+
+	err = db.Model(&model.CourseBookTrans{}).Where("user_id = ? and lesson_date < ?", userID, time.Now()).Count(&lessonPastCount).Error
+	if err != nil {
+		log.Error("overview-fetch past lession error", err)
+	}
+
+	if err != nil {
+		log.Error("overview-fetch Count distinct user_id error:", err)
+	}
+
+	currentWeekStart, currentWeekEnd := utils.GetCurrentWeekRange()
+	err = db.Table("course_book_trans as b").
+		Select(`b.id as book_id, b.booking_no as book_no, b.lesson_date, b.start_time, b.end_time, 
+			b.course_id, c.name as course_name, b.teacher_id, d.name as teacher_name, b.user_id`).
+		Joins("LEFT JOIN course_info c ON b.course_id = c.id").
+		Joins("LEFT JOIN teacher_info d on b.teacher_id = d=id").
+		Where("b.user_id = ? AND b.lesson_date >= ? AND b.lesson_date <= ?", userID, currentWeekStart, currentWeekEnd).
+		Order("b.lesson_date, b.start_time asc").
+		Scan(&currentWeekCourseList).Error
+	if err != nil {
+		log.Error("overview-fetch week course list error", err)
+	}
+
+	res.Data = struct {
+		LessonTotalCount    int64                    `json:"lesson_total_count"`
+		LessonUpcomingCount int64                    `json:"lesson_upcoming_count"`
+		LessonPastCount     int64                    `json:"lesson_past_count"`
+		CurrentWeekCourses  []SimpleCourseBookObject `json:"current_week_courses"`
+	}{
+		LessonTotalCount:    lessonPastCount + lessonUpcomingCount,
+		LessonUpcomingCount: lessonUpcomingCount,
+		LessonPastCount:     lessonPastCount,
+		CurrentWeekCourses:  currentWeekCourseList,
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func RetrieveProfile(c *gin.Context) {
