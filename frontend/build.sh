@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 PROJECT_DIR="/data/langbridge/source/languagebridge/frontend"
 OUTPUT_DIR="/data/langbridge/frontend/dist"
@@ -26,8 +25,13 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "📁 拷贝运行所需文件到目标目录..."
 for item in .next public package.json next.config.js; do
-  [ -e "$item" ] && cp -r "$item" "$OUTPUT_DIR/"
+  if [ -e "$item" ]; then
+    cp -r "$item" "$OUTPUT_DIR/"
+  else
+    echo "⚠️ 跳过不存在的文件或目录: $item"
+  fi
 done
+
 cp -r node_modules "$OUTPUT_DIR/"
 
 echo "✅ 构建完成，运行所需文件已复制至 $OUTPUT_DIR"
