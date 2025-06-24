@@ -473,18 +473,29 @@ func CourseGetMeetingInfo(c *gin.Context) {
 		return
 	}
 
+	// 解析字符串成 time.Time
 	lessonDate := bookTran.LessonDate
-	now := time.Now().Truncate(24 * time.Hour)
-	if lessonDate.Before(now) {
-		//今天之前
+
+	// 当前日期，只保留年月日部分
+	today := time.Now().Format("2006-01-02")
+	todayTime, _ := time.Parse("2006-01-02", today)
+
+	// 比较日期
+	if lessonDate.Before(todayTime) {
 		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
 		res.Msg = "course date already passed"
 		c.JSON(http.StatusOK, res)
 		return
-	} else if lessonDate.After(now) {
-		//今天之后
+	} else if lessonDate.After(todayTime) {
 		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
 		res.Msg = "course not starting"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if bookTran.Ongoing == 0 {
+		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
+		res.Msg = "please waiting for teacher start the classroom"
 		c.JSON(http.StatusOK, res)
 		return
 	}

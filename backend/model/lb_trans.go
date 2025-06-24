@@ -14,6 +14,7 @@ type CourseBookTrans struct {
 	UpdateTime time.Time `gorm:"column:update_time" json:"update_time"`
 	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
 	Status     string    `gorm:"column:status" json:"status"`
+	Ongoing    int       `gorm:"column:ongoing" json:"ongoing"`
 }
 
 func (CourseBookTrans) TableName() string {
