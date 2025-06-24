@@ -74,7 +74,7 @@ const LessonDetailsModal = ({ lesson, onClose }: { lesson: any; onClose: () => v
         toast.error("Lesson ID is missing.");
         return;
     }
-    const meetingPageUrl = `/course/meet/${lesson.id}`;
+    const meetingPageUrl = `/tpa/classroom/${lesson.id}`;
     window.open(meetingPageUrl, '_blank', 'noopener,noreferrer');
     onClose();
   };

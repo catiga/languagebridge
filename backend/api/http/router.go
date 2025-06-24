@@ -49,6 +49,8 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.GET("/course/mine", auth.TeacherCourseList)
 	teacherAuthGroup.POST("/course/add", auth.AddCourse)
 	teacherAuthGroup.GET("/course/unbind", auth.TeacherUnBindCourse)
+	teacherAuthGroup.GET("/course/meeting/fetch", auth.TeacherGetMeetingInfo)
+
 	teacherAuthGroup.GET("/timeslot/retrieve", auth.TeacherTimeSlotTemplate)
 	teacherAuthGroup.POST("/timeslot/update", auth.TeacherTimeslotTemplateUpdate)
 	teacherAuthGroup.GET("/schedule/time/range", auth.TeacherScheduleTimeRange)
