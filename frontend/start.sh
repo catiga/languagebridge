@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROJECT_DIR="/data/langbridge/frontend"  # Next.js 编译后的项目根目录
+PROJECT_DIR="/data/langbridge/frontend/dist"  # Next.js 编译后的项目根目录
 LOG_FILE="$PROJECT_DIR/output.log"
 PROCESS_NAME="next start"
 PORT=3000
