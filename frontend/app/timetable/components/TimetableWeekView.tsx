@@ -1,12 +1,12 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, Event as BigCalendarEvent, ToolbarProps } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import endOfWeek from 'date-fns/endOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
+import { format } from 'date-fns/format';
+import { parse } from 'date-fns/parse';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { endOfWeek } from 'date-fns/endOfWeek';
+import { getDay } from 'date-fns/getDay';
+import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { apiClient } from '../../utils/api';
 import { toast } from 'react-toastify';
@@ -78,16 +78,43 @@ const CustomToolbar = (toolbar: ToolbarProps) => {
 
 // --- UPDATED Event Details Modal ---
 const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: () => void; }) => {
-  
+  // 进入时间判断逻辑
+  const now = new Date();
+  const eventDate = event.start ? new Date(event.start) : null;
+  let status: 'canEnter' | 'expired' | 'notStarted' | 'notInTimeWindow' = 'notStarted';
+  let tip = '';
+
+  if (eventDate) {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    if (eventDay < today) {
+      status = 'expired';
+      tip = 'Class has ended or expired.';
+    } else if (eventDay > today) {
+      status = 'notStarted';
+      tip = 'Class has not started yet.';
+    } else {
+      // 今天，判断时间窗口
+      const diffMinutes = (now.getTime() - eventDate.getTime()) / 60000;
+      if (diffMinutes >= -120 && diffMinutes <= 120) {
+        status = 'canEnter';
+        tip = '';
+      } else {
+        status = 'notInTimeWindow';
+        tip = 'You can only enter the classroom within 2 hours before or after the start time.';
+      }
+    }
+  }
+
   const handleJoinClassroom = () => {
     if (!event.id) {
       toast.error("Lesson ID is missing.");
       return;
     }
-    // Simply open the new dedicated meeting page in a new tab
+    if (status !== 'canEnter') return;
     const meetingPageUrl = `/course/meet/${event.id}`;
     window.open(meetingPageUrl, '_blank', 'noopener,noreferrer');
-    onClose(); // Close the modal
+    onClose();
   };
 
   const modalVariants = {
@@ -110,11 +137,16 @@ const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: ()
         </div>
         <button
           onClick={handleJoinClassroom}
-          className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-0.5"
+          className={`w-full mt-8 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform
+            ${status === 'canEnter' ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+          disabled={status !== 'canEnter'}
         >
           <FaVideo />
           Enter Classroom
         </button>
+        {tip && (
+          <div className="mt-4 text-center text-red-500 text-sm">{tip}</div>
+        )}
       </motion.div>
     </motion.div>
   );
