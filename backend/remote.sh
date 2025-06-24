@@ -1,10 +1,13 @@
 #!/bin/sh
 set -e
-REMOTE_USER="root"
-REMOTE_HOST="47.84.41.204"
-REMOTE_DIR="/app/stonks-api"
-echo "开始执行更新并构建......"
-ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && ./build.sh"
-echo "开始启动应用......"
-ssh ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && ./start.sh"
-echo "更新并启动操作完成。"
+
+REMOTE_HOST="contabo"
+REMOTE_DIR="/data/langbridge"
+
+echo "start building......"
+ssh "${REMOTE_HOST}" "cd ${REMOTE_DIR}/source/languagebridge/backend && ./build.sh"
+
+echo "restart application......"
+ssh "${REMOTE_HOST}" "cd ${REMOTE_DIR}/server && ./start.sh"
+
+echo "finished"
