@@ -473,6 +473,22 @@ func CourseGetMeetingInfo(c *gin.Context) {
 		return
 	}
 
+	lessonDate := bookTran.LessonDate
+	now := time.Now().Truncate(24 * time.Hour)
+	if lessonDate.Before(now) {
+		//今天之前
+		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
+		res.Msg = "course date already passed"
+		c.JSON(http.StatusOK, res)
+		return
+	} else if lessonDate.After(now) {
+		//今天之后
+		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
+		res.Msg = "course not starting"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
 
 	var courseLog model.CourseLogRecord
