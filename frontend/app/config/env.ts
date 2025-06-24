@@ -5,7 +5,7 @@ export const ENV = {
     APP_ID: 'primary'
   },
   production: {
-    API_BASE_URL: 'https://api.yourdomain.com',
+    API_BASE_URL: 'https://api.arc20.cc',
     APP_KEY: '9882768ab9183051ea9ce724d1e6b645a0581492a5bbbf9b23ca88a3d8051f7e',
     APP_ID: 'primary'
   }
