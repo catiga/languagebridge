@@ -79,7 +79,7 @@ func Overview(c *gin.Context) {
 		Select(`b.id as book_id, b.booking_no as book_no, b.lesson_date, b.start_time, b.end_time, 
 			b.course_id, c.name as course_name, b.teacher_id, d.name as teacher_name, b.user_id`).
 		Joins("LEFT JOIN course_info c ON b.course_id = c.id").
-		Joins("LEFT JOIN teacher_info d on b.teacher_id = d=id").
+		Joins("LEFT JOIN teacher_info d ON b.teacher_id = d.id").
 		Where("b.user_id = ? AND b.lesson_date >= ? AND b.lesson_date <= ?", userID, currentWeekStart, currentWeekEnd).
 		Order("b.lesson_date, b.start_time asc").
 		Scan(&currentWeekCourseList).Error

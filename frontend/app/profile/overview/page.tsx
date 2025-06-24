@@ -6,6 +6,8 @@ import { FaBookOpen, FaCalendarAlt, FaEnvelope, FaUserCircle, FaRocket, FaChalkb
 import Image from 'next/image';
 import AnimatedStatCard from '../components/AnimatedStatCard';
 import ProfileLayout from '../ProfileLayout';
+import { apiClient } from '@/app/utils/api';
+import type { ApiResponse } from '@/app/utils/interfaces';
 
 const statColors = [
   'from-pink-400 via-pink-300 to-pink-200',
@@ -15,13 +17,32 @@ const statColors = [
 ];
 
 export default function ProfileOverviewPage() {
-  // Dummy data, replace with API as needed
   const [stats, setStats] = useState([
-    { icon: <FaBookOpen size={32} />, label: 'My Courses', value: 5 },
-    { icon: <FaCalendarAlt size={32} />, label: 'Completed Lessons', value: 12 },
-    { icon: <FaEnvelope size={32} />, label: 'Messages', value: 3 },
-    { icon: <FaChalkboardTeacher size={32} />, label: 'Teachers', value: 2 },
+    { icon: <FaBookOpen size={32} />, label: 'My Courses', value: 0 },
+    { icon: <FaCalendarAlt size={32} />, label: 'Completed Lessons', value: 0 },
+    { icon: <FaEnvelope size={32} />, label: 'Messages', value: 0 },
+    { icon: <FaChalkboardTeacher size={32} />, label: 'Teachers', value: 0 },
   ]);
+  const [weekLessons, setWeekLessons] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchOverview() {
+      try {
+        const res = await apiClient.get<ApiResponse<any>>('/spwapi/auth/overview');
+        if (res && res.code === 0 && res.data) {
+          const teacherSet = new Set((res.data.current_week_courses || []).map((c: any) => c.teacher_name));
+          setStats([
+            { icon: <FaBookOpen size={32} />, label: 'My Courses', value: res.data.lesson_total_count },
+            { icon: <FaCalendarAlt size={32} />, label: 'Completed Lessons', value: res.data.lesson_past_count },
+            { icon: <FaEnvelope size={32} />, label: 'Messages', value: 0 },
+            { icon: <FaChalkboardTeacher size={32} />, label: 'Teachers', value: teacherSet.size },
+          ]);
+          setWeekLessons(res.data.current_week_courses || []);
+        }
+      } catch (e) {}
+    }
+    fetchOverview();
+  }, []);
 
   return (
     <ProfileLayout>
@@ -73,18 +94,39 @@ export default function ProfileOverviewPage() {
           transition={{ delay: 0.5, duration: 0.7, type: 'spring' }}
         >
           <h2 className="text-xl font-bold text-gray-700 mb-4">Weekly Schedule Preview</h2>
-          <div className="flex flex-wrap gap-4">
-            {/* Dummy schedule blocks */}
-            {[1,2,3].map(i => (
-              <motion.div
-                key={i}
-                className="rounded-xl px-6 py-3 bg-gradient-to-r from-yellow-200 via-pink-100 to-blue-100 text-gray-700 font-semibold shadow-md"
-                whileHover={{ scale: 1.08 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
-                Mon {i} 15:00-16:00 Spoken English
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 justify-items-center">
+            {weekLessons.length === 0 ? (
+              <div className="text-gray-400 text-sm text-center py-8 col-span-full">No lessons scheduled this week.</div>
+            ) : (
+              weekLessons.map((lesson, i) => {
+                const today = new Date();
+                const lessonDate = new Date(lesson.lesson_date);
+                const isPast = lessonDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const isToday = lessonDate.getFullYear() === today.getFullYear() && lessonDate.getMonth() === today.getMonth() && lessonDate.getDate() === today.getDate();
+                const isFuture = lessonDate > new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                let cardClass = '';
+                if (isPast) cardClass = 'bg-gray-100 text-gray-400 border border-gray-200';
+                else if (isToday) cardClass = 'bg-blue-50 border border-blue-300 shadow-blue-100 text-blue-900';
+                else if (isFuture) cardClass = 'bg-green-50 border border-green-300 text-green-900';
+                return (
+                  <motion.div
+                    key={lesson.book_id || i}
+                    className={`w-full h-full min-h-[120px] flex flex-col justify-between rounded-xl px-6 py-4 font-semibold shadow-md ${cardClass}`}
+                    whileHover={{ scale: 1.04 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                  >
+                    <div className="font-bold text-lg mb-1">{lesson.course_name}</div>
+                    <div className="text-xs mb-1">
+                      {lesson.start_time} - {lesson.end_time} | {lesson.lesson_date?.slice(0, 10)}
+                      {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
+                      {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
+                      {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">Teacher: {lesson.teacher_name}</div>
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         </motion.div>
       </div>
