@@ -40,6 +40,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/course/meeting/fetch", auth.CourseGetMeetingInfo)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
+	teacherAuthGroup.GET("/overview", auth.Overview)
 	teacherAuthGroup.GET("/profile/retrieve", auth.RetrieveTeacherProfile)
 	teacherAuthGroup.POST("/profile/update", auth.UpdateTeacherProfile)
 	teacherAuthGroup.GET("/certificate/retrieve", auth.RetrieveTeacherCertificate)

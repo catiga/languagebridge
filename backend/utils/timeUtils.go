@@ -128,3 +128,23 @@ func CompareDate(date1, date2 string) (int, error) {
 		return 0, nil
 	}
 }
+
+func GetCurrentWeekRange() (time.Time, time.Time) {
+	now := time.Now()
+	// 获取今天是星期几（周日为0，周一为1，...）
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7 // 将周日改成 7，方便减去得到周一
+	}
+
+	// 获取周一的日期（本周第一天）
+	weekStart := now.AddDate(0, 0, -weekday+1)
+	// 获取周日的日期（本周最后一天）
+	weekEnd := weekStart.AddDate(0, 0, 6)
+
+	// 将时间清零为当天零点
+	weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, weekStart.Location())
+	weekEnd = time.Date(weekEnd.Year(), weekEnd.Month(), weekEnd.Day(), 23, 59, 59, 0, weekEnd.Location())
+
+	return weekStart, weekEnd
+}

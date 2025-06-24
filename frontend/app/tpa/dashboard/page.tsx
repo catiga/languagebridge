@@ -21,6 +21,7 @@ import CourseManagement from './components/CourseManagement';
 import TimeSlotManagement from './components/TimeSlotManagement';
 import TeacherScheduleWeekView from './components/TeacherScheduleWeekView';
 import SettingPanel from './components/SettingPanel';
+import { apiClient } from '@/app/utils/api';
 
 interface DashboardStats {
   totalStudents: number;
@@ -29,6 +30,7 @@ interface DashboardStats {
   totalEarnings: number;
   activeCourses: number;
   pendingBookings: number;
+  pastLessons: number;
 }
 
 interface RecentActivity {
@@ -134,71 +136,74 @@ function RecentActivities({ activities }: { activities: any[] }) {
 
 function QuickActions({ onAction }: { onAction: (tab: Tab) => void }) {
   return (
-    <div className="flex flex-wrap gap-4 mt-2">
-      <button onClick={() => onAction('courses')} className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow font-medium">Add Course</button>
-      <button onClick={() => onAction('schedule')} className="bg-purple-500 hover:bg-purple-600 text-white px-5 py-2 rounded-xl shadow font-medium">Set Time Slots</button>
-      <button onClick={() => onAction('certificates')} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl shadow font-medium">Manage Certificates</button>
-      <button onClick={() => onAction('profile')} className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-xl shadow font-medium">Go to Profile</button>
+    <div className="flex flex-wrap gap-6 justify-center my-6">
+      <button onClick={() => onAction('courses')} className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
+        <FaBookOpen className="w-6 h-6" /> Add Course
+      </button>
+      <button onClick={() => onAction('schedule')} className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
+        <FaCalendarAltIcon className="w-6 h-6" /> Set Time Slots
+      </button>
+      <button onClick={() => onAction('certificates')} className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
+        <FaCertificate className="w-6 h-6" /> Manage Certificates
+      </button>
+      <button onClick={() => onAction('profile')} className="flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-700 hover:from-gray-600 hover:to-gray-800 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
+        <FaUsers className="w-6 h-6" /> Go to Profile
+      </button>
     </div>
   );
 }
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [stats] = useState<DashboardStats>({
-    totalStudents: 127,
-    totalLessons: 342,
-    averageRating: 4.8,
-    totalEarnings: 2847,
-    activeCourses: 8,
-    pendingBookings: 12,
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalLessons: 0,
+    activeCourses: 0,
+    pendingBookings: 0,
+    pastLessons: 0,
   });
-
-  const [recentActivities] = useState<RecentActivity[]>([
-    {
-      id: 1,
-      type: 'lesson',
-      title: 'English Speaking Course',
-      description: 'Completed lesson 15 with Sarah Johnson',
-      time: '2 hours ago',
-      icon: <FaPlayIcon className="w-4 h-4" />,
-      color: 'bg-green-100 text-green-600'
-    },
-    {
-      id: 2,
-      type: 'booking',
-      title: 'New Booking',
-      description: 'Mike Chen booked IELTS course for next Wednesday',
-      time: '4 hours ago',
-      icon: <FaCalendarAltIcon className="w-4 h-4" />,
-      color: 'bg-blue-100 text-blue-600'
-    },
-    {
-      id: 3,
-      type: 'review',
-      title: 'New Review',
-      description: 'Emma Wilson gave you a 5-star rating',
-      time: '6 hours ago',
-      icon: <FaStarIcon className="w-4 h-4" />,
-      color: 'bg-yellow-100 text-yellow-600'
-    },
-    {
-      id: 4,
-      type: 'certificate',
-      title: 'Certificate Updated',
-      description: 'Your TESOL certificate has been updated',
-      time: '1 day ago',
-      icon: <FaCertificate className="w-4 h-4" />,
-      color: 'bg-purple-100 text-purple-600'
-    },
-  ]);
+  const [teacherName, setTeacherName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+  const [weekLessons, setWeekLessons] = useState<any[]>([]);
 
   useEffect(() => {
-    // Check teacher login status
     const teacherToken = Cookies.get('teacherToken');
     if (!teacherToken) {
       window.location.href = '/tpa/login';
     }
+  }, []);
+
+  useEffect(() => {
+    async function fetchOverview() {
+      try {
+        const res = await apiClient.get('/spwapi/tpa/auth/overview');
+        if (res && res.code === 0 && res.data) {
+          setStats({
+            totalStudents: res.data.total_student_count,
+            totalLessons: res.data.lesson_upcoming_count + res.data.lesson_past_count,
+            activeCourses: res.data.my_course_count,
+            pendingBookings: res.data.lesson_upcoming_count,
+            pastLessons: res.data.lesson_past_count,
+          });
+          setWeekLessons(res.data.current_week_courses || []);
+        }
+      } catch (e) {}
+    }
+    fetchOverview();
+  }, []);
+
+  useEffect(() => {
+    // 拉取教师profile，获取真实姓名和头像
+    async function fetchProfile() {
+      try {
+        const res = await apiClient.get('/spwapi/tpa/auth/profile/retrieve');
+        if (res && res.code === 0 && res.data) {
+          setTeacherName(res.data.name || res.data.first_name || 'Teacher');
+          setAvatarUrl(res.data.avatar || '/default-avatar.svg');
+        }
+      } catch (e) {}
+    }
+    fetchProfile();
   }, []);
 
   const renderContent = () => {
@@ -218,20 +223,47 @@ export default function TeacherDashboard() {
       case 'overview':
         return (
           <div className="space-y-8">
-            <WelcomeBanner teacherName="catiga03" avatarUrl={undefined} />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <StatsCard label="Total Students" value={stats.totalStudents} icon={FaUsers} color="border-blue-400" />
-              <StatsCard label="Total Lessons" value={stats.totalLessons} icon={FaBookOpen} color="border-green-400" />
-              <StatsCard label="Average Rating" value={stats.averageRating} icon={FaStarIcon} color="border-yellow-400" />
-              <StatsCard label="Total Earnings" value={`$${stats.totalEarnings}`} icon={FaPlayIcon} color="border-purple-400" />
-              <StatsCard label="Active Courses" value={stats.activeCourses} icon={FaPlayIcon} color="border-indigo-400" />
-              <StatsCard label="Pending Bookings" value={stats.pendingBookings} icon={FaCalendarAltIcon} color="border-pink-400" />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <SchedulePreview lessons={[]} />
-              <RecentActivities activities={recentActivities} />
-            </div>
+            <WelcomeBanner teacherName={teacherName || 'Teacher'} avatarUrl={avatarUrl} />
             <QuickActions onAction={(tab) => setActiveTab(tab as Tab)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              <StatsCard label="Total Students" value={stats.totalStudents} icon={FaUsers} color="border-blue-400" />
+              <StatsCard label="Active Courses" value={stats.activeCourses} icon={FaBookOpen} color="border-indigo-400" />
+              <StatsCard label="Upcoming Lessons" value={stats.pendingBookings} icon={FaCalendarAltIcon} color="border-pink-400" />
+              <StatsCard label="Past Lessons" value={stats.pastLessons} icon={FaBookOpen} color="border-green-400" />
+            </div>
+            <div className="bg-white rounded-2xl shadow p-6">
+              <div className="font-bold text-lg text-gray-800 mb-4">This Week's Lessons</div>
+              {weekLessons.length === 0 ? (
+                <div className="text-gray-400 text-sm text-center py-8">No lessons scheduled this week.</div>
+              ) : (
+                <ul className="space-y-3">
+                  {weekLessons.map((lesson, i) => {
+                    const today = new Date();
+                    const lessonDate = new Date(lesson.lesson_date);
+                    const isPast = lessonDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    const isToday = lessonDate.getFullYear() === today.getFullYear() && lessonDate.getMonth() === today.getMonth() && lessonDate.getDate() === today.getDate();
+                    const isFuture = lessonDate > new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    let cardClass = '';
+                    if (isPast) cardClass = 'bg-gray-100 text-gray-400 border border-gray-200';
+                    else if (isToday) cardClass = 'bg-blue-50 border border-blue-300 shadow-blue-100 text-blue-900';
+                    else if (isFuture) cardClass = 'bg-green-50 border border-green-300 text-green-900';
+                    return (
+                      <li key={lesson.book_id || i} className={`rounded-xl px-5 py-4 shadow-sm flex flex-col ${cardClass}`}>
+                        <div className="font-semibold text-base mb-1 truncate">{lesson.course_name}</div>
+                        <div className="flex items-center gap-4 text-xs">
+                          <span>{lesson.start_time} - {lesson.end_time}</span>
+                          <span>|</span>
+                          <span>{lesson.lesson_date?.slice(0, 10)}</span>
+                          {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
+                          {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
+                          {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         );
       default:
@@ -247,10 +279,8 @@ export default function TeacherDashboard() {
               {[
                 { label: 'Total Students', value: stats.totalStudents, icon: FaUsers, color: 'from-blue-500 to-cyan-500' },
                 { label: 'Total Lessons', value: stats.totalLessons, icon: FaBookOpen, color: 'from-green-500 to-emerald-500' },
-                { label: 'Average Rating', value: stats.averageRating, icon: FaStarIcon, color: 'from-yellow-500 to-orange-500' },
-                { label: 'Total Earnings', value: `$${stats.totalEarnings}`, icon: FaPlayIcon, color: 'from-purple-500 to-pink-500' },
-                { label: 'Active Courses', value: stats.activeCourses, icon: FaPlayIcon, color: 'from-indigo-500 to-purple-500' },
-                { label: 'Pending Bookings', value: stats.pendingBookings, icon: FaCalendarAltIcon, color: 'from-red-500 to-pink-500' },
+                { label: 'Active Courses', value: stats.activeCourses, icon: FaBookOpen, color: 'from-indigo-500 to-purple-500' },
+                { label: 'Upcoming Lessons', value: stats.pendingBookings, icon: FaCalendarAltIcon, color: 'from-pink-500 to-red-500' },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
@@ -292,18 +322,7 @@ export default function TeacherDashboard() {
                   </motion.button>
                 </div>
                 <div className="space-y-4">
-                  {recentActivities.map((activity, index) => (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ x: 50, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.1 * index }}
-                      whileHover={{ x: 5 }}
-                      className="flex items-center space-x-4 p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors"
-                    >
-                      {/* 这里应有内容，暂时留空或补充实际内容 */}
-                    </motion.div>
-                  ))}
+                  {/* 这里应有内容，暂时留空或补充实际内容 */}
                 </div>
               </motion.div>
             </div>

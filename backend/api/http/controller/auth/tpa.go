@@ -13,6 +13,7 @@ import (
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"github.com/langbridge/backend/utils"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -62,6 +63,104 @@ type AddCourseRequest struct {
 	Duration      int             `json:"duration" binding:"required"`
 	SessionNumber int             `json:"session_number" binding:"required"`
 	CoursePicture string          `json:"course_picture" binding:"required"`
+}
+
+type SimpleCourseBookObject struct {
+	BookID     uint64 `json:"book_id"`
+	BookNo     string `json:"book_no"`
+	LessonDate string `json:"lesson_date"`
+	StartTime  string `json:"start_time"`
+	EndTime    string `json:"end_time"`
+	CourseID   uint64 `json:"course_id"`
+	CourseName string `json:"course_name"`
+	TeacherID  uint64 `json:"teacher_id"`
+	UserID     uint64 `json:"user_id"`
+}
+
+func Overview(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var teacherCourseCount int64
+	var lessonUpcomingCount int64
+	var lessonPastCount int64
+	var totalStudentCount int64
+
+	var currentWeekCourseList []SimpleCourseBookObject
+
+	err = db.Model(&model.CourseTeacherBind{}).
+		Where("teacher_id = ?", teacherId).
+		Count(&teacherCourseCount).Error
+	if err != nil {
+		log.Error("overview-fetch total course error", err)
+	}
+
+	err = db.Model(&model.CourseBookTrans{}).Where("teacher_id = ? and lesson_date >= ?", teacherId, time.Now()).Count(&lessonUpcomingCount).Error
+	if err != nil {
+		log.Error("overview-fetch upcoming lession error", err)
+	}
+
+	err = db.Model(&model.CourseBookTrans{}).Where("teacher_id = ? and lesson_date < ?", teacherId, time.Now()).Count(&lessonPastCount).Error
+	if err != nil {
+		log.Error("overview-fetch past lession error", err)
+	}
+
+	err = db.Model(&model.CourseBookTrans{}).
+		Where("teacher_id = ?", 4).
+		Select("DISTINCT user_id").
+		Count(&totalStudentCount).Error
+
+	if err != nil {
+		log.Error("overview-fetch Count distinct user_id error:", err)
+	}
+
+	currentWeekStart, currentWeekEnd := utils.GetCurrentWeekRange()
+	err = db.Table("course_book_trans as b").
+		Select(`b.id as book_id, b.booking_no as book_no, b.lesson_date, b.start_time, b.end_time, 
+			b.course_id, c.name as course_name, b.teacher_id, b.user_id`).
+		Joins("LEFT JOIN course_info c ON b.course_id = c.id").
+		Where("b.teacher_id = ? AND b.lesson_date >= ? AND b.lesson_date <= ?", teacherId, currentWeekStart, currentWeekEnd).
+		Order("b.lesson_date, b.start_time asc").
+		Scan(&currentWeekCourseList).Error
+	if err != nil {
+		log.Error("overview-fetch week course list error", err)
+	}
+
+	res.Data = struct {
+		MyCourseCount       int64                    `json:"my_course_count"`
+		LessonUpcomingCount int64                    `json:"lesson_upcoming_count"`
+		LessonPastCount     int64                    `json:"lesson_past_count"`
+		TotalStudentCount   int64                    `json:"total_student_count"`
+		CurrentWeekCourses  []SimpleCourseBookObject `json:"current_week_courses"`
+	}{
+		MyCourseCount:       teacherCourseCount,
+		LessonUpcomingCount: lessonUpcomingCount,
+		LessonPastCount:     lessonPastCount,
+		TotalStudentCount:   totalStudentCount,
+		CurrentWeekCourses:  currentWeekCourseList,
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func RetrieveTeacherProfile(c *gin.Context) {
