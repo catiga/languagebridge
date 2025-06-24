@@ -3,12 +3,14 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	general "github.com/langbridge/backend/api/http"
 	"github.com/langbridge/backend/api/interceptor"
 	"github.com/langbridge/backend/api/ws"
 	"github.com/langbridge/backend/config"
+	"github.com/langbridge/backend/log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,13 +31,18 @@ func Init() *gin.Engine {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "APPID", "SIG", "TS", "VER", "REQUESTID", "XAUTH", "TAUTH"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	env := os.Getenv("ENV")
+
+	log.Info(env)
+	if env == "dev" {
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"*"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "APPID", "SIG", "TS", "VER", "REQUESTID", "XAUTH", "TAUTH"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+		}))
+	}
 
 	r.GET("/index", helloHandler) //Default welcome api
 
