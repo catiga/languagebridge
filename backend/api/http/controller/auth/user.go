@@ -34,6 +34,18 @@ type EmailSendRequest struct {
 	Email string `json:"email"`
 }
 
+type UserResponse struct {
+	ID        uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	LoginId   string    `gorm:"column:login_id;type:varchar(255);not null" json:"login_id"`
+	Email     string    `gorm:"column:email" json:"email"`
+	Name      string    `gorm:"column:name" json:"name"`
+	CountryID uint64    `gorm:"column:country_id" json:"country_id"`
+	Language  string    `gorm:"column:language" json:"language"`
+	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
+	Status    string    `gorm:"column:status" json:"status"`
+	UserNo    string    `gorm:"column:user_no" json:"user_no"`
+}
+
 func Overview(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -58,6 +70,9 @@ func Overview(c *gin.Context) {
 	}
 
 	db := system.GetDb()
+
+	var userInfo model.UserInfo
+	db.Model(&model.UserInfo{}).Where("id = ?", userID).First(&userInfo)
 
 	var myCourseCount int64
 	var lessonUpcomingCount int64
@@ -104,11 +119,23 @@ func Overview(c *gin.Context) {
 		LessonUpcomingCount int64                    `json:"lesson_upcoming_count"`
 		LessonPastCount     int64                    `json:"lesson_past_count"`
 		CurrentWeekCourses  []SimpleCourseBookObject `json:"current_week_courses"`
+		UpdatedUser         UserResponse             `json:"user_info"`
 	}{
 		LessonTotalCount:    lessonPastCount + lessonUpcomingCount,
 		LessonUpcomingCount: lessonUpcomingCount,
 		LessonPastCount:     lessonPastCount,
 		CurrentWeekCourses:  currentWeekCourseList,
+		UpdatedUser: UserResponse{
+			ID:        userInfo.ID,
+			LoginId:   userInfo.LoginId,
+			Email:     userInfo.Email,
+			Name:      userInfo.Name,
+			CountryID: userInfo.CountryID,
+			Language:  userInfo.Language,
+			AddTime:   userInfo.AddTime,
+			Status:    userInfo.Status,
+			UserNo:    userInfo.UserNo,
+		},
 	}
 	c.JSON(http.StatusOK, res)
 }

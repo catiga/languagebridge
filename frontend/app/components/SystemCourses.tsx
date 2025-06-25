@@ -16,6 +16,7 @@ interface SystemCourse {
   level: number;
   display_price: string;
   goal: string;
+  course_picture?: string;
 }
 
 const PAGE_SIZE = 10; // 每页显示10条
@@ -94,7 +95,7 @@ export default function SystemCourses() {
                 onClick={() => handleDetails(course.id)}
               >
                 <div className="relative w-full h-40">
-                  <img src={'/default-avatar.svg'} alt={course.name} className="w-full h-full object-cover" />
+                  <img src={course.course_picture ? course.course_picture : '/default-course-image.svg'} alt={course.name} className="w-full h-full object-cover" />
                   <span className="absolute top-3 right-3 text-xs font-bold text-white bg-blue-500 px-2 py-1 rounded-full shadow">ALL</span>
                 </div>
                 <div className="p-4 flex-1 flex flex-col">

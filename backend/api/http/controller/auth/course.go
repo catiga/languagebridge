@@ -157,6 +157,7 @@ func CourseList(c *gin.Context) {
 		c.cost_price,
 		c.display_price,
 		c.goal,
+		c.course_picture,
 		c.add_time AS course_add_time,
 		c.update_time AS course_update_time,
 		c.status AS course_status,

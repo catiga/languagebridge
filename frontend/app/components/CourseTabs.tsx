@@ -251,7 +251,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                   onClick={() => router.push(`/mycourses/${course.course_id}`)}
                 >
                   <div className="relative w-full h-40">
-                    <img src={'/default-avatar.svg'} alt={course.course_name} className="w-full h-full object-cover" />
+                    <img src={course.course_picture ? course.course_picture : '/default-course-image.svg'} alt={course.course_name} className="w-full h-full object-cover" />
                     <span className="absolute top-3 right-3 text-xs font-bold text-white bg-green-500 px-2 py-1 rounded-full shadow">Joined</span>
                   </div>
                   <div className="p-4 flex-1 flex flex-col">

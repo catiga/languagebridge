@@ -91,6 +91,7 @@ type UserCourseWithCourse struct {
 	CourseUpdTime time.Time       `gorm:"column:course_update_time" json:"course_update_time"`
 	CourseStatus  string          `gorm:"column:course_status" json:"course_status"`
 	CourseFlag    int             `gorm:"column:course_flag" json:"course_flag"`
+	CoursePicture string          `gorm:"column:course_picture" json:"course_picture"`
 }
 
 type TeacherTimeSlotTemplate struct {
