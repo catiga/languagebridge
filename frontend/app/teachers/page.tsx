@@ -19,6 +19,11 @@ interface Teacher {
   specialties?: string[]; 
   rating?: number;
   lessonsTaught?: number;
+  nationality_name?: string;
+  living_country_name?: string;
+  teacher_no?: string;
+  first_language?: string;
+  detail?: string;
 }
 
 // --- Teacher Card Component ---
@@ -27,25 +32,31 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
   
   return (
     <motion.div
-      className="bg-white rounded-xl shadow-lg text-center p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
+      className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group border border-gray-100 min-w-[240px] max-w-[300px] mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       onClick={() => router.push(`/teachers/${teacher.id}`)}
     >
-      <img src={teacher.avatar || '/default-avatar.svg'} alt={teacher.name} className="w-28 h-28 rounded-full mx-auto mb-4 border-4 border-gray-100 shadow-md" />
-      <h3 className="text-xl font-bold text-gray-900">{teacher.name}</h3>
-      <p className="text-sm text-gray-500 mb-3 h-10 overflow-hidden">{teacher.introduction}</p>
-      <div className="flex flex-wrap justify-center gap-2 mb-4 h-6">
-        {teacher.specialties?.map(spec => (
-          <span key={spec} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{spec}</span>
-        ))}
+      <img
+        src={teacher.avatar || '/default-avatar.svg'}
+        alt={teacher.name}
+        className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow mb-3 group-hover:scale-105 transition-transform duration-300"
+      />
+      <div className="w-full text-center">
+        <h3 className="text-lg font-bold text-gray-900 mb-1">{teacher.name}</h3>
+        <div className="flex flex-col gap-1 items-center text-xs text-gray-500 mb-3">
+          <span><span className="font-semibold text-gray-700">Nationality:</span> {teacher.nationality_name || '—'}</span>
+          <span><span className="font-semibold text-gray-700">Location:</span> {teacher.living_country_name || '—'}</span>
+          <span><span className="font-semibold text-gray-700">Native Language:</span> {teacher.first_language || '—'}</span>
+        </div>
+        <div className="text-gray-700 text-sm mb-2 min-h-[32px] line-clamp-2 font-medium">{teacher.introduction}</div>
+        {teacher.detail && <div className="text-gray-400 text-xs mb-3 min-h-[32px] line-clamp-2 border-t border-gray-100 pt-2">{teacher.detail}</div>}
       </div>
-      <div className="flex justify-center items-center text-gray-600 mb-5">
-        {teacher.rating && <><FaStar className="text-yellow-400 mr-1" /> <span className="font-bold text-gray-800 mr-3">{teacher.rating.toFixed(1)}</span></>}
-        {teacher.lessonsTaught && <span>({teacher.lessonsTaught.toLocaleString()} lessons)</span>}
-      </div>
-      <button className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300">
+      <button
+        className="mt-auto w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:bg-blue-700 transition-all duration-200"
+        onClick={e => { e.stopPropagation(); router.push(`/teachers/${teacher.teacher_no}`); }}
+      >
         View Profile
       </button>
     </motion.div>
@@ -57,25 +68,33 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize] = useState(12);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchTeachers = async () => {
+      setIsLoading(true);
       try {
-        const res = await apiClient.get<ApiResponse<Teacher[]>>('/spwapi/teacher/fetch_all');
-        if (res.code === 0 && Array.isArray(res.data)) {
-          setTeachers(res.data);
+        const res = await apiClient.get<any>('/spwapi/teacher/fetch', { pn: pageNo, ps: pageSize });
+        if (res.code === 0 && res.data?.list) {
+          setTeachers(res.data.list);
+          setTotal(res.data.total || 0);
         } else {
           setTeachers([]);
+          setTotal(0);
         }
       } catch (error) {
-        console.error("Failed to fetch teachers", error);
         setTeachers([]);
+        setTotal(0);
       } finally {
         setIsLoading(false);
       }
     };
     fetchTeachers();
-  }, []);
+  }, [pageNo, pageSize]);
+
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-16">
@@ -109,12 +128,30 @@ export default function TeachersPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {isLoading ? (
             <div className="text-center text-gray-500">Loading teachers...</div>
+          ) : teachers.length === 0 ? (
+            <div className="text-center text-gray-400">No teachers found.</div>
           ) : (
             <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {teachers.map(teacher => (
                 <TeacherCard key={teacher.id} teacher={teacher} />
               ))}
             </main>
+          )}
+          {/* 分页按钮 */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-8 gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                onClick={() => setPageNo(p => Math.max(1, p - 1))}
+                disabled={pageNo === 1}
+              >Prev</button>
+              <span className="px-3 py-2 text-gray-700">Page {pageNo} / {totalPages}</span>
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                onClick={() => setPageNo(p => Math.min(totalPages, p + 1))}
+                disabled={pageNo === totalPages}
+              >Next</button>
+            </div>
           )}
         </div>
         

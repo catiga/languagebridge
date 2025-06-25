@@ -77,6 +77,35 @@ type TeacherResponse struct {
 	Certificates      []TeacherCertificateResponse `json:"certificates"`
 }
 
+type CourseResponse struct {
+	ID            uint64    `json:"id"`
+	Name          string    `json:"name"`
+	Introduction  string    `json:"introduction"`
+	Detail        string    `json:"detail"`
+	Language      string    `json:"language"`
+	Level         int       `json:"level"`
+	Goal          string    `json:"goal"`
+	UpdateTime    time.Time `json:"update_time"`
+	AddTime       time.Time `json:"add_time"`
+	Status        string    `json:"status"`
+	Duration      int       `json:"duration"`
+	SessionNumber int       `json:"session_number"`
+	CoursePicture string    `json:"course_picture"`
+}
+
+type TeacherSlotsResponse struct {
+	WeekDay   int    `gorm:"column:week_day" json:"week_day"`
+	StartTime string `gorm:"column:start_time" json:"start_time"`
+	EndTime   string `gorm:"column:end_time" json:"end_time"`
+	Enabled   bool   `gorm:"column:enabled" json:"enabled"`
+}
+
+type TeacherDetailResponse struct {
+	TeacherResponse
+	Courses []CourseResponse       `json:"courses"`
+	Slots   []TeacherSlotsResponse `json:"slots"`
+}
+
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -555,13 +584,6 @@ func TeacherLogin(c *gin.Context) {
 		return
 	}
 
-	// if teacherInfo.Status != "20" {
-	// 	res.Code = codes.CODE_STATUS_INVALID
-	// 	res.Msg = "teacher status is invalid"
-	// 	c.JSON(http.StatusOK, res)
-	// 	return
-	// }
-
 	originalStr := fmt.Sprintf("%d,%s,%d", teacherInfo.ID, teacherInfo.TeacherNo, time.Now().Unix())
 	token, err := security.Encrypt([]byte(originalStr))
 
@@ -585,5 +607,180 @@ func TeacherLogin(c *gin.Context) {
 		Name:      teacherInfo.Name,
 		Token:     token,
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherFetchList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	pageNo, _ := strconv.ParseInt(c.Query("pn"), 10, 64)
+	pageSize, _ := strconv.ParseInt(c.Query("ps"), 10, 64)
+
+	if pageNo <= 0 {
+		pageNo = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	db := system.GetDb()
+
+	var teacherList []model.Teacher
+	var total int64
+
+	// 统计总数
+	db.Model(&model.Teacher{}).
+		Where("status = ? AND flag != ?", "10", -1).
+		Count(&total)
+
+	// 获取当前页数据
+	err := db.Model(&model.Teacher{}).
+		Where("status = ? AND flag != ?", "10", -1).
+		Order("id ASC").
+		Offset(int((pageNo - 1) * pageSize)).
+		Limit(int(pageSize)).
+		Find(&teacherList).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var teachResponseResult []TeacherResponse
+	for _, r := range teacherList {
+		teachResponseResult = append(teachResponseResult, TeacherResponse{
+			ID:                r.ID,
+			Name:              r.Name,
+			FirstName:         r.FirstName,
+			LastName:          r.LastName,
+			Introduction:      r.Introduction,
+			Detail:            r.Detail,
+			FirstLanguage:     r.FirstLanguage,
+			NationalityID:     r.NationalityID,
+			NationalityName:   r.NationalityName,
+			LivingCountryID:   r.LivingCountryID,
+			LivingCountryName: r.LivingCountryName,
+			TeacherNo:         r.TeacherNo,
+			Avatar:            r.Avatar,
+		})
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = gin.H{
+		"list":        teachResponseResult,
+		"pn":          pageNo,
+		"ps":          pageSize,
+		"total":       total,
+		"total_pages": totalPages,
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherFetchDetail(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	teacherNo := c.Query("teacher_no")
+
+	db := system.GetDb()
+
+	var teacher model.Teacher
+
+	err := db.Model(&model.Teacher{}).
+		Where("teacher_no = ? AND flag != ?", teacherNo, -1).
+		First(&teacher).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if teacher.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "teacher not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var teacherCertificates []model.TeacherCertificate
+	var teacherSlots []model.TeacherTimeSlotTemplate
+	var teacherCourses []model.CourseInfo
+
+	db.Model(&model.TeacherCertificate{}).Where("teacher_id = ?", teacher.ID).Find(&teacherCertificates)
+	db.Model(&model.TeacherTimeSlotTemplate{}).Where("teacher_id = ?", teacher.ID).Find(&teacherSlots)
+
+	db.Model(&model.CourseInfo{}).Where("id IN (select course_id from course_teacher where teacher_id = ? order by score desc)", teacher.ID).Find(&teacherCourses)
+
+	var teacherCertRes []TeacherCertificateResponse
+	var teacherCourseRes []CourseResponse
+	var teacherSlotRes []TeacherSlotsResponse
+
+	for _, r := range teacherCertificates {
+		teacherCertRes = append(teacherCertRes, TeacherCertificateResponse{
+			Title:       r.Title,
+			Achievement: r.Achievement,
+			GetDate:     r.GetDate,
+			Document:    r.Document,
+			IssueOrg:    r.IssueOrg,
+		})
+	}
+	for _, r := range teacherCourses {
+		teacherCourseRes = append(teacherCourseRes, CourseResponse{
+			ID:            r.ID,
+			Name:          r.Name,
+			Introduction:  r.Introduction,
+			Detail:        r.Detail,
+			Language:      r.Language,
+			Level:         r.Level,
+			Goal:          r.Goal,
+			UpdateTime:    r.UpdateTime,
+			AddTime:       r.AddTime,
+			Status:        r.Status,
+			Duration:      r.Duration,
+			SessionNumber: r.SessionNumber,
+			CoursePicture: r.CoursePicture,
+		})
+	}
+
+	for _, r := range teacherSlots {
+		teacherSlotRes = append(teacherSlotRes, TeacherSlotsResponse{
+			WeekDay:   r.WeekDay,
+			StartTime: r.StartTime,
+			EndTime:   r.EndTime,
+			Enabled:   r.Enabled,
+		})
+	}
+
+	var teachResponse TeacherDetailResponse = TeacherDetailResponse{
+		TeacherResponse: TeacherResponse{
+			ID:                teacher.ID,
+			Name:              teacher.Name,
+			FirstName:         teacher.FirstName,
+			LastName:          teacher.LastName,
+			Introduction:      teacher.Introduction,
+			Detail:            teacher.Detail,
+			FirstLanguage:     teacher.FirstLanguage,
+			NationalityID:     teacher.NationalityID,
+			NationalityName:   teacher.NationalityName,
+			LivingCountryID:   teacher.LivingCountryID,
+			LivingCountryName: teacher.LivingCountryName,
+			TeacherNo:         teacher.TeacherNo,
+			Avatar:            teacher.Avatar,
+			Certificates:      teacherCertRes,
+		},
+		Courses: teacherCourseRes,
+		Slots:   teacherSlotRes,
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = teachResponse
 	c.JSON(http.StatusOK, res)
 }

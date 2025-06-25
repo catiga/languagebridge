@@ -21,6 +21,8 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.GET("/course/teachers", home.CourseFetchTeacherList)
 	homeGroup.GET("/course/reviews", home.CourseFetchReviewList)
 	homeGroup.GET("/course/teacher/slots", home.CourseFetchTeacherTimeSlot)
+	homeGroup.GET("/teacher/fetch", home.TeacherFetchList)
+	homeGroup.GET("/teacher/detail", home.TeacherFetchDetail)
 	homeGroup.POST("/tpa/register", home.TeacherRegister)
 	homeGroup.POST("/tpa/login", home.TeacherLogin)
 
