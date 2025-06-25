@@ -106,7 +106,6 @@ export default function SystemCourses() {
                     <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Level {course.level}</span>
                   </div>
                   <div className="flex items-center justify-between mt-auto">
-                    <span className="text-base font-bold text-blue-600">${course.display_price}</span>
                     <span className="text-xs text-gray-500">{course.goal}</span>
                   </div>
                 </div>
