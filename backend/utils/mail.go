@@ -29,7 +29,7 @@ func SendVerifyCodeMail(toEmail, sort string) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
 	m.SetHeader("To", toEmail)
-	m.SetHeader("Subject", "Your Verification Code")
+	m.SetHeader("Subject", "[LangBridge] Your Email Verification Code")
 	m.SetBody("text/html", fmt.Sprintf(`
         <div style="font-family:Arial,sans-serif;font-size:16px;color:#222;max-width:420px;margin:auto;border:1px solid #e5e7eb;border-radius:12px;padding:32px 24px;background:#f9fafb;">
             <div style="text-align:center;margin-bottom:18px;">
