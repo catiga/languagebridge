@@ -71,9 +71,12 @@ export default function TeacherRegisterPage() {
     };
 
     try {
-        const res = await apiClient.post('/spwapi/tpa/register', payload);
+        const res = await apiClient.post<any>('/spwapi/tpa/register', payload);
         if (res && res.code === 0) {
-            toast.success("Application submitted successfully! Please check your email for verification.");
+            toast.success("Application submitted successfully!");
+            setTimeout(() => {
+                window.location.href = '/tpa/login';
+            }, 1500);
         } else {
             toast.error(res?.msg || "Submission failed. Please try again.");
         }
