@@ -4,6 +4,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { FaEnvelope, FaQuestionCircle, FaTwitter, FaLinkedin } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
+import { apiClient } from '@/app/utils/api';
 
 interface IFormInput {
   name: string;
@@ -13,12 +14,21 @@ interface IFormInput {
 }
 
 export default function ContactUsPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<IFormInput>();
+  const messageValue = watch('message', '');
 
-  const onSubmit: SubmitHandler<IFormInput> = data => {
-    console.log(data);
-    // Here you would typically send the data to your backend API
-    toast.success("Your message has been sent successfully!");
+  const onSubmit: SubmitHandler<IFormInput> = async data => {
+    try {
+      await apiClient.post('/spwapi/contact', {
+        full_name: data.name,
+        email: data.email,
+        subject: data.subject,
+        message: data.message,
+      });
+      toast.success("Your message has been sent successfully!");
+    } catch (e) {
+      toast.error("Failed to send message. Please try again later.");
+    }
   };
   
   const inputStyle = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 bg-gray-50";
@@ -62,16 +72,22 @@ export default function ContactUsPage() {
               <div>
                 <label htmlFor="subject" className={labelStyle}>Subject</label>
                 <select id="subject" {...register("subject", { required: true })} className={inputStyle}>
+                  <option value="">Select a subject</option>
                   <option value="General Inquiry">General Inquiry</option>
                   <option value="Student Support">Student Support</option>
                   <option value="Teacher Application">Teacher Application</option>
                   <option value="Partnerships">Partnerships</option>
                 </select>
+                {errors.subject && <span className="text-red-500 text-sm mt-1">This field is required</span>}
               </div>
               <div>
                 <label htmlFor="message" className={labelStyle}>Message</label>
-                <textarea id="message" rows={5} {...register("message", { required: true })} className={inputStyle}></textarea>
-                {errors.message && <span className="text-red-500 text-sm mt-1">This field is required</span>}
+                <textarea id="message" rows={5} {...register("message", { required: true, maxLength: 500 })} className={inputStyle}></textarea>
+                <div className="flex justify-between items-center mt-1">
+                  {errors.message?.type === 'required' && <span className="text-red-500 text-sm">This field is required</span>}
+                  {errors.message?.type === 'maxLength' && <span className="text-red-500 text-sm">Maximum 500 characters allowed</span>}
+                  <span className={`text-xs ml-auto ${messageValue.length > 500 ? 'text-red-500' : 'text-gray-400'}`}>{messageValue.length}/500</span>
+                </div>
               </div>
               <button
                 type="submit"
@@ -95,7 +111,7 @@ export default function ContactUsPage() {
                 <FaEnvelope className="w-6 h-6 text-blue-600" />
                 <div>
                   <h3 className="font-semibold text-gray-800">Email Us</h3>
-                  <a href="mailto:support@langbridge.io" className="hover:text-blue-600">support@langbridge.io</a>
+                  <a href="mailto:langbridge1215@gmail.com" className="hover:text-blue-600">langbridge1215@gmail.com</a>
                 </div>
               </div>
               <div className="flex items-center space-x-4">

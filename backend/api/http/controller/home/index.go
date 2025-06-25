@@ -106,6 +106,13 @@ type TeacherDetailResponse struct {
 	Slots   []TeacherSlotsResponse `json:"slots"`
 }
 
+type SendSystemMessageRequest struct {
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	Subject  string `json:"subject"`
+	Message  string `json:"message"`
+}
+
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -782,5 +789,54 @@ func TeacherFetchDetail(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = teachResponse
+	c.JSON(http.StatusOK, res)
+}
+
+func SendSystemMessage(c *gin.Context) {
+	var req SendSystemMessageRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Message) > 500 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "message should less then 500 chars"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if len(req.Email) > 100 || len(req.FullName) > 100 || len(req.Subject) > 100 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Some fields are too long"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Message) == 0 || len(req.FullName) == 0 || len(req.Email) == 0 || len(req.Subject) == 0 {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "All fields must be filled in"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	smg := model.SysMessage{
+		AddTime:  time.Now(),
+		Subject:  req.Subject,
+		Message:  req.Message,
+		FullName: req.FullName,
+		Email:    req.Email,
+	}
+	db.Save(&smg)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
 	c.JSON(http.StatusOK, res)
 }
