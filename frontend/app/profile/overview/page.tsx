@@ -8,6 +8,7 @@ import AnimatedStatCard from '../components/AnimatedStatCard';
 import ProfileLayout from '../ProfileLayout';
 import { apiClient } from '@/app/utils/api';
 import type { ApiResponse } from '@/app/utils/interfaces';
+import { useRouter } from 'next/navigation';
 
 const statColors = [
   'from-pink-400 via-pink-300 to-pink-200',
@@ -24,6 +25,8 @@ export default function ProfileOverviewPage() {
     { icon: <FaChalkboardTeacher size={32} />, label: 'Teachers', value: 0 },
   ]);
   const [weekLessons, setWeekLessons] = useState<any[]>([]);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchOverview() {
@@ -38,6 +41,7 @@ export default function ProfileOverviewPage() {
             { icon: <FaChalkboardTeacher size={32} />, label: 'Teachers', value: teacherSet.size },
           ]);
           setWeekLessons(res.data.current_week_courses || []);
+          setUserInfo(res.data.user_info || null);
         }
       } catch (e) {}
     }
@@ -55,10 +59,36 @@ export default function ProfileOverviewPage() {
           transition={{ duration: 0.7, type: 'spring' }}
         >
           <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg mb-4">
-            <Image src="/default-avatar.svg" alt="avatar" width={112} height={112} />
+            <Image src={userInfo?.avatar && userInfo.avatar.trim() !== '' ? userInfo.avatar : '/default-avatar.svg'} alt="avatar" width={112} height={112} />
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-800 mb-2 tracking-wide drop-shadow">Hi there!</h1>
-          <p className="text-lg text-gray-600 font-medium">Welcome to your learning dashboard 🎉</p>
+          <h1 className="text-3xl font-extrabold text-gray-800 mb-2 tracking-wide drop-shadow flex items-center justify-center gap-3">
+            Hi, {userInfo?.name || userInfo?.email || 'there'}!
+            {userInfo?.status === '00' && (
+              <span className="inline-block px-3 py-1 rounded-full bg-red-500 text-white text-xs font-bold animate-pulse ml-2 shadow-md" style={{letterSpacing: '1px'}}>Unverified</span>
+            )}
+            {userInfo?.status === '20' && (
+              <span className="inline-block px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold ml-2 shadow-md">Verified</span>
+            )}
+          </h1>
+          <p className="text-lg text-gray-600 font-medium mb-2">Welcome to your learning dashboard 🎉</p>
+          {/* 个人信息行 */}
+          {userInfo && (
+            <div className="text-sm text-gray-500 mb-2 flex flex-wrap items-center justify-center gap-2">
+              <span>{userInfo.email}</span>
+              <span className="mx-2">|</span>
+              <span>User No: {userInfo.user_no}</span>
+            </div>
+          )}
+          {/* 未验证时高亮按钮 */}
+          {userInfo?.status === '00' && (
+            <button
+              onClick={() => router.push('/profile/email')}
+              className="mt-2 px-5 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2"
+            >
+              <FaEnvelope className="w-4 h-4" />
+              Verify Email
+            </button>
+          )}
         </motion.div>
 
         {/* Stat Cards */}

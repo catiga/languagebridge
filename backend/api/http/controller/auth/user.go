@@ -44,6 +44,7 @@ type UserResponse struct {
 	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
 	Status    string    `gorm:"column:status" json:"status"`
 	UserNo    string    `gorm:"column:user_no" json:"user_no"`
+	Avatar    string    `gorm:"column:avatar" json:"avatar"`
 }
 
 func Overview(c *gin.Context) {
@@ -72,7 +73,9 @@ func Overview(c *gin.Context) {
 	db := system.GetDb()
 
 	var userInfo model.UserInfo
+	var userProfile model.UserProfile
 	db.Model(&model.UserInfo{}).Where("id = ?", userID).First(&userInfo)
+	db.Model(&model.UserProfile{}).Where("user_id = ?", userID).First(&userProfile)
 
 	var myCourseCount int64
 	var lessonUpcomingCount int64
@@ -135,6 +138,7 @@ func Overview(c *gin.Context) {
 			AddTime:   userInfo.AddTime,
 			Status:    userInfo.Status,
 			UserNo:    userInfo.UserNo,
+			Avatar:    userProfile.Avatar,
 		},
 	}
 	c.JSON(http.StatusOK, res)
