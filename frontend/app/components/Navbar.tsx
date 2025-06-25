@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FaUserCircle } from 'react-icons/fa';
+import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState<{ avatar?: string; name?: string; email?: string } | null>(null);
   const router = useRouter();
 
   const isHomePage = pathname === '/';
@@ -38,6 +40,12 @@ export default function Navbar() {
     const checkLogin = () => {
       const token = (typeof window !== 'undefined') ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
       setIsLoggedIn(!!token);
+      let info = null;
+      try {
+        const raw = (typeof window !== 'undefined') ? (localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')) : null;
+        if (raw) info = JSON.parse(raw);
+      } catch {}
+      setUserInfo(info);
     };
     checkLogin();
     window.addEventListener('userChanged', checkLogin);
@@ -113,11 +121,29 @@ export default function Navbar() {
                   className="focus:outline-none"
                   aria-label="User menu"
                 >
-                  <FaUserCircle className={`transition-colors duration-300 ${iconColor}`} size={28} />
+                  {userInfo?.avatar && userInfo.avatar.trim() !== '' ? (
+                    <Image src={userInfo.avatar} alt="avatar" width={36} height={36} className="rounded-full object-cover border-2 border-blue-400" />
+                  ) : (
+                    <FaUserCircle className={`transition-colors duration-300 ${iconColor}`} size={32} />
+                  )}
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg py-2 z-50 animate-fade-in">
-                    <Link href="/profile/overview" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 rounded-t-xl" onClick={() => setMenuOpen(false)}>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 animate-fade-in">
+                    {/* 用户信息行 */}
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                      {userInfo?.avatar && userInfo.avatar.trim() !== '' ? (
+                        <Image src={userInfo.avatar} alt="avatar" width={36} height={36} className="rounded-full object-cover border border-blue-200" />
+                      ) : (
+                        <FaUserCircle className="text-blue-400" size={28} />
+                      )}
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-800 text-sm">{userInfo?.name || userInfo?.email || 'User'}</span>
+                        {userInfo?.email && userInfo?.name && (
+                          <span className="text-xs text-gray-500">{userInfo.email}</span>
+                        )}
+                      </div>
+                    </div>
+                    <Link href="/profile/overview" className="block px-4 py-2 text-gray-700 hover:bg-blue-50" onClick={() => setMenuOpen(false)}>
                       Profile
                     </Link>
                     <button
