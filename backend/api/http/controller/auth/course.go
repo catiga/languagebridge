@@ -544,6 +544,7 @@ func CourseGetMeetingInfo(c *gin.Context) {
 	today := time.Now().Format("2006-01-02")
 	todayTime, _ := time.Parse("2006-01-02", today)
 
+	log.Info("Judge here", lessonDate.Format("2006-01-02"), " === ", today)
 	// 比较日期
 	if lessonDate.Before(todayTime) {
 		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
