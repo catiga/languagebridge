@@ -55,7 +55,7 @@ export default function SystemCourses() {
 
   // 查看详情
   const handleDetails = (courseId: number) => {
-    router.push(`/courses/${courseId}`);
+    router.push(`/profile/courses/${courseId}`);
   };
 
   // 报名课程

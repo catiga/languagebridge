@@ -37,6 +37,7 @@ export interface CourseDetail {
   duration: number;
   session_number: number;
   course_picture: string;
+  joined?: boolean;
 }
 
 export interface Certificate {

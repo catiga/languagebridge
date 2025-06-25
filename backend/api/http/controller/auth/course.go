@@ -37,6 +37,11 @@ type internalComputeBookDatetime struct {
 	EndTime    string
 }
 
+type CourseWithJoinStatus struct {
+	model.CourseInfo
+	Joined bool `json:"joined"`
+}
+
 func CourseJoin(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -170,6 +175,49 @@ func CourseList(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = result
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseFetchDetail(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	courseId, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+
+	currentUser, exist := c.Get("user_id")
+
+	var userID int64
+	var joined bool = false
+	if exist {
+		currentUserStr, _ := currentUser.(string)
+		userID, _ = strconv.ParseInt(currentUserStr, 10, 64)
+	}
+
+	db := system.GetDb()
+
+	var course model.CourseInfo
+	err := db.Model(&model.CourseInfo{}).Where("id = ?", courseId).First(&course).Error
+	if err != nil {
+		log.Error("[Course] fetch detail err", err)
+	}
+
+	if userID > 0 {
+		var userCourse model.UserCourse
+		err := db.Model(&model.UserCourse{}).Where("user_id = ? and course_id = ?", userID, courseId).First(&userCourse).Error
+		if err != nil {
+			log.Error("[Course] fetch detail judge user join status", err)
+		}
+		if userCourse.ID > 0 {
+			joined = true
+		}
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = CourseWithJoinStatus{
+		CourseInfo: course,
+		Joined:     joined,
+	}
 	c.JSON(http.StatusOK, res)
 }
 

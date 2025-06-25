@@ -263,7 +263,6 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                       <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{course.user_course_status}</span>
                     </div>
                     <div className="flex items-center justify-between mt-auto">
-                      <span className="text-base font-bold text-blue-600">${course.display_price}</span>
                       <span className="text-xs text-gray-500">{course.goal}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">

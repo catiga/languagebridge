@@ -37,6 +37,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/profile/member/del", auth.FetchMemberDelete)
 	authGroup.GET("/course/join", auth.CourseJoin)
 	authGroup.GET("/course/list", auth.CourseList)
+	authGroup.GET("/course/detail", auth.CourseFetchDetail)
 	authGroup.POST("/course/confirm", auth.CourseConfirm)
 	authGroup.GET("/course/time/list", auth.CourseTimeList)
 	authGroup.GET("/course/time/range", auth.CourseTimeRange)
