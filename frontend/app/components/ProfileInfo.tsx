@@ -173,7 +173,7 @@ export default function ProfileInfo({ onLoading }: ProfileInfoProps) {
       
       <div className="mb-6 flex flex-col items-center">
         <div className="relative inline-block mb-2">
-          <Image
+          <img
             src={avatarPreview || '/default-avatar.svg'}
             alt="avatar"
             width={96}
