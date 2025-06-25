@@ -32,7 +32,7 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
   
   return (
     <motion.div
-      className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group border border-gray-100 min-w-[240px] max-w-[300px] mx-auto"
+      className="bg-white rounded-2xl shadow-lg p-7 flex flex-col items-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group border border-gray-100 max-w-xs w-full mx-auto min-h-[340px]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -41,21 +41,20 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
       <img
         src={teacher.avatar || '/default-avatar.svg'}
         alt={teacher.name}
-        className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow mb-3 group-hover:scale-105 transition-transform duration-300"
+        className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow mb-4 group-hover:scale-105 transition-transform duration-300"
       />
       <div className="w-full text-center">
-        <h3 className="text-lg font-bold text-gray-900 mb-1">{teacher.name}</h3>
-        <div className="flex flex-col gap-1 items-center text-xs text-gray-500 mb-3">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">{teacher.name}</h3>
+        <div className="flex flex-col gap-1 items-center text-xs text-gray-500 mb-2">
           <span><span className="font-semibold text-gray-700">Nationality:</span> {teacher.nationality_name || '—'}</span>
           <span><span className="font-semibold text-gray-700">Location:</span> {teacher.living_country_name || '—'}</span>
           <span><span className="font-semibold text-gray-700">Native Language:</span> {teacher.first_language || '—'}</span>
         </div>
-        <div className="text-gray-700 text-sm mb-2 min-h-[32px] line-clamp-2 font-medium">{teacher.introduction}</div>
-        {teacher.detail && <div className="text-gray-400 text-xs mb-3 min-h-[32px] line-clamp-2 border-t border-gray-100 pt-2">{teacher.detail}</div>}
+        <div className="text-gray-700 text-sm mb-3 min-h-[32px] line-clamp-2 font-medium break-words">{teacher.introduction}</div>
       </div>
       <button
         className="mt-auto w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:bg-blue-700 transition-all duration-200"
-        onClick={e => { e.stopPropagation(); router.push(`/teachers/${teacher.teacher_no}`); }}
+        onClick={e => { e.stopPropagation(); router.push(`/teachers/${teacher.id}`); }}
       >
         View Profile
       </button>
@@ -98,7 +97,7 @@ export default function TeachersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-16">
-      <div className="max-w-3xl mx-auto pt-10 px-4">
+      <div className="pt-10 px-4">
         <div className="flex justify-center mb-8">
           <Link href="/tpa/login" passHref legacyBehavior>
             <a className="inline-block px-8 py-3 rounded-full bg-gradient-to-r from-blue-500 via-pink-400 to-yellow-400 text-white text-lg font-bold shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-200">
@@ -131,7 +130,7 @@ export default function TeachersPage() {
           ) : teachers.length === 0 ? (
             <div className="text-center text-gray-400">No teachers found.</div>
           ) : (
-            <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <main className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-10">
               {teachers.map(teacher => (
                 <TeacherCard key={teacher.id} teacher={teacher} />
               ))}

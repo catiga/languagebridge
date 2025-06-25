@@ -46,7 +46,6 @@ const CourseCard = ({ course }: { course: Course }) => {
       <div className="relative w-full h-48">
         <img src={course.course_picture || '/default-avatar.svg'} alt={course.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-        <span className="absolute top-3 right-3 text-sm font-semibold text-gray-900 bg-yellow-300 px-3 py-1 rounded-full">${course.display_price}</span>
       </div>
       <div className="p-5">
         <h3 className="text-lg font-bold text-gray-900 truncate mb-2">{course.name}</h3>

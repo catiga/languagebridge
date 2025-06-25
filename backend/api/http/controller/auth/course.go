@@ -542,16 +542,18 @@ func CourseGetMeetingInfo(c *gin.Context) {
 
 	// 当前日期，只保留年月日部分
 	today := time.Now().Format("2006-01-02")
-	todayTime, _ := time.Parse("2006-01-02", today)
+	_, _ = time.Parse("2006-01-02", today)
 
-	log.Info("Judge here", lessonDate.Format("2006-01-02"), " === ", today)
+	lessonDateStr := lessonDate.Format("2006-01-02")
+
+	log.Info("Judge here: ", lessonDateStr, " === ", today)
 	// 比较日期
-	if lessonDate.Before(todayTime) {
+	if lessonDateStr < today {
 		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
 		res.Msg = "course date already passed"
 		c.JSON(http.StatusOK, res)
 		return
-	} else if lessonDate.After(todayTime) {
+	} else if lessonDateStr > today {
 		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
 		res.Msg = "course not starting"
 		c.JSON(http.StatusOK, res)
