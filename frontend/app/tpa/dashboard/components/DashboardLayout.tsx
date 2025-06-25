@@ -16,7 +16,8 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
-  FaGraduationCap
+  FaGraduationCap,
+  FaRobot
 } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -37,6 +38,7 @@ const menuItems = [
   { id: 'schedule', label: 'Time Slots', icon: FaCalendarAlt },
   { id: 'schedule2', label: 'Schedule', icon: FaCalendarWeek },
   { id: 'analytics', label: 'Analytics', icon: FaChartBar },
+  { id: 'ai', label: 'AI Tools', icon: FaRobot, beta: true },
 ];
 
 const bottomMenuItems = [
@@ -102,6 +104,9 @@ export default function DashboardLayout({ children, activeTab, onTabChange }: Da
             >
               <item.icon className={`h-5 w-5 ${!sidebarCollapsed ? 'mr-3' : ''}`} />
               {!sidebarCollapsed && <span>{item.label}</span>}
+              {!sidebarCollapsed && item.beta && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded-full font-bold animate-pulse" title="Beta - Advanced feature">Beta</span>
+              )}
             </button>
           ))}
         </nav>

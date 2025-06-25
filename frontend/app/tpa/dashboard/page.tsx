@@ -11,7 +11,8 @@ import {
   FaCertificate,
   FaPlay as FaPlayIcon,
   FaCalendarAlt as FaCalendarAltIcon,
-  FaStar as FaStarIcon
+  FaStar as FaStarIcon,
+  FaRobot
 } from 'react-icons/fa';
 import Cookies from 'js-cookie';
 import DashboardLayout from './components/DashboardLayout';
@@ -43,7 +44,7 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai';
 
 function WeekRangeTitle() {
   // 取本地时间的本周一
@@ -153,6 +154,54 @@ function QuickActions({ onAction }: { onAction: (tab: Tab) => void }) {
   );
 }
 
+function AIToolsPanel() {
+  const [topic, setTopic] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState('');
+
+  const handleGenerate = async () => {
+    if (!topic.trim()) return;
+    setLoading(true);
+    setResult('');
+    // mock AI生成，实际可调用后端AI接口
+    setTimeout(() => {
+      setResult(`Lesson Plan for: ${topic}\n\n1. Objectives: ...\n2. Key Points: ...\n3. Activities: ...\n4. Homework: ...`);
+      setLoading(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 mt-8">
+      <div className="flex items-center mb-6">
+        <FaRobot className="w-8 h-8 text-blue-500 mr-3" />
+        <h2 className="text-2xl font-bold text-gray-900">AI Lesson Plan Generator <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded-full font-bold animate-pulse">Beta</span></h2>
+      </div>
+      <p className="text-gray-600 mb-4">Enter a lesson topic or goal, and AI will generate a structured English lesson plan for you.</p>
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={topic}
+          onChange={e => setTopic(e.target.value)}
+          className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g. Present Perfect Tense"
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={loading || !topic.trim()}
+          className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+        >
+          {loading ? 'Generating...' : 'Generate'}
+        </button>
+      </div>
+      {result && (
+        <div className="bg-blue-50 rounded-lg p-4 text-gray-800 whitespace-pre-line mt-4 border border-blue-100">
+          {result}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [stats, setStats] = useState({
@@ -176,7 +225,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     async function fetchOverview() {
       try {
-        const res = await apiClient.get('/spwapi/tpa/auth/overview');
+        const res = await apiClient.get<any>('/spwapi/tpa/auth/overview');
         if (res && res.code === 0 && res.data) {
           setStats({
             totalStudents: res.data.total_student_count,
@@ -196,7 +245,7 @@ export default function TeacherDashboard() {
     // 拉取教师profile，获取真实姓名和头像
     async function fetchProfile() {
       try {
-        const res = await apiClient.get('/spwapi/tpa/auth/profile/retrieve');
+        const res = await apiClient.get<any>('/spwapi/tpa/auth/profile/retrieve');
         if (res && res.code === 0 && res.data) {
           setTeacherName(res.data.name || res.data.first_name || 'Teacher');
           setAvatarUrl(res.data.avatar || '/default-avatar.svg');
@@ -266,6 +315,8 @@ export default function TeacherDashboard() {
             </div>
           </div>
         );
+      case 'ai':
+        return <AIToolsPanel />;
       default:
         return (
           <div className="space-y-8">
