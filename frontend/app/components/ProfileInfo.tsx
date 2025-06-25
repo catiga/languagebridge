@@ -121,10 +121,6 @@ export default function ProfileInfo({ onLoading }: ProfileInfoProps) {
   };
 
   const onSubmit = async (data: any) => {
-    if (!emailVerified) {
-      toast.error('Please verify your email before saving.');
-      return;
-    }
     onLoading(true);
     const payload = { ...data, living_country_id: Number(data.living_country_id), email };
     try {
