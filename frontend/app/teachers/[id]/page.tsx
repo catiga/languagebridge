@@ -89,6 +89,28 @@ export default function TeacherProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Weekly Timeslots */}
+      {Array.isArray(t.slots) && t.slots.length > 0 && (
+        <div className="bg-white rounded-xl shadow p-6 mb-8">
+          <h2 className="text-lg font-bold mb-4">Available Weekly Timeslots</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map((day, idx) => {
+              const slot = t.slots.find((s: any) => s.week_day === idx + 1);
+              return (
+                <div key={day} className={`rounded px-3 py-2 text-center text-sm font-semibold ${slot?.enabled ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400 line-through'}`}>
+                  <div>{day}</div>
+                  {slot?.enabled ? (
+                    <div>{slot.start_time} - {slot.end_time}</div>
+                  ) : (
+                    <div>Unavailable</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
