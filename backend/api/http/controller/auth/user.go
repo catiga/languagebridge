@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
 	"github.com/langbridge/backend/utils"
+	"gorm.io/gorm"
 )
 
 type UpdateProfileRequest struct {
@@ -20,6 +23,15 @@ type UpdateProfileRequest struct {
 	LivingCountryID uint64 `json:"living_country_id"`
 	Phone           string `json:"phone"`
 	NativeLanguage  string `json:"native_language"`
+}
+
+type EmailCheckRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+type EmailSendRequest struct {
+	Email string `json:"email"`
 }
 
 func Overview(c *gin.Context) {
@@ -101,6 +113,165 @@ func Overview(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func EmailSend(c *gin.Context) {
+	var req EmailSendRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(req.Email) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Invalid email format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	err = utils.SendVerifyCodeMail(req.Email, string(codes.VerificationSortUser))
+	if err != nil {
+		log.Error("send email err", err)
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = "send email failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userInfo model.UserInfo
+
+	db.Model(&model.UserInfo{}).Where("id = ?", userId).First(&userInfo)
+	if userInfo.Status == "20" && req.Email == userInfo.Email {
+		res.Code = codes.CODE_ERR_REPEAT
+		res.Msg = "unverified email or change email needs reverify"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func EmailCheck(c *gin.Context) {
+	var req EmailCheckRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(req.Email) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Invalid email format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Code) != 6 || !regexp.MustCompile(`^\d{6}$`).MatchString(req.Code) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Code must be a 6-digit number"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userInfo model.UserInfo
+	db.Model(&model.UserInfo{}).Where("id = ?", userID).First(&userInfo)
+
+	if userInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "user record not existed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if req.Email != userInfo.Email {
+		// change email check
+		var existEmailuser model.UserInfo
+		err = db.Model(&model.UserInfo{}).Where("email = ?", req.Email).First(&existEmailuser).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			res.Code = codes.CODE_ERR_UNKNOWN
+			res.Msg = "user email check error"
+			log.Error("query user email err", err)
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		if err == nil {
+			res.Code = codes.CODE_ERR_EXIST_OBJ
+			res.Msg = "Email already registered"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		userInfo.Email = req.Email
+	}
+
+	var verifyProcess model.VerificationProcess
+	db.Model(&model.VerificationProcess{}).
+		Where("target = ? and code = ? and type = ? and sort = ?", req.Email, req.Code, codes.VerificationTypeEmail, codes.VerificationSortUser).
+		First(&verifyProcess)
+	if verifyProcess.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "verification code not sent"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if time.Now().After(verifyProcess.AddTime.Add(time.Duration(verifyProcess.ValidatePeriod) * time.Second)) {
+		res.Code = codes.CODE_ERR_REQ_EXPIRED
+		res.Msg = "verification code expired"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	userInfo.Status = "20"
+	db.Save(&userInfo)
+	verifyProcess.Status = "100"
+	db.Save(&verifyProcess)
+	c.JSON(http.StatusOK, res)
+}
+
 func RetrieveProfile(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -144,6 +315,7 @@ func RetrieveProfile(c *gin.Context) {
 		Avatar          string `json:"avatar"`
 		Phone           string `json:"phone"`
 		NickName        string `json:"nick_name"`
+		Status          string `json:"status"`
 	}{
 		UserNo:          userInfo.UserNo,
 		NickName:        userProfile.NickName,
@@ -153,6 +325,7 @@ func RetrieveProfile(c *gin.Context) {
 		NativeLanguage:  userProfile.NativeLanguage,
 		Avatar:          userProfile.Avatar,
 		Phone:           userProfile.ContactPhone,
+		Status:          userInfo.Status,
 	}
 	c.JSON(http.StatusOK, res)
 }

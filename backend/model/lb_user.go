@@ -20,6 +20,13 @@ func (UserInfo) TableName() string {
 	return "user_info"
 }
 
+func (u UserInfo) IsChecked() bool {
+	if u.Status == "00" {
+		return false
+	}
+	return true
+}
+
 type UserProfile struct {
 	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID            uint64    `gorm:"column:user_id" json:"user_id"`

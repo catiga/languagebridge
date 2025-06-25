@@ -62,6 +62,21 @@ func CourseJoin(c *gin.Context) {
 
 	db := system.GetDb()
 
+	var userInfo model.UserInfo
+	db.Model(&model.UserInfo{}).Where("id = ?", userID).First(&userInfo)
+	if userInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "user not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if !userInfo.IsChecked() {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "user status invalid, please verify email at first"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	var course model.CourseInfo
 
 	err = db.Model(&model.CourseInfo{}).Where("id = ?", courseId).First(&course).Error

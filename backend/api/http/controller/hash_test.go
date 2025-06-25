@@ -8,8 +8,10 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"testing"
 
+	"github.com/subosito/gotenv"
 	"gopkg.in/gomail.v2"
 )
 
@@ -65,12 +67,15 @@ func TestGoPlus(t *testing.T) {
 
 func TestMail(t *testing.T) {
 	m := gomail.NewMessage()
-	m.SetHeader("From", "catiga03@gmail.com")                                // 发件人
+	m.SetHeader("From", "langbridge1215@gmail.com")                          // 发件人
 	m.SetHeader("To", "catiga03@gmail.com")                                  // 收件人
 	m.SetHeader("Subject", "Gmail Test from Golang")                         // 主题
 	m.SetBody("text/plain", "This is a test email sent using Gmail and Go!") // 正文
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "catiga03@gmail.com", "gdgv hayb tykg mxcx")
+	gotenv.Load("../../../.env")
+	app_acc := os.Getenv("GMAIL_APP_ACC")
+	app_pwd := os.Getenv("GMAIL_APP_PWD")
+	d := gomail.NewDialer("smtp.gmail.com", 587, app_acc, app_pwd)
 
 	// 发送
 	if err := d.DialAndSend(m); err != nil {
