@@ -178,8 +178,12 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
     onLoading && onLoading(true);
     try {
       const res: any = await apiClient.get('/spwapi/auth/course/list', { status });
-      if (res && res.code === 0 && Array.isArray(res.data)) {
-        setMyCourses(res.data);
+      if (res && res.code === 0) {
+        if ( Array.isArray(res.data)) {
+          setMyCourses(res.data);
+        } else {
+          setMyCourses([]);  
+        }
       } else {
         setMyCourses([]);
         toast.error(res?.msg || 'Failed to fetch courses.');
@@ -263,7 +267,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                       <span className="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">{course.language}</span>
                       <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Level {course.level}</span>
-                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{course.user_course_status}</span>
+                      
                     </div>
                     <div className="flex items-center justify-between mt-auto">
                       <span className="text-xs text-gray-500">{course.goal}</span>
