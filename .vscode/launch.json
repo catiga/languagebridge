@@ -9,7 +9,6 @@
             "program": "${workspaceFolder}/backend/main.go",
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DALINK_GO_CONFIG_PATH": "${workspaceFolder}/backend/dev.yml"
             },
             "args": []
         },

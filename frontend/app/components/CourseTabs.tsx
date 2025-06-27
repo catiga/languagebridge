@@ -3,18 +3,18 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { Calendar as BigCalendar, dateFnsLocalizer, Event } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
+import { format } from 'date-fns/format';
+import { parse } from 'date-fns/parse';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { getDay } from 'date-fns/getDay';
+import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import SystemCourses from './SystemCourses'; // 导入新组件
 import { apiClient } from '../utils/api';
 import { toast } from 'react-toastify';
 import TimetableListView from '../timetable/components/TimetableListView';
 import TimetableWeekView from '../timetable/components/TimetableWeekView';
-import { FaStar, FaChalkboardTeacher } from 'react-icons/fa';
+import { FaStar, FaChalkboardTeacher, FaPlayCircle, FaCheckCircle, FaPauseCircle } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 // 假数据
@@ -125,10 +125,9 @@ function CourseHistory() {
 
 const statusTabs = [
   { key: 'all', label: 'All' },
-  { key: '00', label: 'Active' },
-  { key: '01', label: 'Inactive' },
-  { key: '02', label: 'Completed' },
-  // 你可以根据实际 user_course_status 增加更多
+  { key: 'ongoing', label: 'Ongoing' },
+  { key: 'complete', label: 'Complete' },
+  { key: 'inactive', label: 'Inactive' },
 ];
 
 export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
@@ -162,10 +161,10 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
   // 拉取我的课程
   useEffect(() => {
     if (activeTab === 'mycourses') {
-      fetchMyCourses();
+      fetchMyCourses(statusFilter);
     }
     // eslint-disable-next-line
-  }, [activeTab]);
+  }, [activeTab, statusFilter]);
 
   // 默认切到 Timetable 时跳转到 List View
   useEffect(() => {
@@ -174,11 +173,11 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
     }
   }, [activeTab]);
 
-  const fetchMyCourses = async () => {
+  const fetchMyCourses = async (status = 'all') => {
     setMyCoursesLoading(true);
     onLoading && onLoading(true);
     try {
-      const res = await apiClient.get('/spwapi/auth/course/list');
+      const res: any = await apiClient.get('/spwapi/auth/course/list', { status });
       if (res && res.code === 0 && Array.isArray(res.data)) {
         setMyCourses(res.data);
       } else {
@@ -194,9 +193,8 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
     }
   };
 
-  const filteredCourses = statusFilter === 'all'
-    ? myCourses
-    : myCourses.filter(c => c.user_course_status === statusFilter);
+  // 后端已做过滤，前端不再二次过滤
+  const filteredCourses = myCourses;
 
   return (
     <div>
@@ -252,7 +250,12 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                 >
                   <div className="relative w-full h-40">
                     <img src={course.course_picture ? course.course_picture : '/default-course-image.svg'} alt={course.course_name} className="w-full h-full object-cover" />
-                    <span className="absolute top-3 right-3 text-xs font-bold text-white bg-green-500 px-2 py-1 rounded-full shadow">Joined</span>
+                    <span className="absolute top-3 right-3">
+                      {course.uc_status === 'ongoing' && <FaPlayCircle className="text-blue-500 text-2xl" title="Ongoing" />}
+                      {course.uc_status === 'complete' && <FaCheckCircle className="text-green-500 text-2xl" title="Complete" />}
+                      {course.uc_status === 'inactive' && <FaPauseCircle className="text-gray-400 text-2xl" title="Inactive" />}
+                      {(!course.uc_status || course.uc_status === 'all') && <FaStar className="text-yellow-400 text-2xl" title="All" />}
+                    </span>
                   </div>
                   <div className="p-4 flex-1 flex flex-col">
                     <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{course.course_name}</h4>

@@ -132,13 +132,9 @@ func CourseList(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
-	status, exist := c.Get("status")
-	if !exist {
+	status := c.Query("status")
+	if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" {
 		status = "all"
-	} else {
-		if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" {
-			status = "all"
-		}
 	}
 	var statusList []string
 	if status == "all" {
