@@ -128,6 +128,7 @@ const statusTabs = [
   { key: 'ongoing', label: 'Ongoing' },
   { key: 'complete', label: 'Complete' },
   { key: 'inactive', label: 'Inactive' },
+  { key: 'waitingconfirm', label: 'WaitingConfirm' },
 ];
 
 export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
@@ -250,16 +251,18 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                 <div
                   key={course.user_course_id}
                   className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 group hover:shadow-green-200 hover:-translate-y-2 cursor-pointer flex flex-col"
-                  onClick={() => router.push(`/mycourses/${course.course_id}`)}
+                  onClick={() => router.push(`/mycourses/${course.user_course_id}`)}
                 >
                   <div className="relative w-full h-40">
                     <img src={course.course_picture ? course.course_picture : '/default-course-image.svg'} alt={course.course_name} className="w-full h-full object-cover" />
-                    <span className="absolute top-3 right-3">
-                      {course.uc_status === 'ongoing' && <FaPlayCircle className="text-blue-500 text-2xl" title="Ongoing" />}
-                      {course.uc_status === 'complete' && <FaCheckCircle className="text-green-500 text-2xl" title="Complete" />}
-                      {course.uc_status === 'inactive' && <FaPauseCircle className="text-gray-400 text-2xl" title="Inactive" />}
-                      {(!course.uc_status || course.uc_status === 'all') && <FaStar className="text-yellow-400 text-2xl" title="All" />}
-                    </span>
+                    {statusFilter === 'all' && (
+                      <span className="absolute top-3 right-3">
+                        {course.user_course_status === '10' && <FaPlayCircle className="text-blue-500 text-2xl" title="Ongoing" />}
+                        {course.user_course_status === '20' && <FaCheckCircle className="text-green-500 text-2xl" title="Complete" />}
+                        {course.user_course_status === '00' && <FaPauseCircle className="text-gray-400 text-2xl" title="Inactive" />}
+                        {course.user_course_status === '01' && <FaPauseCircle className="text-gray-400 text-2xl" title="WaitingConfirm" />}
+                      </span>
+                    )}
                   </div>
                   <div className="p-4 flex-1 flex flex-col">
                     <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{course.course_name}</h4>

@@ -1,8 +1,20 @@
 package utils
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 var TimeLayout = "2006-01-02 15:04:05"
+var dayMap = map[int]string{
+	1: "Monday",
+	2: "Tuesday",
+	3: "Wednesday",
+	4: "Thursday",
+	5: "Friday",
+	6: "Saturday",
+	7: "Sunday",
+}
 
 func PeriodTime(period string) string {
 	switch period {
@@ -97,6 +109,13 @@ func GetWeekdayNumber(dateStr string) (int, error) {
 		return 7, nil // Sunday
 	}
 	return weekday, nil
+}
+
+func GetWeekdayStr(day int) (string, error) {
+	if day < 1 || day > 7 {
+		return "", fmt.Errorf("invalid week day value")
+	}
+	return dayMap[day], nil
 }
 
 func GetNextDate(dateStr string) (string, error) {

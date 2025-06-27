@@ -13,7 +13,8 @@ const (
 type CourseMineStatus string
 
 const (
-	CourseMineInactive CourseMineStatus = "00"
-	CourseMineOngoing  CourseMineStatus = "10"
-	CourseMineComplete CourseMineStatus = "20"
+	CourseMineInactive      CourseMineStatus = "00"
+	CourseMineWatingConfirm CourseMineStatus = "01"
+	CourseMineOngoing       CourseMineStatus = "10"
+	CourseMineComplete      CourseMineStatus = "20"
 )

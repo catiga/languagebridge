@@ -4,6 +4,7 @@ import "time"
 
 type CourseBookTrans struct {
 	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UcID       uint64    `gorm:"column:uc_id" json:"uc_id"`
 	BookingNo  string    `gorm:"column:booking_no" json:"booking_no"`
 	TeacherID  uint64    `gorm:"column:teacher_id" json:"teacher_id"`
 	CourseID   uint64    `gorm:"column:course_id" json:"course_id"`

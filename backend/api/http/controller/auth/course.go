@@ -37,9 +37,24 @@ type internalComputeBookDatetime struct {
 	EndTime    string
 }
 
+type CourseBookedTran struct {
+	BookingNo  string    `gorm:"column:booking_no" json:"booking_no"`
+	TeacherID  uint64    `gorm:"column:teacher_id" json:"teacher_id"`
+	CourseID   uint64    `gorm:"column:course_id" json:"course_id"`
+	UserID     uint64    `gorm:"column:user_id" json:"user_id"`
+	LessonDate time.Time `gorm:"column:lesson_date" json:"lesson_date"`
+	StartTime  string    `gorm:"column:start_time" json:"start_time"`
+	EndTime    string    `gorm:"column:end_time" json:"end_time"`
+	Status     string    `gorm:"column:status" json:"status"`
+	Ongoing    int       `gorm:"column:ongoing" json:"ongoing"`
+}
+
 type CourseWithJoinStatus struct {
 	model.CourseInfo
-	Joined bool `json:"joined"`
+	Joined           bool               `json:"joined"`
+	UserCourseStatus string             `json:"uc_ss"`
+	JoinTime         time.Time          `json:"join_time"`
+	BookedTrans      []CourseBookedTran `json:"booked_trans"`
 }
 
 func CourseJoin(c *gin.Context) {
@@ -92,8 +107,13 @@ func CourseJoin(c *gin.Context) {
 		return
 	}
 
+	var unavailableUserCourseStatus []string
+	unavailableUserCourseStatus = append(unavailableUserCourseStatus, string(codes.CourseMineInactive))
+	unavailableUserCourseStatus = append(unavailableUserCourseStatus, string(codes.CourseMineWatingConfirm))
+	unavailableUserCourseStatus = append(unavailableUserCourseStatus, string(codes.CourseMineOngoing))
+
 	var userCourseSelected model.UserCourse
-	err = db.Model(&model.UserCourse{}).Where("user_id = ? and course_id = ? and flag != ?", userID, course.ID, -1).First(&userCourseSelected).Error
+	err = db.Model(&model.UserCourse{}).Where("user_id = ? and course_id = ? and flag != ? and status IN ?", userID, course.ID, -1, unavailableUserCourseStatus).First(&userCourseSelected).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			userCourseSelected.AddTime = time.Now()
@@ -133,18 +153,20 @@ func CourseList(c *gin.Context) {
 		return
 	}
 	status := c.Query("status")
-	if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" {
+	if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" && status != "waitingconfirm" {
 		status = "all"
 	}
 	var statusList []string
 	if status == "all" {
-		statusList = append(statusList, string(codes.CourseMineComplete), string(codes.CourseMineInactive), string(codes.CourseMineOngoing))
+		statusList = append(statusList, string(codes.CourseMineComplete), string(codes.CourseMineInactive), string(codes.CourseMineOngoing), string(codes.CourseMineWatingConfirm))
 	} else if status == "inactive" {
 		statusList = append(statusList, string(codes.CourseMineInactive))
 	} else if status == "ongoing" {
 		statusList = append(statusList, string(codes.CourseMineOngoing))
 	} else if status == "complete" {
 		statusList = append(statusList, string(codes.CourseMineComplete))
+	} else if status == "waitingconfirm" {
+		statusList = append(statusList, string(codes.CourseMineWatingConfirm))
 	}
 	currentUserStr, _ := currentUser.(string)
 	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
@@ -195,41 +217,76 @@ func CourseFetchDetail(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
 
-	courseId, _ := strconv.ParseInt(c.Query("course_id"), 10, 64)
+	userCourseId, _ := strconv.ParseInt(c.Query("uc_id"), 10, 64)
 
 	currentUser, exist := c.Get("user_id")
 
-	var userID int64
-	var joined bool = false
-	if exist {
-		currentUserStr, _ := currentUser.(string)
-		userID, _ = strconv.ParseInt(currentUserStr, 10, 64)
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
 	}
 
 	db := system.GetDb()
 
+	var userCourse model.UserCourse
+	err = db.Model(&model.UserCourse{}).Where("id = ?", userCourseId).First(&userCourse).Error
+	if err != nil {
+		log.Error("[Course] fetch detail judge user join status", err)
+	}
+	if userCourse.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Can not find course you joined"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if userCourse.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Can not find course you joined, please check"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	var course model.CourseInfo
-	err := db.Model(&model.CourseInfo{}).Where("id = ?", courseId).First(&course).Error
+	err = db.Model(&model.CourseInfo{}).Where("id = ?", userCourse.CourseID).First(&course).Error
 	if err != nil {
 		log.Error("[Course] fetch detail err", err)
 	}
 
-	if userID > 0 {
-		var userCourse model.UserCourse
-		err := db.Model(&model.UserCourse{}).Where("user_id = ? and course_id = ?", userID, courseId).First(&userCourse).Error
-		if err != nil {
-			log.Error("[Course] fetch detail judge user join status", err)
-		}
-		if userCourse.ID > 0 {
-			joined = true
-		}
+	var bookTrans []model.CourseBookTrans
+	db.Model(&model.CourseBookTrans{}).Where("uc_id = ?", userCourse.ID).Find(&bookTrans)
+	var courseBooked []CourseBookedTran
+	for _, r := range bookTrans {
+		courseBooked = append(courseBooked, CourseBookedTran{
+			BookingNo:  r.BookingNo,
+			TeacherID:  r.TeacherID,
+			CourseID:   r.CourseID,
+			UserID:     r.UserID,
+			LessonDate: r.LessonDate,
+			StartTime:  r.StartTime,
+			EndTime:    r.EndTime,
+			Status:     r.Status,
+			Ongoing:    r.Ongoing,
+		})
 	}
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = CourseWithJoinStatus{
-		CourseInfo: course,
-		Joined:     joined,
+		CourseInfo:       course,
+		Joined:           true,
+		JoinTime:         userCourse.AddTime,
+		UserCourseStatus: userCourse.Status,
+		BookedTrans:      courseBooked,
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -259,6 +316,18 @@ func CourseConfirm(c *gin.Context) {
 	if err != nil {
 		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
 		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	// check user course status
+	var userCourse model.UserCourse
+	db.Model(&model.UserCourse{}).Where("user_id = ? and course_id = ? and status = ?", userID, req.CourseID, codes.CourseMineInactive).First(&userCourse)
+
+	if userCourse.ID == 0 {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "You need to join this course before accessing it."
 		c.JSON(http.StatusOK, res)
 		return
 	}
@@ -293,8 +362,6 @@ func CourseConfirm(c *gin.Context) {
 		return
 	}
 
-	db := system.GetDb()
-
 	var existResult []model.CourseBookTrans
 	// query can book?
 	err = db.Model(&model.CourseBookTrans{}).
@@ -318,8 +385,10 @@ func CourseConfirm(c *gin.Context) {
 
 					hasConflict := newStart.Before(existEnd) && newEnd.After(existStart)
 					if hasConflict {
+						weekDay, _ := utils.GetWeekdayNumber(want.LessonDate)
+						weekDayStr, _ := utils.GetWeekdayStr(weekDay)
 						res.Code = codes.CODE_BOOKING_CONFLICT
-						res.Msg = fmt.Sprintf("booking conflict on %s %s–%s", want.LessonDate, want.StartTime, want.EndTime)
+						res.Msg = fmt.Sprintf("booking conflict on [%s] %s–%s", weekDayStr, want.StartTime, want.EndTime)
 						c.JSON(http.StatusOK, res)
 						return
 					}
@@ -344,6 +413,7 @@ func CourseConfirm(c *gin.Context) {
 		}
 
 		saveResult = append(saveResult, model.CourseBookTrans{
+			UcID:       userCourse.ID,
 			BookingNo:  bookNo,
 			TeacherID:  req.TeacherID,
 			CourseID:   req.CourseID,
@@ -362,6 +432,8 @@ func CourseConfirm(c *gin.Context) {
 	if err != nil {
 		log.Error(err)
 	}
+	//update user course status
+	db.Model(&model.UserCourse{}).Where("id = ?", userCourse.ID).Update("status", codes.CourseMineWatingConfirm)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

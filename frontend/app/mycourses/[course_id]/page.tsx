@@ -32,7 +32,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
     if (!params.course_id) return;
     setCourseLoading(true);
     apiClient
-      .get('/spwapi/course/detail', { course_id: params.course_id })
+      .get('/spwapi/auth/course/detail', { uc_id: params.course_id })
       .then((res: any) => {
         if (res && res.code === 0 && res.data) {
           const detail = {
