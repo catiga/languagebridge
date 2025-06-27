@@ -9,7 +9,9 @@ echo "switch direction：$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
 echo "pull code for update..."
-git pull
+git fetch origin
+git reset --hard origin/main
+git clean -fd
 
 echo "start compiling..."
 export CGO_ENABLED=1

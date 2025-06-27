@@ -7,7 +7,9 @@ echo "📁 进入项目目录: $PROJECT_DIR"
 cd "$PROJECT_DIR"
 
 echo "🔄 拉取最新代码..."
-git pull
+git fetch origin
+git reset --hard origin/main
+git clean -fd
 
 echo "📦 安装依赖..."
 if [ -f "yarn.lock" ]; then
