@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import { apiClient } from '../../utils/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import CryptoAndWechatPayment from './CryptoAndWechatPayment';
 
 export default function CourseStatus01Panel({ course, params }: { course: any, params: { course_id: string } }) {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function CourseStatus01Panel({ course, params }: { course: any, p
   const [teacherLoading, setTeacherLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
     setTeacherLoading(true);
@@ -49,8 +51,8 @@ export default function CourseStatus01Panel({ course, params }: { course: any, p
     }
   };
   const handlePay = () => {
-    // TODO: 跳转到支付页面或弹窗
-    toast.info('Go to payment (mock)');
+    setShowPayment(v => !v);
+    // toast.info('Go to payment (mock)');
   };
 
   // 找到当前老师
@@ -110,6 +112,7 @@ export default function CourseStatus01Panel({ course, params }: { course: any, p
         <button className="px-4 py-2 rounded bg-gray-200" onClick={handleCancel}>Cancel</button>
         <button className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" onClick={handlePay}>Pay</button>
       </div>
+      {showPayment && <CryptoAndWechatPayment />}
       <ConfirmModal
         isOpen={showConfirm}
         title="Cancel Course"
