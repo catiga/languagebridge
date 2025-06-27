@@ -33,7 +33,7 @@ export default function ProfileCourseDetailPage() {
         setIsLoading(true);
         try {
           const [courseRes, teachersRes, reviewsRes] = await Promise.all([
-            apiClient.get<ApiResponse<CourseDetail>>(`/spwapi/auth/course/detail?course_id=${id}`),
+            apiClient.get<ApiResponse<CourseDetail>>(`/spwapi/course/detail?course_id=${id}`),
             apiClient.get<ApiResponse<Teacher[]>>(`/spwapi/course/teachers?course_id=${id}`),
             apiClient.get<ApiResponse<Review[]>>(`/spwapi/course/reviews?course_id=${id}`),
           ]);

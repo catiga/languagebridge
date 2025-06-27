@@ -70,7 +70,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
       !course?.course_id ||
       !periodStartDate ||
       !periodEndDate ||
-      daysBetween(periodStartDate, periodEndDate) < 30
+      daysBetween(periodStartDate, periodEndDate) < 1
     ) {
       setSlots({});
       return;
@@ -128,8 +128,8 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
       toast.error('Please select an end date');
       return;
     }
-    if (daysBetween(periodStartDate, periodEndDate) < 30) {
-      toast.error('The course period must be at least 30 days');
+    if (daysBetween(periodStartDate, periodEndDate) < 1) {
+      toast.error('End date must be after start date');
       return;
     }
     const selected = Object.entries(selectedTimes).filter(([_, v]) => v);
@@ -255,7 +255,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
               onChange={e => {
                 setPeriodStartDate(e.target.value);
                 // 自动修正结束日期
-                if (periodEndDate && daysBetween(e.target.value, periodEndDate) < 30) {
+                if (periodEndDate && daysBetween(e.target.value, periodEndDate) < 1) {
                   setPeriodEndDate('');
                 }
               }}
@@ -266,7 +266,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
             <input
               type="date"
               className="ml-2 border rounded px-2 py-1"
-              min={periodStartDate ? addDays(periodStartDate, 30) : getTomorrow()}
+              min={periodStartDate ? addDays(periodStartDate, 1) : getTomorrow()}
               value={periodEndDate}
               onChange={e => setPeriodEndDate(e.target.value)}
               disabled={!periodStartDate}
