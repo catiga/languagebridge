@@ -9,3 +9,11 @@ const (
 	VerificationTypeEmail   VerificationType = "10"
 	VerificationTypeSms     VerificationType = "20"
 )
+
+type CourseMineStatus string
+
+const (
+	CourseMineInactive CourseMineStatus = "00"
+	CourseMineOngoing  CourseMineStatus = "10"
+	CourseMineComplete CourseMineStatus = "20"
+)

@@ -33,7 +33,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
     setCourseLoading(true);
     apiClient
       .get('/spwapi/course/detail', { course_id: params.course_id })
-      .then(res => {
+      .then((res: any) => {
         if (res && res.code === 0 && res.data) {
           const detail = {
             ...res.data,
@@ -48,7 +48,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
           setTeacherLoading(true);
           apiClient
             .get('/spwapi/course/teachers', { course_id: detail.course_id })
-            .then(res2 => {
+            .then((res2: any) => {
               if (res2 && res2.code === 0 && Array.isArray(res2.data)) {
                 setTeachers(res2.data);
                 // 默认选中第一个老师
@@ -83,7 +83,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
         start_date: periodStartDate,
         end_date: periodEndDate,
       })
-      .then(res => {
+      .then((res: any) => {
         if (res && res.code === 0 && Array.isArray(res.data)) {
           // 转换为 { Monday: { enabled, start, end } ... }
           const slotMap: { [day: string]: { enabled: boolean; start: string; end: string } } = {};
@@ -117,24 +117,24 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
 
   const handleConfirm = async () => {
     if (!selectedTeacher) {
-      toast.error('请选择老师');
+      toast.error('Please select a teacher');
       return;
     }
     if (!periodStartDate) {
-      toast.error('请选择开始日期');
+      toast.error('Please select a start date');
       return;
     }
     if (!periodEndDate) {
-      toast.error('请选择结束日期');
+      toast.error('Please select an end date');
       return;
     }
     if (daysBetween(periodStartDate, periodEndDate) < 30) {
-      toast.error('课程周期至少为30天');
+      toast.error('The course period must be at least 30 days');
       return;
     }
     const selected = Object.entries(selectedTimes).filter(([_, v]) => v);
     if (selected.length === 0) {
-      toast.error('请至少选择一天的上课时间');
+      toast.error('Please select at least one class time');
       return;
     }
 
@@ -152,7 +152,7 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
     });
 
     try {
-      const res = await apiClient.post('/spwapi/auth/course/confirm', {
+      const res: any = await apiClient.post('/spwapi/auth/course/confirm', {
         course_id: course.course_id,
         teacher_id: selectedTeacher,
         start_date: periodStartDate,
@@ -160,13 +160,15 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
         time_slots,
       });
       if (res && res.code === 0) {
-        toast.success('预约成功！');
-        // 可选：跳转或刷新
+        toast.success('Reservation successful! Returning to My Courses...');
+        setTimeout(() => {
+          router.push('/profile/courses');
+        }, 1200);
       } else {
-        toast.error(res?.msg || '预约失败');
+        toast.error(res?.msg || 'Reservation failed');
       }
     } catch (e: any) {
-      toast.error(e?.message || '预约失败');
+      toast.error(e?.message || 'Reservation failed');
     }
   };
 
@@ -346,7 +348,11 @@ export default function MyCourseDetailPage({ params }: { params: { course_id: st
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
-        <span className="ml-4 font-semibold">Total: <span className="text-blue-600">${totalPrice}</span></span>
+      </div>
+
+      {/* 新增提示部分 */}
+      <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
+        After confirmation, your reservation will be held for a period of time. Please go to My Courses to complete the follow-up steps as soon as possible.
       </div>
 
       <div className="flex justify-end gap-4 mt-6">

@@ -132,6 +132,24 @@ func CourseList(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
+	status, exist := c.Get("status")
+	if !exist {
+		status = "all"
+	} else {
+		if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" {
+			status = "all"
+		}
+	}
+	var statusList []string
+	if status == "all" {
+		statusList = append(statusList, string(codes.CourseMineComplete), string(codes.CourseMineInactive), string(codes.CourseMineOngoing))
+	} else if status == "inactive" {
+		statusList = append(statusList, string(codes.CourseMineInactive))
+	} else if status == "ongoing" {
+		statusList = append(statusList, string(codes.CourseMineOngoing))
+	} else if status == "complete" {
+		statusList = append(statusList, string(codes.CourseMineComplete))
+	}
 	currentUserStr, _ := currentUser.(string)
 	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
 	if err != nil {
@@ -153,7 +171,6 @@ func CourseList(c *gin.Context) {
 		uc.course_id,
 		uc.status AS uc_status,
 		uc.add_time AS uc_add_time,
-
 		c.name,
 		c.introduction,
 		c.detail,
@@ -168,7 +185,7 @@ func CourseList(c *gin.Context) {
 		c.status AS course_status,
 		c.flag AS course_flag
 	`).
-		Where("uc.user_id = ? AND uc.flag != ? AND c.flag != ?", userID, -1, -1).
+		Where("uc.user_id = ? AND uc.flag != ? AND c.flag != ? and uc.status IN ?", userID, -1, -1, statusList).
 		Order("uc.add_time DESC").
 		Scan(&result).Error
 
