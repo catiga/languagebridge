@@ -18,17 +18,19 @@ import (
 	"gorm.io/gorm"
 )
 
-const DEFAULT_MSG = "Welcome to Stonks"
+const DEFAULT_MSG = "Welcome to LangBridge"
 
 var loginInLock sync.Map
 
 type AuthRequestKey struct {
 	AuthKey string `json:"auth_key" binding:"required,min=5"`
+	Chain   string `json:"chain"`
 }
 type VerifyAuthRequest struct {
-	ID   uint64 `json:"id", binding:"id,min=1"`
-	Sign string `json:"sign" binding:"required"`
-	Ref  string `json:"ref"`
+	ID    uint64 `json:"id"`
+	Sign  string `json:"sign"`
+	Chain string `json:"chain"`
+	Ref   string `json:"ref"`
 }
 
 func GetAuthMsg(c *gin.Context) {
@@ -62,6 +64,7 @@ func GetAuthMsg(c *gin.Context) {
 		authObj = model.AuthMessage{
 			AuthKey:    req.AuthKey,
 			AuthMsg:    DEFAULT_MSG,
+			Chain:      req.Chain,
 			CreateTime: time.Now(),
 			ExpireTime: time.Now().Add(5 * time.Minute),
 			Nonce:      system.GenerateNonce(10),
@@ -152,11 +155,29 @@ func VerifyMessage(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
+	var userInfo model.UserInfo
 	if existWallet.ID == 0 {
+		// create user_id
+		userInfo = model.UserInfo{
+			AddTime:    time.Now(),
+			UpdateTime: time.Now(),
+			Status:     "00",
+			UserNo:     system.GenerateUserNoNumberOnly(),
+		}
+		err := db.Save(&userInfo).Error
+		if err != nil {
+			log.Error("create user error", err)
+		}
+		userProfile := model.UserProfile{
+			UserID:     userInfo.ID,
+			UpdateTime: time.Now(),
+		}
+		db.Save(&userProfile)
 		existWallet = model.UserWallet{
 			Wallet:     authObj.AuthKey,
-			Chain:      "solana",
+			Chain:      req.Chain,
 			CreateTime: time.Now(),
+			UserID:     userInfo.ID,
 		}
 		if len(req.Ref) > 0 {
 			var refModel model.UserRef
@@ -168,25 +189,23 @@ func VerifyMessage(c *gin.Context) {
 			}
 		}
 		db.Save(&existWallet)
+	} else {
+		db.Model(&model.UserInfo{}).Where("id = ?", existWallet.UserID).First(&userInfo)
 	}
 
-	expireTs := time.Now().Add(common.TOKEN_DURATION).Unix()
+	originalStr := fmt.Sprintf("%d,%s,%d", userInfo.ID, userInfo.UserNo, time.Now().Unix())
+	token, err := security.Encrypt([]byte(originalStr))
 
-	tokenOrig := fmt.Sprintf("%d|%s|%s|%d", existWallet.ID, existWallet.Wallet, existWallet.Chain, expireTs)
-	tokenEnc, err := security.Encrypt([]byte(tokenOrig))
-	if err != nil {
-		res.Code = codes.CODE_ERR_SECURITY
-		res.Msg = "token gen error:" + err.Error()
-		c.JSON(http.StatusOK, res)
-		return
-	}
-
-	res.Code = codes.CODE_SUCCESS
-	res.Msg = "success"
 	res.Data = struct {
-		Token string `json:"token"`
+		UserNo string `json:"user_no"`
+		Email  string `json:"email"`
+		Name   string `json:"name"`
+		Token  string `json:"token"`
 	}{
-		Token: tokenEnc,
+		UserNo: userInfo.UserNo,
+		Email:  userInfo.Email,
+		Name:   userInfo.Name,
+		Token:  token,
 	}
 	c.JSON(http.StatusOK, res)
 }

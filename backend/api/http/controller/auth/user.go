@@ -400,6 +400,11 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	userInfo.UpdateTime = time.Now()
+	userInfo.CountryID = req.LivingCountryID
+	userInfo.Name = req.NickName
+	db.Save(&userInfo)
+
 	var userProfile model.UserProfile
 	db.Model(&model.UserProfile{}).Where("user_id = ?", userInfo.ID).First(&userProfile)
 

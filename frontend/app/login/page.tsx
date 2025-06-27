@@ -11,6 +11,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SHA256 from 'crypto-js/sha256';
 import Cookies from 'js-cookie';
+import WalletLoginSection from './WalletLoginSection';
 
 const schema = yup.object().shape({
   loginName: yup.string().required('please input login id'),
@@ -144,6 +145,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+        <WalletLoginSection />
       </div>
     </div>
   );

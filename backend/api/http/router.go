@@ -5,6 +5,7 @@ import (
 
 	"github.com/langbridge/backend/api/http/controller/auth"
 	"github.com/langbridge/backend/api/http/controller/home"
+	preauth "github.com/langbridge/backend/api/http/controller/preauth"
 	"github.com/langbridge/backend/api/interceptor"
 )
 
@@ -26,6 +27,8 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.POST("/tpa/register", home.TeacherRegister)
 	homeGroup.POST("/tpa/login", home.TeacherLogin)
 	homeGroup.POST("/contact", home.SendSystemMessage)
+	homeGroup.POST("/preauth/get_msg", preauth.GetAuthMsg)
+	homeGroup.POST("/preauth/verify_msg", preauth.VerifyMessage)
 
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
 	authGroup.GET("/overview", auth.Overview)
