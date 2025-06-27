@@ -53,6 +53,7 @@ type CourseWithJoinStatus struct {
 	model.CourseInfo
 	Joined           bool               `json:"joined"`
 	UserCourseStatus string             `json:"uc_ss"`
+	UcID             uint64             `json:"uc_id"`
 	JoinTime         time.Time          `json:"join_time"`
 	BookedTrans      []CourseBookedTran `json:"booked_trans"`
 }
@@ -158,7 +159,12 @@ func CourseList(c *gin.Context) {
 	}
 	var statusList []string
 	if status == "all" {
-		statusList = append(statusList, string(codes.CourseMineComplete), string(codes.CourseMineInactive), string(codes.CourseMineOngoing), string(codes.CourseMineWatingConfirm))
+		statusList = append(statusList,
+			string(codes.CourseMineComplete),
+			string(codes.CourseMineInactive),
+			string(codes.CourseMineOngoing),
+			string(codes.CourseMineWatingConfirm),
+			string(codes.CourseMineCanceled))
 	} else if status == "inactive" {
 		statusList = append(statusList, string(codes.CourseMineInactive))
 	} else if status == "ongoing" {
@@ -167,6 +173,8 @@ func CourseList(c *gin.Context) {
 		statusList = append(statusList, string(codes.CourseMineComplete))
 	} else if status == "waitingconfirm" {
 		statusList = append(statusList, string(codes.CourseMineWatingConfirm))
+	} else if status == "canceled" {
+		statusList = append(statusList, string(codes.CourseMineCanceled))
 	}
 	currentUserStr, _ := currentUser.(string)
 	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
@@ -283,6 +291,7 @@ func CourseFetchDetail(c *gin.Context) {
 	res.Msg = "success"
 	res.Data = CourseWithJoinStatus{
 		CourseInfo:       course,
+		UcID:             userCourse.ID,
 		Joined:           true,
 		JoinTime:         userCourse.AddTime,
 		UserCourseStatus: userCourse.Status,
@@ -434,6 +443,67 @@ func CourseConfirm(c *gin.Context) {
 	}
 	//update user course status
 	db.Model(&model.UserCourse{}).Where("id = ?", userCourse.ID).Update("status", codes.CourseMineWatingConfirm)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseCancel(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	userCourseId, _ := strconv.ParseInt(c.Query("uc_id"), 10, 64)
+
+	db := system.GetDb()
+	// check user course status
+	var userCourse model.UserCourse
+	db.Model(&model.UserCourse{}).Where("id = ?", userCourseId).First(&userCourse)
+
+	if userCourse.ID == 0 {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "You need to join this course before accessing it."
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if userCourse.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Can not find bookings."
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if userCourse.Status != string(codes.CourseMineInactive) && userCourse.Status != string(codes.CourseMineWatingConfirm) {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Can not execute under current status."
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db.Model(&model.CourseBookTrans{}).
+		Where("uc_id = ?", userCourse.ID).
+		Update("status", "001")
+
+	db.Model(&model.UserCourse{}).Where("id = ?", userCourse.ID).Update("status", codes.CourseMineCanceled)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

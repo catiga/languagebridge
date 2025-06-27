@@ -14,7 +14,7 @@ import { apiClient } from '../utils/api';
 import { toast } from 'react-toastify';
 import TimetableListView from '../timetable/components/TimetableListView';
 import TimetableWeekView from '../timetable/components/TimetableWeekView';
-import { FaStar, FaChalkboardTeacher, FaPlayCircle, FaCheckCircle, FaPauseCircle } from 'react-icons/fa';
+import { FaStar, FaChalkboardTeacher, FaPlayCircle, FaCheckCircle, FaPauseCircle, FaTimesCircle } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 // 假数据
@@ -129,6 +129,7 @@ const statusTabs = [
   { key: 'complete', label: 'Complete' },
   { key: 'inactive', label: 'Inactive' },
   { key: 'waitingconfirm', label: 'WaitingConfirm' },
+  { key: 'canceled', label: 'Canceled' },
 ];
 
 export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolean) => void }) {
@@ -261,6 +262,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                         {course.user_course_status === '20' && <FaCheckCircle className="text-green-500 text-2xl" title="Complete" />}
                         {course.user_course_status === '00' && <FaPauseCircle className="text-gray-400 text-2xl" title="Inactive" />}
                         {course.user_course_status === '01' && <FaPauseCircle className="text-gray-400 text-2xl" title="WaitingConfirm" />}
+                        {course.user_course_status === '02' && <FaTimesCircle className="text-red-500 text-2xl" title="Canceled" />}
                       </span>
                     )}
                   </div>
