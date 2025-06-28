@@ -640,6 +640,10 @@ func CourseTimeRange(c *gin.Context) {
 		log.Error(err)
 	}
 
+	if len(result) == 0 {
+		result = []model.CourseBookWithJoin{}
+	}
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = result
