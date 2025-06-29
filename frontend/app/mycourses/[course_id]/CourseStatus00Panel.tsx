@@ -119,8 +119,9 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
       };
     });
     try {
+      console.log('这个课程', course)
       const res: any = await apiClient.post('/spwapi/auth/course/confirm', {
-        course_id: course.course_id,
+        course_id: course.id,
         teacher_id: selectedTeacher,
         start_date: periodStartDate,
         end_date: periodEndDate,

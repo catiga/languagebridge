@@ -159,7 +159,7 @@ func CourseList(c *gin.Context) {
 		return
 	}
 	status := c.Query("status")
-	if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" && status != "waitingconfirm" {
+	if status != "all" && status != "inactive" && status != "ongoing" && status != "complete" && status != "waitingconfirm" && status != "canceled" {
 		status = "all"
 	}
 	var statusList []string
