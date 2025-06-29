@@ -227,11 +227,12 @@ export default function TimetableWeekView() {
         {/* --- Global Styles for Calendar --- */}
         <style jsx global>{`
           .rbc-event { padding: 2px 6px; border: none; border-radius: 6px; color: white; transition: all 0.3s; cursor: pointer; }
-          .rbc-event-past { background-color: #94a3b8; /* slate-400 */ }
-          .rbc-event-future { background-color: #0284c7; /* sky-600 */ }
+          .rbc-event-past { background-color: #a3a3a3 !important; color: #fff !important; opacity: 0.7; }
+          .rbc-event-future { background-color:rgb(115, 190, 228) !important; color: #fff !important; }
           .rbc-event-today { 
-            background-color: #f59e0b; /* amber-500 */ 
-            box-shadow: 0 0 12px 0px rgba(245, 158, 11, 0.5);
+            background-color: #32a852 !important; color: #fff !important;
+            box-shadow: 0 0 12px 0px rgba(173, 240, 168, 0.5);
+            font-weight: bold;
           }
           .rbc-event:hover { transform: scale(1.03); filter: brightness(1.1); }
           .rbc-event:focus { outline: none; }
@@ -254,6 +255,7 @@ export default function TimetableWeekView() {
             toolbar: CustomToolbar,
           }}
           tooltipAccessor={(e: CustomEvent) => `${e.resource.courseName}\nTeacher: ${e.resource.teacher}`}
+          eventPropGetter={eventPropGetter}
         />
       </motion.div>
 
