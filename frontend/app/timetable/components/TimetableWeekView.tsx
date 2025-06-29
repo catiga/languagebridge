@@ -117,6 +117,20 @@ const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: ()
     onClose();
   };
 
+  const handleGoReview = () => {
+    if (!event.id) {
+      toast.error("Lesson ID is missing.");
+      return;
+    }
+    if (status !== 'expired') {
+      toast.error("Only finished course can be reviewed.");
+      return;
+    };
+    const reviewPageUrl = `/course/review/${event.id}`;
+    window.open(reviewPageUrl, '_blank', 'noopener,noreferrer');
+    onClose();
+  }
+
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1 },
@@ -125,7 +139,7 @@ const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: ()
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+      <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()} className={`bg-white rounded-2xl shadow-xl w-full max-w-md p-8 ${status === 'expired' ? 'bg-gray-100' : ''}`}>
         <div className="flex justify-between items-start">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">{event.resource.courseName}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><FaTimes size={20} /></button>
@@ -147,6 +161,15 @@ const EventDetailsModal = ({ event, onClose }: { event: CustomEvent; onClose: ()
         {tip && (
           <div className="mt-4 text-center text-red-500 text-sm">{tip}</div>
         )}
+        {/* 过期课程显示去评价按钮 */}
+        {status === 'expired' && (
+          <button
+            className="w-full mt-4 py-3 px-4 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600 transition"
+            onClick={handleGoReview}
+          >
+            Go to review
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -166,9 +189,10 @@ export default function TimetableWeekView() {
     try {
       const res = await apiClient.get('/spwapi/auth/course/time/range', { start_date: startDate, end_date: endDate });
       if (res && res.code === 0 && Array.isArray(res.data)) {
+
         const newEvents: CustomEvent[] = res.data.map((item: CourseTimeItem) => ({
           id: item.id,
-          title: '',
+          title: item.course_name,
           start: new Date(`${item.lesson_date.slice(0, 10)}T${item.start_time}`),
           end: new Date(`${item.lesson_date.slice(0, 10)}T${item.end_time}`),
           resource: { teacher: item.teacher_name, student: item.student_name, courseName: item.course_name },
