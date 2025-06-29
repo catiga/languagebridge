@@ -944,3 +944,69 @@ func GenerateRoomName(input string) string {
 	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:])[:32] // 可选：截取前32位，已经足够唯一
 }
+
+func TeacherCourseGetHistories(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	pageNo, _ := strconv.ParseInt(c.Query("pn"), 10, 64)
+	pageSize, _ := strconv.ParseInt(c.Query("ps"), 10, 64)
+
+	if pageNo <= 0 {
+		pageNo = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	db := system.GetDb()
+
+	var total int64
+	db.Model(&model.CourseBookTrans{}).
+		Where("user_id = ?", teacherID).
+		Count(&total)
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	var result []model.CourseBookWithJoin
+
+	err = db.Table("course_book_trans").
+		Joins("JOIN course_log_record clr on clr.book_id = course_book_trans.id").
+		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
+		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
+		Where("course_book_trans.teacher_id = ?", teacherID).
+		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
+		Order("lesson_date, start_time DESC").
+		Offset(int((pageNo - 1)) * int(pageSize)).
+		Limit(int(pageSize)).
+		Scan(&result).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Data = gin.H{
+		"list":        result,
+		"pn":          pageNo,
+		"ps":          pageSize,
+		"total":       total,
+		"total_pages": totalPages,
+	}
+	c.JSON(http.StatusOK, res)
+}

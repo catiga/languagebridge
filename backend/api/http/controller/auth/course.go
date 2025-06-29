@@ -914,6 +914,7 @@ func CourseAddReview(c *gin.Context) {
 		Comment:   req.Comment,
 		Rate:      int(req.Rate),
 		AddTime:   time.Now(),
+		Direction: 1,
 		Flag:      0,
 	}
 	db.Save(&review)

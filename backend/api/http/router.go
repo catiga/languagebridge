@@ -70,6 +70,8 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.POST("/timeslot/update", auth.TeacherTimeslotTemplateUpdate)
 	teacherAuthGroup.GET("/schedule/time/range", auth.TeacherScheduleTimeRange)
 
+	teacherAuthGroup.GET("/course/histories", auth.TeacherCourseGetHistories)
+
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)
 	// preAuthGroup := e.Group("/preauth")

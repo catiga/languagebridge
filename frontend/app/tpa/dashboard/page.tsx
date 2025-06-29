@@ -23,6 +23,7 @@ import TimeSlotManagement from './components/TimeSlotManagement';
 import TeacherScheduleWeekView from './components/TeacherScheduleWeekView';
 import SettingPanel from './components/SettingPanel';
 import { apiClient } from '@/app/utils/api';
+import TeacherCourseHistoryPanel from './components/TeacherCourseHistoryPanel';
 
 interface DashboardStats {
   totalStudents: number;
@@ -44,7 +45,7 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai' | 'courseHistory';
 
 function WeekRangeTitle() {
   // 取本地时间的本周一
@@ -317,6 +318,8 @@ export default function TeacherDashboard() {
         );
       case 'ai':
         return <AIToolsPanel />;
+      case 'courseHistory':
+        return <TeacherCourseHistoryPanel />;
       default:
         return (
           <div className="space-y-8">
