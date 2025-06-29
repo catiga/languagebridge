@@ -168,21 +168,27 @@ func findProjectRoot(currentDir, rootIndicator string) (string, error) {
 
 func init() {
 	log.Println("system starting...")
+
+	var confFilePath string
+	_, filename, _, _ := runtime.Caller(0)
+	testDir := filepath.Dir(filename)
+	confFilePath, _ = findProjectRoot(testDir, "__mark__")
+
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		if len(confFilePath) > 0 {
+			err = godotenv.Load(confFilePath + "/.env")
+		}
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
 	}
 	//topic.StartSubscription()
 	log.Println("DATABASE_PWD:", os.Getenv("DATABASE_PWD"))
 
-	var confFilePath string
-
 	if configFilePathFromEnv := os.Getenv("DALINK_GO_CONFIG_PATH"); configFilePathFromEnv != "" {
 		confFilePath = configFilePathFromEnv
 	} else {
-		_, filename, _, _ := runtime.Caller(0)
-		testDir := filepath.Dir(filename)
-		confFilePath, _ = findProjectRoot(testDir, "__mark__")
 		if len(confFilePath) > 0 {
 			confFilePath += "/config/dev.yml"
 		}

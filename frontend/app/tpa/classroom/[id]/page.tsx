@@ -46,6 +46,10 @@ export default function ClassroomPage() {
     return classInfo?.meeting_uri;
   };
 
+  const getJwtToken = () => {
+    return classInfo?.token
+  }
+
   // 事件处理函数
   const printEventOutput = (payload: any) => {
     updateLog((items: any[]) => [...items, JSON.stringify(payload)]);
@@ -246,7 +250,7 @@ export default function ClassroomPage() {
         <JitsiMeeting
           domain="8x8.vc"
           roomName={`vpaas-magic-cookie-a72e88e466dd449c891fb37ea83a09ed/${getRoomName()}`}
-          jwt="eyJraWQiOiJ2cGFhcy1tYWdpYy1jb29raWUtYTcyZTg4ZTQ2NmRkNDQ5Yzg5MWZiMzdlYTgzYTA5ZWQvY2Q3NzkwLVNBTVBMRV9BUFAiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJqaXRzaSIsImlzcyI6ImNoYXQiLCJpYXQiOjE3NTExODc5NzYsImV4cCI6MTc1MTE5NTE3NiwibmJmIjoxNzUxMTg3OTcxLCJzdWIiOiJ2cGFhcy1tYWdpYy1jb29raWUtYTcyZTg4ZTQ2NmRkNDQ5Yzg5MWZiMzdlYTgzYTA5ZWQiLCJjb250ZXh0Ijp7ImZlYXR1cmVzIjp7ImxpdmVzdHJlYW1pbmciOnRydWUsIm91dGJvdW5kLWNhbGwiOnRydWUsInNpcC1vdXRib3VuZC1jYWxsIjpmYWxzZSwidHJhbnNjcmlwdGlvbiI6dHJ1ZSwicmVjb3JkaW5nIjp0cnVlLCJmbGlwIjpmYWxzZX0sInVzZXIiOnsiaGlkZGVuLWZyb20tcmVjb3JkZXIiOmZhbHNlLCJtb2RlcmF0b3IiOnRydWUsIm5hbWUiOiJjYXRpZ2EwMyIsImlkIjoiZ29vZ2xlLW9hdXRoMnwxMDMzMDI5NDY0NTEwNDczMTc2NjgiLCJhdmF0YXIiOiIiLCJlbWFpbCI6ImNhdGlnYTAzQGdtYWlsLmNvbSJ9fSwicm9vbSI6IioifQ.Q_dUy9J-gyBR89BKMUE9p0T0r9bgv6lzC4BQdUuRMBaSnGGATGLnLaZSaCAeQgvGSOy3YEtTb4JuZAqpWmhoAVQIylLEBRbi2u0i0qhlzkZlgMUSnu0p5Et00SQBePyFpn6DJneLHp86Jban6XXBga6MrbobR9MIFEBTQhqNsdJViVJAzV2J8cfhLmhZnRQ2ziVwbUnP_WAPeHfErYbr878B12T2IySrghkoLsbtVwgCp0ehz6DBPdpS1qdokWOpmQ7OWuyBliT6jlKobLzCvww9U3FyFvNF6ZvdKeaquvl5V7xwgyqqfYfavkP5ZnjXSrMVEm4CSze-idi8Ibfdjw"
+          jwt={getJwtToken()}
           userInfo={{ displayName: classInfo?.teacher_name || 'Teacher' }}
           spinner={renderSpinner}
           configOverwrite={{

@@ -750,6 +750,11 @@ func CourseGetMeetingInfo(c *gin.Context) {
 	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
 	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
 
+	token, err := utils.GenerateJWT(bookTran.LessonDate, 24*time.Hour)
+	if err != nil {
+		log.Error(err)
+	}
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = struct {
@@ -764,6 +769,7 @@ func CourseGetMeetingInfo(c *gin.Context) {
 		LessonDate    string `json:"lesson_date"`
 		StartTime     string `json:"start_time"`
 		EndTime       string `json:"end_time"`
+		Token         string `json:"token"`
 	}{
 		MeetingURI:    roomURI,
 		BookID:        bookTran.ID,
@@ -776,6 +782,7 @@ func CourseGetMeetingInfo(c *gin.Context) {
 		LessonDate:    bookTran.LessonDate.Format("2006-01-02"),
 		StartTime:     bookTran.StartTime,
 		EndTime:       bookTran.EndTime,
+		Token:         token,
 	}
 	c.JSON(http.StatusOK, res)
 }
