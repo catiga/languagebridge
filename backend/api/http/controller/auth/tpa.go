@@ -1010,3 +1010,209 @@ func TeacherCourseGetHistories(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, res)
 }
+
+func TeacherCourseFetchDetail(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	userCourseId, _ := strconv.ParseInt(c.Query("uc_id"), 10, 64)
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var userCourse model.CourseBookTrans
+	db.Model(&model.CourseBookTrans{}).Where("id = ?", userCourseId).First(&userCourse)
+
+	if userCourse.TeacherID != uint64(teacherID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Can not find course you taught, please check"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var course model.CourseInfo
+	err = db.Model(&model.CourseInfo{}).Where("id = ?", userCourse.CourseID).First(&course).Error
+	if err != nil {
+		log.Error("[Course] fetch detail err", err)
+	}
+
+	var bookTrans []model.CourseBookTrans
+	db.Model(&model.CourseBookTrans{}).Where("uc_id = ?", userCourse.ID).Find(&bookTrans)
+	var courseBooked []CourseBookedTran
+	for _, r := range bookTrans {
+		courseBooked = append(courseBooked, CourseBookedTran{
+			BookingNo:  r.BookingNo,
+			TeacherID:  r.TeacherID,
+			CourseID:   r.CourseID,
+			UserID:     r.UserID,
+			LessonDate: r.LessonDate,
+			StartTime:  r.StartTime,
+			EndTime:    r.EndTime,
+			Status:     r.Status,
+			Ongoing:    r.Ongoing,
+		})
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = CourseWithJoinStatus{
+		CourseInfo:       course,
+		UcID:             userCourse.ID,
+		Joined:           true,
+		JoinTime:         userCourse.AddTime,
+		UserCourseStatus: userCourse.Status,
+		BookedTrans:      courseBooked,
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherCourseGetReview(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course spec invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var bookTran model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).Where("id = ? and teacher_id = ?", btid, teacherID).First(&bookTran).Error
+
+	if err != nil {
+		log.Error("fetch course info error", err)
+	}
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var reviews []model.CourseReview
+	db.Model(&model.CourseReview{}).Where("book_id = ? and teacher_id = ?", bookTran.ID, teacherID).Order("add_time DESC").Find(&reviews)
+
+	res.Data = reviews
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherCourseAddReview(c *gin.Context) {
+	var req CourseReviewAddRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Comment) == 0 || len(req.Comment) > 500 {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Comment should not be empty, and less than 500 chars"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if req.Rate < 0 || req.Rate > 5 {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Rate should be between 0 to 5"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course meeting invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var bookTran model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).Where("id = ? and teacher_id = ?", btid, teacherID).First(&bookTran).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var review = model.CourseReview{
+		BookID:    bookTran.ID,
+		TeacherID: uint64(teacherID),
+		UserID:    bookTran.UserID,
+		Comment:   req.Comment,
+		Rate:      int(req.Rate),
+		AddTime:   time.Now(),
+		Direction: 2,
+		Flag:      0,
+	}
+	db.Save(&review)
+
+	c.JSON(http.StatusOK, res)
+}
