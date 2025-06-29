@@ -60,9 +60,12 @@ export default function MeetPage() {
   }, [id]);
 
   // 生成房间名
-  const generateRoomName = () => {
-    if (!details) return `meeting-${id}-${Date.now()}`;
-    return `englishbridge-${details.course_name?.replace(/\s+/g, '-')}-${id}`;
+  const getRoomName = () => {
+    if (details?.meeting_uri) {
+      const arr = details.meeting_uri.split('/');
+      return arr[arr.length - 1];
+    }
+    return `meeting-${id}-${Date.now()}`;
   };
 
   // 事件处理函数
@@ -258,19 +261,22 @@ export default function MeetPage() {
       {/* 右侧会议区域 */}
       <div className="flex-1 bg-gray-800">
         <JitsiMeeting
-          roomName={generateRoomName()}
+          domain="8x8.vc"
+          roomName={`vpaas-magic-cookie-a72e88e466dd449c891fb37ea83a09ed/${getRoomName()}`}
+          userInfo={{ displayName: details?.student_name || 'Student' }}
           spinner={renderSpinner}
           configOverwrite={{
-            subject: details.course_name || 'English Bridge Class',
+            subject: details?.course_name || 'English Bridge Class',
             hideConferenceSubject: false,
+            disableLobby: true,
             prejoinPageEnabled: false,
             startWithAudioMuted: false,
             startWithVideoMuted: false,
             disableModeratorIndicator: false,
             enableClosePage: true,
             enableWelcomePage: false,
-            enableLobbyChat: true,
-            enableKnockingParticipant: true,
+            enableLobbyChat: false,
+            enableKnockingParticipant: false,
             enableNoAudioDetection: true,
             enableNoisyMicDetection: true,
             enableRemb: true,
@@ -294,13 +300,6 @@ export default function MeetPage() {
             }
           }}
           interfaceConfigOverwrite={{
-            TOOLBAR_BUTTONS: [
-              'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-              'fodeviceselection', 'hangup', 'chat', 'recording',
-              'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-              'videoquality', 'filmstrip', 'feedback', 'stats', 'shortcuts',
-              'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone', 'security'
-            ],
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
             SHOW_POWERED_BY: false,
@@ -317,6 +316,7 @@ export default function MeetPage() {
             TOOLBAR_TIMEOUT: 4000,
             TOOLBAR_TIMEOUT_AUTO_HIDE: 2000,
             TOOLBAR_BUTTONS_ALWAYS_VISIBLE: true,
+            SHOW_LOGIN_BUTTON: false,
             TOOLBAR_BUTTONS_ALWAYS_VISIBLE_HIDE: [
               'livestreaming',
               'recording',
