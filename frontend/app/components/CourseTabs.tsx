@@ -16,6 +16,7 @@ import TimetableListView from '../timetable/components/TimetableListView';
 import TimetableWeekView from '../timetable/components/TimetableWeekView';
 import { FaStar, FaChalkboardTeacher, FaPlayCircle, FaCheckCircle, FaPauseCircle, FaTimesCircle } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
+import CourseHistoryPanel from './CourseHistoryPanel';
 
 // 假数据
 const students = [
@@ -290,7 +291,7 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       {activeTab === 'systemcourses' && <SystemCourses />}
       {activeTab === 'timetable' && viewMode === 'list' && <TimetableListView />}
       {activeTab === 'timetable' && viewMode === 'week' && <TimetableWeekView />}
-      {activeTab === 'history' && <CourseHistory />}
+      {activeTab === 'history' && <CourseHistoryPanel />}
     </div>
   );
 }
