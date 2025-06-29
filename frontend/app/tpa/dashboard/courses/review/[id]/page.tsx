@@ -146,11 +146,30 @@ export default function TeacherCourseReviewPage() {
         ) : (
           <ul className="space-y-4">
             {reviews.map((r, idx) => (
-              <li key={idx} className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                <div className="text-gray-800 font-semibold mb-1">{r.user_name || r.teacher_name || 'Anonymous'}</div>
-                <div className="text-gray-600 text-sm mb-1">{r.add_time ? new Date(r.add_time).toLocaleString() : ''}</div>
-                <div className="text-gray-700">{r.comment}</div>
-                <div className="text-yellow-500 mt-1 flex items-center gap-2">Satisfaction: {RATE_ICONS[r.rate]} <span>{RATE_LABELS[r.rate] || r.rate}</span></div>
+              <li
+                key={idx}
+                className={`bg-gray-50 rounded-lg p-4 shadow-sm border-l-4 ${
+                  r.direction === 2 ? 'border-blue-400' : 'border-green-400'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {r.direction === 2 ? (
+                    <>
+                      <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded font-bold">Teacher Review</span>
+                      <span className="text-blue-400"><FaRegGrinStars /></span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded font-bold">Student Review</span>
+                      <span className="text-green-400"><FaRegSmile /></span>
+                    </>
+                  )}
+                  <span className="text-gray-600 text-xs ml-2">{r.add_time ? new Date(r.add_time).toLocaleString() : ''}</span>
+                </div>
+                <div className="text-gray-700 mb-1">{r.comment}</div>
+                <div className="text-yellow-500 flex items-center gap-2">
+                  Satisfaction: {RATE_ICONS[r.rate]} <span>{RATE_LABELS[r.rate] || r.rate}</span>
+                </div>
               </li>
             ))}
           </ul>

@@ -34,11 +34,11 @@ const menuItems = [
   { id: 'profile', label: 'Profile', icon: FaUserCircle },
   { id: 'certificates', label: 'Certificates', icon: FaCertificate },
   { id: 'courses', label: 'Courses', icon: FaBook },
-  { id: 'courseHistory', label: 'Course History', icon: FaBook },
+  { id: 'courseHistory', label: 'Class Logs', icon: FaBook },
   { id: 'students', label: 'Students', icon: FaUsers },
   { id: 'schedule', label: 'Time Slots', icon: FaCalendarAlt },
   { id: 'schedule2', label: 'Schedule', icon: FaCalendarWeek },
-  { id: 'analytics', label: 'Analytics', icon: FaChartBar },
+  //{ id: 'analytics', label: 'Analytics', icon: FaChartBar },
   { id: 'ai', label: 'AI Tools', icon: FaRobot, beta: true },
 ];
 
