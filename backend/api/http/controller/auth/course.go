@@ -731,7 +731,9 @@ func CourseGetMeetingInfo(c *gin.Context) {
 		return
 	}
 
-	roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
+	// roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
+	bridgeMeeting := fmt.Sprintf("%s%d_%s_%d", "langbridge", bookTran.UcID, bookTran.BookingNo, bookTran.ID)
+	roomURI := GenerateRoomName(bridgeMeeting)
 
 	var courseLog model.CourseLogRecord
 	db.Model(&model.CourseLogRecord{}).Where("book_id = ?", bookTran.ID).First(&courseLog)

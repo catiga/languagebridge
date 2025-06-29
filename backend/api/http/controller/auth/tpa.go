@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -880,7 +882,10 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 		}
 	}
 
-	roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
+	bridgeMeeting := fmt.Sprintf("%s%d_%s_%d", "langbridge", bookTran.UcID, bookTran.BookingNo, bookTran.ID)
+
+	//roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
+	roomURI := GenerateRoomName(bridgeMeeting)
 
 	var courseLog model.CourseLogRecord
 	db.Model(&model.CourseLogRecord{}).Where("book_id = ?", bookTran.ID).First(&courseLog)
@@ -926,4 +931,9 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 		EndTime:       bookTran.EndTime,
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+func GenerateRoomName(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])[:32] // 可选：截取前32位，已经足够唯一
 }
