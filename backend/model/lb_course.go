@@ -154,6 +154,7 @@ type CourseReview struct {
 	Rate      int       `gorm:"column:rate" json:"rate"`
 	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
 	Flag      int       `gorm:"column:flag" json:"flag"`
+	Direction int       `gorm:"column:direction" json:"direction"`
 }
 
 func (CourseReview) TableName() string {
