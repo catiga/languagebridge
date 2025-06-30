@@ -103,8 +103,14 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Link href="/">
-              <span className={`text-2xl font-bold transition-colors duration-300 ${logoColor}`}>
-                LangBridge
+              <span className="flex items-center gap-2">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="18" cy="18" r="18" fill="#2563EB"/>
+                  <path d="M10 24C10 18 18 12 26 24" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="18" cy="15" r="4" fill="#fff"/>
+                  <ellipse cx="18" cy="27" rx="7" ry="2.5" fill="#fff" fillOpacity=".7"/>
+                </svg>
+                <span className={`text-2xl font-bold transition-colors duration-300 ${logoColor}`}>LangBridge</span>
               </span>
             </Link>
           </div>
