@@ -32,7 +32,7 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
   
   return (
     <motion.div
-      className="bg-white rounded-2xl shadow-lg p-7 flex flex-col items-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group border border-gray-100 max-w-xs w-full mx-auto min-h-[340px]"
+      className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer group border border-gray-100 max-w-sm w-full mx-auto min-h-[360px]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -44,13 +44,13 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
         className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow mb-4 group-hover:scale-105 transition-transform duration-300"
       />
       <div className="w-full text-center">
-        <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">{teacher.name}</h3>
-        <div className="flex flex-col gap-1 items-center text-xs text-gray-500 mb-2">
+        <h3 className="text-xl font-bold text-gray-900 mb-2 truncate w-full">{teacher.name}</h3>
+        <div className="flex flex-col gap-1 items-center text-sm text-gray-600 mb-3">
           <span><span className="font-semibold text-gray-700">Nationality:</span> {teacher.nationality_name || '—'}</span>
           <span><span className="font-semibold text-gray-700">Location:</span> {teacher.living_country_name || '—'}</span>
           <span><span className="font-semibold text-gray-700">Native Language:</span> {teacher.first_language || '—'}</span>
         </div>
-        <div className="text-gray-700 text-sm mb-3 min-h-[32px] line-clamp-2 font-medium break-words">{teacher.introduction}</div>
+        <div className="text-gray-700 text-sm mb-4 min-h-[40px] line-clamp-2 font-medium break-words text-left w-full">{teacher.introduction}</div>
       </div>
       <button
         className="mt-auto w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:bg-blue-700 transition-all duration-200"
@@ -130,7 +130,7 @@ export default function TeachersPage() {
           ) : teachers.length === 0 ? (
             <div className="text-center text-gray-400">No teachers found.</div>
           ) : (
-            <main className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-10">
+            <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
               {teachers.map(teacher => (
                 <TeacherCard key={teacher.id} teacher={teacher} />
               ))}
