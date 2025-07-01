@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { InferType } from 'yup';
 
 interface Member {
   id: number;
@@ -51,35 +52,63 @@ const genderOptions = [
 ];
 
 // 添加成员表单校验
-const memberSchema = yup.object().shape({
+const memberSchema = yup.object({
+  id: yup.number().required(),
   name: yup.string().required('Name is required'),
   gender: yup.number().oneOf([0, 1, 2]).required('Gender is required'),
   rel_type: yup.string().oneOf(["100", "101", "200", "900"]).required('Relationship is required'),
-  birthday: yup.string().matches(/^\d{4}-\d{2}-\d{2}$/, 'Birthday must be in yyyy-MM-dd format').nullable(),
-  email: yup.string().email('Invalid email').nullable(),
-  rel_desc: yup.string().nullable(),
-  personality: yup.string().nullable(),
-  character: yup.string().nullable(),
+  birthday: yup.string().matches(/^\d{4}-\d{2}-\d{2}$/, 'Birthday must be in yyyy-MM-dd format').required('Birthday is required'),
+  email: yup.string().email('Invalid email').required('Email is required'),
+  rel_desc: yup.string().required('Relationship description is required'),
+  personality: yup.string().required('Personality is required'),
+  character: yup.string().required('Character is required'),
 });
+
+// Define the form type
+type MemberFormType = InferType<typeof memberSchema>;
+
+// API response type
+interface ApiResponse<T> {
+  code: number;
+  data: T;
+  msg?: string;
+}
 
 interface MemberListProps {
   onLoading: (loading: boolean) => void;
 }
 
-export default function MemberList({ onLoading }: MemberListProps) {
+export default function StudentList({ onLoading }: MemberListProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showModalEdit, setShowModalEdit] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const defaultMemberForm: MemberFormType = {
+    id: 0,
+    name: '',
+    gender: 0,
+    rel_type: '100',
+    birthday: '',
+    email: '',
+    rel_desc: '',
+    personality: '',
+    character: '',
+  };
 
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting }
-  } = useForm({
+  } = useForm<MemberFormType>({
     resolver: yupResolver(memberSchema),
+    defaultValues: {
+      ...defaultMemberForm,
+      rel_type: '100' as MemberFormType['rel_type'],
+    }
   });
 
   useEffect(() => {
@@ -89,7 +118,7 @@ export default function MemberList({ onLoading }: MemberListProps) {
   const fetchMembers = async () => {
     onLoading(true);
     try {
-      const res = await apiClient.post('/spwapi/auth/profile/member/list');
+      const res = await apiClient.post<ApiResponse<Member[]>>('/spwapi/auth/profile/member/list');
       if (res && res.code === 0) {
         setMembers(res.data || []);
       } else {
@@ -104,27 +133,27 @@ export default function MemberList({ onLoading }: MemberListProps) {
 
   const handleAdd = () => {
     reset({
-      id: undefined,
-      name: '',
-      gender: 0,
-      rel_type: "100",
-      birthday: '',
-      email: '',
-      rel_desc: '',
-      personality: '',
-      character: '',
+      ...defaultMemberForm,
+      rel_type: '100' as MemberFormType['rel_type'],
     });
     setShowModal(true);
+    setShowModalEdit(false);
   };
 
   const handleEdit = (member: any) => {
     reset({
-      ...member,
-      rel_type: String(member.rel_type ?? "100"),
-      gender: member.gender ?? 0,
-      birthday: member.birthday?.split('T')[0] || '', // Format date
+      id: member.id,
+      name: member.name || '',
+      gender: typeof member.gender === 'number' ? member.gender : 0,
+      rel_type: (member.rel_type || '100') as MemberFormType['rel_type'],
+      birthday: member.birthday?.split('T')[0] || '',
+      email: member.email || '',
+      rel_desc: member.rel_desc || '',
+      personality: member.personality || '',
+      character: member.character || '',
     });
     setShowModal(true);
+    setShowModalEdit(true);
   };
 
   const handleDeleteClick = (member: Member) => {
@@ -136,7 +165,7 @@ export default function MemberList({ onLoading }: MemberListProps) {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const res = await apiClient.get('/spwapi/auth/profile/member/del', { member_id: deleteTarget.id });
+      const res = await apiClient.get<ApiResponse<any>>('/spwapi/auth/profile/member/del', { member_id: deleteTarget.id });
       if (res && res.code === 0) {
         toast.success('Deleted successfully');
         setMembers(members => members.filter(m => m.id !== deleteTarget.id));
@@ -152,11 +181,23 @@ export default function MemberList({ onLoading }: MemberListProps) {
     }
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: MemberFormType) => {
+    console.log('点击了提交', data);
+    const payload = {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      rel_type: data.rel_type,
+      rel_desc: data.rel_desc,
+      gender: Number(data.gender),
+      birthday: data.birthday,
+      personality: data.personality,
+      character: data.character,
+    };
     try {
-      const res = await apiClient.post('/spwapi/auth/profile/member/add', data);
+      const res = await apiClient.post<ApiResponse<any>>('/spwapi/auth/profile/member/add', payload);
       if (res && res.code === 0) {
-        toast.success(data.id ? 'Member updated successfully' : 'Member added successfully');
+        toast.success(data.id ? 'Student updated successfully' : 'Student added successfully');
         setShowModal(false);
         fetchMembers();
       } else {
@@ -171,95 +212,115 @@ export default function MemberList({ onLoading }: MemberListProps) {
   const labelStyle = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="bg-white p-8 rounded-xl shadow-lg max-w-full mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Member Management</h1>
+    <div className="bg-white rounded-2xl shadow p-6 w-full max-w-5xl mx-auto mt-6">
+      <div className="flex items-center mb-4">
+        <h1 className="text-xl font-bold text-gray-800 mr-4">Student Management</h1>
         <button
           onClick={handleAdd}
-          className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300"
+          className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition"
         >
-          Add Member
+          Add Student
         </button>
       </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-100 border-b border-gray-200">
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Email</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Relationship</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Gender</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Birthday</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-              <th className="py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+      <table className="w-full border-t border-gray-100 text-sm">
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="py-2 px-3 font-semibold text-gray-600">Name</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Email</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Relationship</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Gender</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Birthday</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Status</th>
+            <th className="py-2 px-3 font-semibold text-gray-600">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {members.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="py-6 text-center text-gray-400">No members found.</td>
             </tr>
-          </thead>
-          <tbody>
-            {members.map(member => (
-              <tr key={member.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="py-3 px-4">{member.name}</td>
-                <td className="py-3 px-4">{member.email}</td>
-                <td className="py-3 px-4">{relTypeOptions.find(o => o.value === String(member.rel_type))?.label || member.rel_type}</td>
-                <td className="py-3 px-4">{genderMap[member.gender] || 'Unknown'}</td>
-                <td className="py-3 px-4">{member.birthday?.split('T')[0]}</td>
-                <td className="py-3 px-4">{statusMap[member.flag] || 'Unknown'}</td>
-                <td className="py-3 px-4">
-                  <button className="text-blue-600 hover:underline font-medium mr-4" onClick={() => handleEdit(member)}>Edit</button>
-                  <button
-                    className="text-red-500 hover:underline font-medium"
-                    onClick={() => handleDeleteClick(member)}
-                  >
+          ) : (
+            members.map(member => (
+              <tr key={member.id} className="border-b border-gray-100 hover:bg-blue-50/40 transition">
+                <td className="py-2 px-3 whitespace-nowrap">{member.name}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{member.email}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{relTypeOptions.find(o => o.value === String(member.rel_type))?.label || member.rel_type}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{genderMap[member.gender] || 'Unknown'}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{member.birthday?.split('T')[0]}</td>
+                <td className="py-2 px-3 whitespace-nowrap">{statusMap[member.flag] || 'Unknown'}</td>
+                <td className="py-2 px-3 whitespace-nowrap">
+                  <button className="text-blue-600 hover:underline font-medium mr-2" onClick={() => handleEdit(member)}>Edit</button>
+                  <button className="text-red-500 hover:underline font-medium" onClick={() => handleDeleteClick(member)}>
                     Delete
                   </button>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
+            ))
+          )}
+        </tbody>
+      </table>
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md m-4">
-            <h3 className="text-2xl font-bold mb-6">{errors.id ? 'Edit Member' : 'Add Member'}</h3>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-blue-100">
+            <h3 className="text-lg font-bold mb-4">{showModalEdit ? 'Edit Student' : 'Add Student'}</h3>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               <input type="hidden" {...register('id')} />
               <div>
                 <label className={labelStyle}>Name<span className="text-red-500">*</span></label>
-                <input type="text" {...register('name')} className={inputStyle} />
+                <input type="text" {...register('name', { required: true })} className={inputStyle} />
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message as string}</p>}
               </div>
-              <div>
-                <label className={labelStyle}>Gender<span className="text-red-500">*</span></label>
-                <select {...register('gender')} className={inputStyle}>
-                  {genderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender.message as string}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelStyle}>Gender<span className="text-red-500">*</span></label>
+                  <select {...register('gender', { required: true })} className={inputStyle}>
+                    {genderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                  {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender.message as string}</p>}
+                </div>
+                <div>
+                  <label className={labelStyle}>Relationship<span className="text-red-500">*</span></label>
+                  <select {...register('rel_type', { required: true })} className={inputStyle}>
+                    {relTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                  {errors.rel_type && <p className="text-red-500 text-xs mt-1">{errors.rel_type.message as string}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelStyle}>Birthday</label>
+                  <input type="date" {...register('birthday')} className={inputStyle} />
+                  {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday.message as string}</p>}
+                </div>
+                <div>
+                  <label className={labelStyle}>Email</label>
+                  <input type="email" {...register('email')} className={inputStyle} />
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
+                </div>
               </div>
               <div>
-                <label className={labelStyle}>Relationship<span className="text-red-500">*</span></label>
-                <select {...register('rel_type')} className={inputStyle}>
-                  {relTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                {errors.rel_type && <p className="text-red-500 text-xs mt-1">{errors.rel_type.message as string}</p>}
+                <label className={labelStyle}>Relationship Description</label>
+                <input type="text" {...register('rel_desc')} className={inputStyle} placeholder="e.g. Son, Daughter, Nephew..." />
+                {errors.rel_desc && <p className="text-red-500 text-xs mt-1">{errors.rel_desc.message as string}</p>}
               </div>
-              <div>
-                <label className={labelStyle}>Birthday</label>
-                <input type="date" {...register('birthday')} className={inputStyle} />
-                {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday.message as string}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelStyle}>Personality</label>
+                  <input type="text" {...register('personality')} className={inputStyle} />
+                  {errors.personality && <p className="text-red-500 text-xs mt-1">{errors.personality.message as string}</p>}
+                </div>
+                <div>
+                  <label className={labelStyle}>Character</label>
+                  <input type="text" {...register('character')} className={inputStyle} />
+                  {errors.character && <p className="text-red-500 text-xs mt-1">{errors.character.message as string}</p>}
+                </div>
               </div>
-              <div>
-                <label className={labelStyle}>Email</label>
-                <input type="email" {...register('email')} className={inputStyle} />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300" onClick={() => setShowModal(false)} disabled={isSubmitting}>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" onClick={() => setShowModal(false)} disabled={isSubmitting}>
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 flex items-center" disabled={isSubmitting}>
-                  {isSubmitting && <svg className="animate-spin h-4 w-4 mr-2 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+                <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center" disabled={isSubmitting}>
+                  {isSubmitting && <span className="loader mr-2"></span>}
                   Save
                 </button>
               </div>
@@ -267,18 +328,17 @@ export default function MemberList({ onLoading }: MemberListProps) {
           </div>
         </div>
       )}
-
       {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md m-4">
-            <h3 className="text-2xl font-bold mb-4">Delete Member</h3>
-            <p className="mb-6 text-gray-600">Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.</p>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-red-100">
+            <h3 className="text-xl font-bold mb-2">Delete Student</h3>
+            <p className="mb-4 text-gray-600">Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.</p>
             <div className="flex justify-end space-x-3">
-              <button className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading}>
+              <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading}>
                 Cancel
               </button>
-              <button className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 flex items-center" onClick={handleConfirmDelete} disabled={deleteLoading}>
-                {deleteLoading && <svg className="animate-spin h-4 w-4 mr-2 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+              <button className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 flex items-center" onClick={handleConfirmDelete} disabled={deleteLoading}>
+                {deleteLoading && <span className="loader mr-2"></span>}
                 Delete
               </button>
             </div>

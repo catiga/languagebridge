@@ -22,7 +22,7 @@ export default function TeacherDashboardDemo() {
   const features = [
     {
       icon: FaUsers,
-      title: 'Student Management',
+      title: 'Students',
       description: 'Manage your student information, view learning progress and feedback',
       color: 'from-blue-500 to-cyan-500'
     },
