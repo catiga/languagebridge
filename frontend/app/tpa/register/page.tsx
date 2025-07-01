@@ -9,6 +9,7 @@ import { apiClient } from '../../utils/api';
 import Link from 'next/link';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useSearchParams } from 'next/navigation';
 
 interface CountryOption {
   value: string;
@@ -32,7 +33,8 @@ const schema = yup.object().shape({
 });
 
 export default function TeacherRegisterPage() {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const searchParams = useSearchParams();
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: yupResolver(schema)
   });
   const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
@@ -56,6 +58,14 @@ export default function TeacherRegisterPage() {
 
     fetchCountries();
   }, []);
+
+  // Autofill invite_code from URL
+  useEffect(() => {
+    const code = searchParams.get('invite_code');
+    if (code) {
+      setValue('invite_code', code);
+    }
+  }, [searchParams, setValue]);
 
   const onSubmit = async (data: any) => {
     const payload = {

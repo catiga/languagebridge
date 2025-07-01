@@ -51,6 +51,7 @@ interface TeacherProfile {
   phone: string;
   status: string;
   email_verified: boolean;
+  invite_code: string;
 }
 
 export default function ProfileManagement() {
@@ -78,6 +79,7 @@ export default function ProfileManagement() {
     detail: '',
     email_verified: false,
     status: '',
+    invite_code: '',
   });
 
   const [formData, setFormData] = useState(profile);
@@ -109,6 +111,7 @@ export default function ProfileManagement() {
           avatar: teacherData.avatar || '/default-avatar.svg',
           email_verified: teacherData.email_verified,
           status: teacherData.status,
+          invite_code: teacherData.invite_code || '',
         };
         setProfile(updatedProfile);
         setFormData(updatedProfile);
@@ -258,6 +261,27 @@ export default function ProfileManagement() {
           className="lg:col-span-1"
         >
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            {/* Invite Code Section */}
+            {profile.invite_code && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col items-center">
+                <div className="text-lg font-bold text-blue-700 mb-2 flex items-center gap-2">
+                  Invite Code:
+                  <span className="text-2xl tracking-widest font-mono bg-blue-100 px-3 py-1 rounded-lg">{profile.invite_code}</span>
+                  <button
+                    type="button"
+                    className="ml-4 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                    onClick={() => {
+                      const link = typeof window !== 'undefined' ? `${window.location.origin}/tpa/register?invite_code=${profile.invite_code}` : '';
+                      navigator.clipboard.writeText(link);
+                      toast.success('Registration link copied!');
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">Share this code to invite others to register as a teacher.</div>
+              </div>
+            )}
             <div className="text-center">
               <div className="relative inline-block">
                 <motion.div
