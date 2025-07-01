@@ -98,6 +98,23 @@ export default function TeachersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-16">
       <div className="pt-10 px-4">
+        <div className="bg-gradient-to-r from-pink-400 to-blue-400 text-white rounded-xl shadow-lg p-6 flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold mb-1 flex items-center">
+              <svg className="w-7 h-7 mr-2 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="#fff" strokeWidth="2" fill="#f472b6" />
+                <path stroke="#fff" strokeWidth="2" strokeLinecap="round" d="M12 8v4l2 2" />
+              </svg>
+              We are recruiting teachers!
+            </h2>
+            <p className="text-white/90">Join us and inspire more students. Flexible schedule, competitive pay, and a passionate community!</p>
+          </div>
+          <Link href="/tpa/register">
+            <button className="ml-6 px-6 py-3 bg-yellow-400 text-pink-700 font-bold rounded-lg shadow-lg hover:bg-yellow-300 transition text-lg animate-pulse">
+              Become a Teacher
+            </button>
+          </Link>
+        </div>
         <div className="flex justify-center mb-8">
           <Link href="/tpa/login" passHref legacyBehavior>
             <a className="inline-block px-8 py-3 rounded-full bg-gradient-to-r from-blue-500 via-pink-400 to-yellow-400 text-white text-lg font-bold shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-200">

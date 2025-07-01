@@ -54,3 +54,14 @@ func GenerateTeacherNo() string {
 	checkDigit := sum % 10
 	return base + fmt.Sprintf("%d", checkDigit)
 }
+
+// GenerateShortInviteCode 生成5-8位的数字和大小写字母邀请码
+func GenerateShortInviteCode() string {
+	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	length := rand.Intn(4) + 5 // 5~8
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}

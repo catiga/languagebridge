@@ -236,6 +236,7 @@ func RetrieveTeacherProfile(c *gin.Context) {
 		PhoneCode       string `json:"phone_code"`
 		Phone           string `json:"phone"`
 		Status          string `json:"status"`
+		InviteCode      string `json:"invite_code"`
 	}{
 		TeacherNo:       teacherInfo.TeacherNo,
 		Name:            teacherInfo.Name,
@@ -250,6 +251,8 @@ func RetrieveTeacherProfile(c *gin.Context) {
 		PhoneCode:       teacherInfo.PhoneCode,
 		Phone:           teacherInfo.Phone,
 		Avatar:          teacherInfo.Avatar,
+		Status:          teacherInfo.Status,
+		InviteCode:      teacherInfo.InviteCode,
 	}
 	c.JSON(http.StatusOK, res)
 }

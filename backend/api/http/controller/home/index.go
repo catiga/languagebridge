@@ -18,6 +18,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const fixedSysInviteCode = "HelloLangBridge"
+
 type HomeRequest struct {
 	Chain    string `json:"chain"`
 	Interval string `json:"interval"`
@@ -50,6 +52,7 @@ type TeacherRegisterRequest struct {
 	Introduction    string `json:"introduction" binding:"required,min=6"`
 	FirstLanguage   string `json:"first_language" binding:"required"`
 	TeachLanguage   string `json:"teach_language" binding:"required"`
+	InviteCode      string `json:"invite_code" binding:"required"`
 }
 
 type TeacherCertificateResponse struct {
@@ -498,6 +501,18 @@ func TeacherRegister(c *gin.Context) {
 		return
 	}
 
+	//find teacher by invitation code
+	var masterTeacher model.Teacher
+	if req.InviteCode != fixedSysInviteCode {
+		db.Model(&model.Teacher{}).Where("invite_code = ?", req.InviteCode).First(&masterTeacher)
+		if masterTeacher.ID == 0 {
+			res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+			res.Msg = "Invitation code is invalid"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+	}
+
 	var livingCountry model.DictCountry
 	var nationality model.DictCountry
 	if req.LivingCountryID > 0 {
@@ -531,6 +546,7 @@ func TeacherRegister(c *gin.Context) {
 		Status:            "00", // waiting for email verification
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
+		InviteCode:        system.GenerateShortInviteCode(),
 	}
 	err = db.Save(&teacherInfo).Error
 	if err != nil {
@@ -548,6 +564,18 @@ func TeacherRegister(c *gin.Context) {
 	}{
 		TeacherNo: teacherInfo.TeacherNo,
 	}
+
+	inviteRecord := model.TeacherInvite{
+		TeacherID:        masterTeacher.ID,
+		InvitedTeacherID: teacherInfo.ID,
+		AddTime:          time.Now(),
+		Flag:             0,
+	}
+	err = db.Save(&inviteRecord).Error
+	if err != nil {
+		log.Errorf("Master teacher is %s - Invited teacher is - %s", masterTeacher.TeacherNo, teacherInfo.TeacherNo)
+	}
+
 	c.JSON(http.StatusOK, res)
 }
 

@@ -28,6 +28,7 @@ const schema = yup.object().shape({
   first_language: yup.string().required('First language is required'),
   teach_language: yup.string().required('Teachable languages are required'),
   introduction: yup.string().min(6, 'Introduction must be at least 6 characters').required('Introduction is required'),
+  invite_code: yup.string().required('Invite code is required'),
 });
 
 export default function TeacherRegisterPage() {
@@ -68,6 +69,7 @@ export default function TeacherRegisterPage() {
       introduction: data.introduction,
       first_language: data.first_language,
       teach_language: data.teach_language,
+      invite_code: data.invite_code,
     };
 
     try {
@@ -178,6 +180,13 @@ export default function TeacherRegisterPage() {
               <label htmlFor="introduction" className={labelStyle}><FaQuoteLeft className="mr-2"/>Personal Introduction</label>
               <textarea id="introduction" {...register("introduction")} rows={4} className={inputStyle} placeholder="Tell students a bit about yourself and your teaching style."></textarea>
               {errors.introduction && <p className={errorStyle}>{errors.introduction.message}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="invite_code" className={labelStyle}><FaLock className="mr-2"/>Invite Code</label>
+              <input id="invite_code" {...register("invite_code")}
+                className={inputStyle} placeholder="Enter your invite code" />
+              {errors.invite_code && <p className={errorStyle}>{errors.invite_code.message}</p>}
             </div>
 
             <div className="pt-4">

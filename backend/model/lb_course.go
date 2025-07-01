@@ -51,6 +51,7 @@ type Teacher struct {
 	Password          string    `gorm:"column:password" json:"-"`
 	TeacherNo         string    `gorm:"column:teacher_no" json:"teacher_no"`
 	Avatar            string    `gorm:"column:avatar" json:"avatar"`
+	InviteCode        string    `gorm:"column:invite_code" json:"-"`
 }
 
 func (Teacher) TableName() string {
@@ -159,4 +160,16 @@ type CourseReview struct {
 
 func (CourseReview) TableName() string {
 	return "course_review"
+}
+
+type TeacherInvite struct {
+	ID               uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	TeacherID        uint64    `gorm:"column:teacher_id" json:"teacher_id"`
+	InvitedTeacherID uint64    `gorm:"column:invited_teacher_id" json:"invited_teacher_id"`
+	AddTime          time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag             int       `gorm:"column:flag" json:"flag"`
+}
+
+func (TeacherInvite) TableName() string {
+	return "teacher_invite"
 }

@@ -55,7 +55,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/courses', label: 'Courses' },
-    { href: '/teachers', label: 'Teachers' },
+    { href: '/teachers', label: 'Teachers', recruit: true },
     { href: '/about', label: 'About Us' },
     { href: '/contact', label: 'Contact Us' },
   ];
@@ -71,10 +71,24 @@ export default function Navbar() {
   const logoColor = scrolled ? 'text-gray-900' : 'text-white';
   const iconColor = scrolled ? 'text-gray-600 hover:text-blue-600' : 'text-gray-200 hover:text-white';
 
-  const NavLink = ({ href, label }: { href: string; label: string }) => (
+  const NavLink = ({ href, label, recruit }: { href: string; label: string; recruit?: boolean }) => (
     <Link href={href}>
-      <span className={`relative transition-colors duration-300 font-medium ${linkColor}`}>
+      <span className={`relative transition-colors duration-300 font-medium ${linkColor}`}
+        style={{ display: 'inline-block', paddingRight: recruit ? '32px' : undefined }}>
         {label}
+        {recruit && (
+          <span
+            className="absolute -top-2 -right-6 flex items-center px-1.5 py-0.5 text-[10px] bg-pink-500 text-white rounded-full font-bold animate-bounce shadow"
+            style={{ lineHeight: '1', minWidth: '36px', height: '18px' }}
+            title="We are hiring teachers!"
+          >
+            <svg className="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2v2m6.364 1.636l-1.414 1.414M22 12h-2M19.364 19.364l-1.414-1.414M12 22v-2M4.636 19.364l1.414-1.414M2 12h2M4.636 4.636l1.414 1.414" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="5" fill="#f472b6" />
+            </svg>
+            Hiring
+          </span>
+        )}
         {pathname === href && (
           <span className={`absolute bottom-[-6px] left-1/2 -translate-x-1/2 h-[3px] w-3/5 rounded-full ${scrolled ? 'bg-blue-600' : 'bg-cyan-400'}`}></span>
         )}
@@ -163,7 +177,12 @@ export default function Navbar() {
               </div>
             ) : (
               <>
-                <Link href="/login" className={`px-4 py-2 rounded-lg font-bold transition-colors duration-200 ${scrolled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white/80 text-blue-600 hover:bg-blue-700 hover:text-white'}`}>Login</Link>
+                <Link
+                  href="/login"
+                  className={`px-5 py-2 rounded-lg font-bold transition-colors duration-200 bg-gradient-to-r from-blue-500 to-pink-500 text-white shadow-lg hover:scale-105 hover:from-blue-600 hover:to-pink-600 animate-pulse`}
+                >
+                  Login
+                </Link>
                 <Link href="/register" className={`ml-2 px-4 py-2 rounded-lg font-bold transition-colors duration-200 ${scrolled ? 'bg-pink-500 text-white hover:bg-pink-600' : 'bg-white/80 text-pink-500 hover:bg-pink-600 hover:text-white'}`}>Register</Link>
               </>
             )}
