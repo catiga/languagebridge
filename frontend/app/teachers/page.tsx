@@ -65,145 +65,101 @@ const TeacherCard = ({ teacher }: { teacher: Teacher }) => {
 
 // --- Main Teachers Page ---
 export default function TeachersPage() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize] = useState(12);
-  const [total, setTotal] = useState(0);
-
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      setIsLoading(true);
-      try {
-        const res = await apiClient.get<any>('/spwapi/teacher/fetch', { pn: pageNo, ps: pageSize });
-        if (res.code === 0 && res.data?.list) {
-          setTeachers(res.data.list);
-          setTotal(res.data.total || 0);
-        } else {
-          setTeachers([]);
-          setTotal(0);
-        }
-      } catch (error) {
-        setTeachers([]);
-        setTotal(0);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTeachers();
-  }, [pageNo, pageSize]);
-
-  const totalPages = Math.ceil(total / pageSize);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-16">
-      <div className="pt-10 px-4">
-        <div className="bg-gradient-to-r from-pink-400 to-blue-400 text-white rounded-xl shadow-lg p-6 flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-1 flex items-center">
-              <svg className="w-7 h-7 mr-2 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="#fff" strokeWidth="2" fill="#f472b6" />
-                <path stroke="#fff" strokeWidth="2" strokeLinecap="round" d="M12 8v4l2 2" />
-              </svg>
-              We are recruiting teachers!
-            </h2>
-            <p className="text-white/90">Join us and inspire more students. Flexible schedule, competitive pay, and a passionate community!</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 flex flex-col">
+      {/* Hero Section */}
+      <section className="w-full py-20 bg-gradient-to-r from-blue-500 via-pink-400 to-yellow-400 text-white text-center">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow">Meet Our Trusted, Professional Teachers</h1>
+        <p className="text-lg md:text-2xl mb-8 max-w-2xl mx-auto drop-shadow">
+          All our teachers are strictly selected, identity-verified, and passionate about education. We are committed to providing a safe, high-quality, and inspiring learning environment for every student.
+        </p>
+        <div className="flex justify-center gap-6 mb-4">
           <Link href="/tpa/register">
-            <button className="ml-6 px-6 py-3 bg-yellow-400 text-pink-700 font-bold rounded-lg shadow-lg hover:bg-yellow-300 transition text-lg animate-pulse">
-              Become a Teacher
-            </button>
+            <button className="px-8 py-3 rounded-full bg-white text-blue-600 font-bold text-lg shadow-lg hover:bg-blue-100 transition-all duration-200">Become a Teacher</button>
+          </Link>
+          <Link href="/tpa/login">
+            <button className="px-8 py-3 rounded-full bg-white text-pink-600 font-bold text-lg shadow-lg hover:bg-pink-100 transition-all duration-200">Teacher Login</button>
           </Link>
         </div>
-        <div className="flex justify-center mb-8">
-          <Link href="/tpa/login" passHref legacyBehavior>
-            <a className="inline-block px-8 py-3 rounded-full bg-gradient-to-r from-blue-500 via-pink-400 to-yellow-400 text-white text-lg font-bold shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-200">
-              Login as Teacher
-            </a>
-          </Link>
-        </div>
-        {/* Header Section */}
-        <header className="bg-white pt-24 pb-12">
-          <div className="max-w-4xl mx-auto text-center px-4">
-            <motion.h1 
-              className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight"
-              initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
-            >
-              Meet Our Professional Tutors
-            </motion.h1>
-            <motion.p 
-              className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.7 }}
-            >
-              Find an expert who matches your learning style and goals.
-            </motion.p>
-          </div>
-        </header>
+      </section>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {isLoading ? (
-            <div className="text-center text-gray-500">Loading teachers...</div>
-          ) : teachers.length === 0 ? (
-            <div className="text-center text-gray-400">No teachers found.</div>
-          ) : (
-            <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
-              {teachers.map(teacher => (
-                <TeacherCard key={teacher.id} teacher={teacher} />
-              ))}
-            </main>
-          )}
-          {/* 分页按钮 */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-8 gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                onClick={() => setPageNo(p => Math.max(1, p - 1))}
-                disabled={pageNo === 1}
-              >Prev</button>
-              <span className="px-3 py-2 text-gray-700">Page {pageNo} / {totalPages}</span>
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                onClick={() => setPageNo(p => Math.min(totalPages, p + 1))}
-                disabled={pageNo === totalPages}
-              >Next</button>
-            </div>
-          )}
+      {/* Trust & Quality Section */}
+      <section className="max-w-5xl mx-auto py-16 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="flex flex-col items-center">
+          <div className="bg-blue-100 text-blue-600 rounded-full p-4 mb-3">
+            {/* 身份核验icon */}
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#2563EB" strokeWidth="2" fill="#dbeafe" /><path stroke="#2563EB" strokeWidth="2" strokeLinecap="round" d="M12 8v4l2 2" /></svg>
+          </div>
+          <h3 className="font-bold text-lg mb-1">Identity Verification</h3>
+          <p className="text-gray-600 text-center">All teachers must pass strict identity checks to ensure safety and trust.</p>
         </div>
-        
-        {/* Our Commitment Section */}
-        <section className="py-20 bg-white">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-12">Our Commitment to Quality</h2>
-              <div className="grid md:grid-cols-3 gap-10">
-                {[
-                  { icon: FaUserCheck, title: "1. Identity Verification", desc: "We confirm the identity of every teacher to ensure a safe and trusted environment." },
-                  { icon: FaCertificate, title: "2. Expertise Review", desc: "Our team reviews teaching credentials and experience to guarantee high-quality instruction." },
-                  { icon: FaUsers, title: "3. Community-Driven Ratings", desc: "Honest, transparent reviews from students like you help maintain the highest standards." }
-                ].map((item) => (
-                  <div key={item.title} className="flex flex-col items-center">
-                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-blue-100 text-blue-600 mb-5">
-                      <item.icon className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                    <p className="text-gray-600 text-center">{item.desc}</p>
-                  </div>
-                ))}
+        <div className="flex flex-col items-center">
+          <div className="bg-pink-100 text-pink-600 rounded-full p-4 mb-3">
+            {/* 资质审核icon */}
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a2 2 0 110 4 2 2 0 010-4zm0 12a8 8 0 01-6.32-3.16c.03-2.67 4-4.14 6.32-4.14s6.29 1.47 6.32 4.14A8 8 0 0112 20z" stroke="#ec4899" strokeWidth="2" fill="#fce7f3" /></svg>
+          </div>
+          <h3 className="font-bold text-lg mb-1">Credentials Review</h3>
+          <p className="text-gray-600 text-center">We review every teacher's qualifications and teaching experience.</p>
+        </div>
+        <div className="flex flex-col items-center">
+          <div className="bg-yellow-100 text-yellow-600 rounded-full p-4 mb-3">
+            {/* 社区评价icon */}
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#f59e42" strokeWidth="2" fill="#fef9c3" /></svg>
+          </div>
+          <h3 className="font-bold text-lg mb-1">Community Ratings</h3>
+          <p className="text-gray-600 text-center">Real feedback from students and parents helps us maintain the highest standards.</p>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="bg-white py-16">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-center mb-8 text-blue-700">What Parents & Students Say</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-3">
+                <span className="text-2xl font-bold text-blue-600">A</span>
               </div>
+              <p className="text-gray-700 text-center italic mb-2">"The teachers are so patient and professional. My child loves every lesson!"</p>
+              <span className="text-sm text-gray-500">— Mrs. Wang, Parent</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mb-3">
+                <span className="text-2xl font-bold text-pink-600">B</span>
+              </div>
+              <p className="text-gray-700 text-center italic mb-2">"I feel safe and motivated. The platform really cares about students."</p>
+              <span className="text-sm text-gray-500">— Lily, Student</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mb-3">
+                <span className="text-2xl font-bold text-yellow-600">C</span>
+              </div>
+              <p className="text-gray-700 text-center italic mb-2">"The teacher selection is very strict. I trust this platform for my family."</p>
+              <span className="text-sm text-gray-500">— Mr. Smith, Parent</span>
+            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Become a Teacher CTA */}
-        <section className="bg-blue-600 text-white">
-          <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-            <h2 className="text-3xl font-bold">Share Your Knowledge.</h2>
-            <p className="mt-3 text-lg text-blue-100">Join our global community of educators and empower learners worldwide.</p>
-            <a href="/tpa/register" className="mt-8 inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors duration-300">
-              Apply to Teach
-            </a>
-          </div>
-        </section>
-      </div>
+      {/* Platform Commitment */}
+      <section className="py-12 bg-gradient-to-r from-blue-100 via-pink-50 to-yellow-50 text-center">
+        <h2 className="text-xl font-bold text-blue-700 mb-2">Our Commitment</h2>
+        <p className="text-gray-700 max-w-2xl mx-auto">
+          We are dedicated to every learner's growth and safety. Join us to experience the difference.
+        </p>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="py-10 text-center">
+        <div className="flex justify-center gap-6">
+          <Link href="/tpa/register">
+            <button className="px-8 py-3 rounded-full bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-all duration-200">Become a Teacher</button>
+          </Link>
+          <Link href="/tpa/login">
+            <button className="px-8 py-3 rounded-full bg-pink-600 text-white font-bold text-lg shadow-lg hover:bg-pink-700 transition-all duration-200">Teacher Login</button>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 } 
