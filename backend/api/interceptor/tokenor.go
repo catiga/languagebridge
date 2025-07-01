@@ -10,7 +10,9 @@ import (
 	"github.com/langbridge/backend/api/common"
 	"github.com/langbridge/backend/codes"
 	"github.com/langbridge/backend/log"
+	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/security"
+	"github.com/langbridge/backend/system"
 )
 
 func TokenInterceptor() gin.HandlerFunc {
@@ -46,6 +48,14 @@ func TokenInterceptor() gin.HandlerFunc {
 		}
 		if time.Now().Unix()-expireTs > int64(common.TOKEN_DURATION.Seconds()) {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token expired error")
+			return
+		}
+		// check user info
+		var userInfo model.UserInfo
+		db := system.GetDb()
+		db.Model(&model.UserInfo{}).Where("id = ?", tokenArr[0]).First(&userInfo)
+		if userInfo.ID == 0 {
+			makeFaileRes(c, codes.CODE_ERR_SECURITY, "please login")
 			return
 		}
 
