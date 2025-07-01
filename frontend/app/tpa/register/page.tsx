@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { FaUser, FaGlobe, FaLanguage, FaBookReader, FaQuoteLeft, FaCertificate, FaChalkboardTeacher, FaEnvelope, FaLock } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -32,7 +32,7 @@ const schema = yup.object().shape({
   invite_code: yup.string().required('Invite code is required'),
 });
 
-export default function TeacherRegisterPage() {
+function TeacherRegisterPageInner() {
   const searchParams = useSearchParams();
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: yupResolver(schema)
@@ -216,5 +216,13 @@ export default function TeacherRegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TeacherRegisterPage() {
+  return (
+    <Suspense>
+      <TeacherRegisterPageInner />
+    </Suspense>
   );
 } 
