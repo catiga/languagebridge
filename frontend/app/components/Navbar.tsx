@@ -136,7 +136,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center">
             {isLoggedIn ? (
               <div className="relative">
-                <button
+                    <button
                   onClick={() => setMenuOpen((v) => !v)}
                   className="focus:outline-none"
                   aria-label="User menu"
@@ -146,7 +146,7 @@ export default function Navbar() {
                   ) : (
                     <FaUserCircle className={`transition-colors duration-300 ${iconColor}`} size={32} />
                   )}
-                </button>
+                    </button>
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 animate-fade-in">
                     {/* 用户信息行 */}

@@ -295,3 +295,4 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
     </div>
   );
 }
+ 
