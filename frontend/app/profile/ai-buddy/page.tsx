@@ -44,29 +44,34 @@ export default function AiBuddyPage() {
   return (
     <ProfileLayout>
       <AIBanner />
-      <div className="flex gap-4 mb-6">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            type="button"
-            className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg transition-all border shadow-md backdrop-blur-md
-              ${tab===t.key ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white scale-105 shadow-lg' : 'bg-white/80 text-blue-700 border-blue-100 hover:bg-blue-50 hover:scale-105'}`}
-            style={{boxShadow: tab===t.key ? '0 4px 24px 0 rgba(80,80,255,0.15)' : undefined}}
-            onClick={() => setTab(t.key)}
-          >
-            <span className="text-xl">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="w-full max-w-3xl mx-auto">
-        <div className="bg-white/80 rounded-2xl shadow-2xl p-6 min-h-[340px] animate-fade-in">
-          {tab==='selftest' && <SelfTestPanel />}
-          {tab==='practice' && <PracticePanel />}
-          {tab==='history' && <HistoryPanel />}
+      <div className="h-8 md:h-12" />
+      <div className="flex justify-center relative z-10 mb-[-32px]">
+        <div className="flex gap-4 bg-white/90 rounded-2xl shadow-lg px-6 py-3 border border-blue-100">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              type="button"
+              className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg transition-all border shadow-sm
+                ${tab===t.key ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white scale-105 shadow-lg' : 'bg-white/80 text-blue-700 border-blue-100 hover:bg-blue-50 hover:scale-105'}`}
+              style={{boxShadow: tab===t.key ? '0 4px 24px 0 rgba(80,80,255,0.15)' : undefined}}
+              onClick={() => setTab(t.key)}
+            >
+              <span className="text-xl">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
-      <ComingSoonCard />
+      <div className="w-full max-w-4xl mx-auto mt-12">
+        <div className="bg-white/80 rounded-2xl shadow-2xl p-8 min-h-[340px] animate-fade-in border-t border-blue-100">
+          <div className="w-full">
+            {tab==='selftest' && <SelfTestPanel />}
+            {tab==='practice' && <PracticePanel />}
+            {tab==='history' && <HistoryPanel />}
+          </div>
+        </div>
+        <ComingSoonCard />
+      </div>
     </ProfileLayout>
   );
 } 

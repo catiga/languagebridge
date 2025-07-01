@@ -80,7 +80,6 @@ func SelfAssessment(c *gin.Context) {
 		Messages: messages,
 	}
 
-	// 调用 Agent
 	agentResp, err := agentReq.Chat(c.Request.Context())
 	if err != nil {
 		res.Code = codes.CODE_ERR_GPT_COMPLETE
@@ -89,12 +88,25 @@ func SelfAssessment(c *gin.Context) {
 		return
 	}
 
+	// insert record for user generation ai result
+	ur := model.UserAgentRecord{
+		AddTime:       time.Now(),
+		Flag:          0,
+		CategoryPath:  categoryPath,
+		CategoryLevel: categoryLevel,
+		Input:         req.Content,
+		Result:        agentResp.Content,
+		UserID:        uint64(userID),
+	}
+	db.Save(&ur)
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = gin.H{
 		"user_input": req.Content,
 		"ai_reply":   agentResp.Content,
 	}
+
 	c.JSON(http.StatusOK, res)
 }
 

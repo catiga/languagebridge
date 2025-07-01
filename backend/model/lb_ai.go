@@ -18,3 +18,19 @@ type PromptContext struct {
 func (PromptContext) TableName() string {
 	return "ai_prompt_context"
 }
+
+type UserAgentRecord struct {
+	ID            uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AddTime       time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag          int       `gorm:"column:flag" json:"flag"`
+	AiPromptID    uint64    `gorm:"column:ai_prompt_id" json:"ai_prompt_id"`
+	Input         string    `gorm:"column:input" json:"input"`
+	Result        string    `gorm:"column:result" json:"result"`
+	UserID        uint64    `gorm:"column:user_id" json:"user_id"`
+	CategoryPath  string    `gorm:"column:category_path" json:"category_path"`
+	CategoryLevel string    `gorm:"column:category_level" json:"category_level"`
+}
+
+func (UserAgentRecord) TableName() string {
+	return "user_agent_record"
+}
