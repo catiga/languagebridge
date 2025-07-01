@@ -15,30 +15,54 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func TestChatWithDeepSeek(t *testing.T) {
+func TestAgent_Chat_DeepSeek(t *testing.T) {
 	_ = config.GetConfig()
 	apiKey := os.Getenv("DEEPSEEK_API_KEY")
 	if apiKey == "" {
-		t.Fatal("请设置环境变量 DEEPSEEK_API_KEY")
+		t.Fatal("DEEPSEEK_API_KEY is not set")
 	}
 
+	// 构造 Prompt 模板
+	prompts := []PromptContext{
+		{
+			PromptType: "system",
+			GeneralContext: `You are an experienced English writing teacher. When a student submits their paragraph or essay, evaluate it carefully and provide:
+1. A score from 0 to 100.
+2. Specific feedback on:
+   - Grammar
+   - Vocabulary
+   - Sentence structure
+   - Coherence and logic
+3. Suggestions for improvement.
+
+Be clear, encouraging, and educational. The goal is to help the student become a better English writer.`,
+			Sort: 1,
+		},
+	}
+
+	// 模拟用户输入
+	userInput := "I'm a student in Grade 3 from Primary school, and I love English very much."
+
+	// 构造消息
+	messages := BuildMessagesFromPromptTemplates(prompts, userInput)
+
+	// 构造请求
 	req := AgentRequest{
-		Model:     ModelDeepSeek,
-		APIKey:    apiKey,
-		SystemMsg: "你是一个英语老师助理。",
-		Prompt:    "帮我根据小托福课程内容，生成10道选择题并附上正确答案和讲解。",
+		Model:    ModelDeepSeek,
+		Messages: messages,
 	}
 
-	resp, err := Chat(context.Background(), req)
+	// 执行调用
+	resp, err := req.Chat(context.Background())
 	if err != nil {
-		t.Fatalf("调用失败: %v", err)
+		t.Fatalf("Chat failed: %v", err)
 	}
 
-	if resp == nil {
-		t.Fatal("返回内容为空")
+	if resp == nil || resp.Content == "" {
+		t.Fatal("Empty response from AI")
 	}
 
-	fmt.Println("AI 回复：\n", resp)
+	t.Logf("AI Response:\n%s", resp.Content)
 }
 
 func TestDeepseekCall(t *testing.T) {

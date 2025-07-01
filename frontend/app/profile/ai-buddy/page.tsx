@@ -1,44 +1,72 @@
 "use client";
 import React, { useState } from 'react';
-import Link from 'next/link';
+import ProfileLayout from '../ProfileLayout';
+import SelfTestPanel from './components/SelfTestPanel';
+import PracticePanel from './components/PracticePanel';
+import HistoryPanel from './components/HistoryPanel';
+import { FaRobot, FaPenFancy, FaPuzzlePiece, FaChartLine } from 'react-icons/fa';
+
+function AIBanner() {
+  return (
+    <div className="flex items-center gap-5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl shadow-lg px-8 py-6 mb-8 animate-fade-in">
+      <div className="bg-white/30 rounded-full p-3 shadow-lg">
+        <FaRobot className="text-5xl text-white animate-bounce" />
+      </div>
+      <div>
+        <div className="text-2xl md:text-3xl font-extrabold text-white drop-shadow mb-1">AI Buddy</div>
+        <div className="text-white/90 text-lg font-medium mb-1">Welcome back! Ready to level up your English today?</div>
+        <div className="text-indigo-100 text-sm italic">Your personal AI-powered English learning assistant</div>
+      </div>
+    </div>
+  );
+}
 
 const tabs = [
-  { key: 'analysis', label: 'Learning Analysis' },
-  { key: 'assessment', label: 'Level Assessment' },
-  { key: 'mock-exam', label: 'Mock Exam' },
+  { key: 'selftest', label: 'Self Assessment', icon: <FaPenFancy /> },
+  { key: 'practice', label: 'Practice', icon: <FaPuzzlePiece /> },
+  { key: 'history', label: 'History', icon: <FaChartLine /> },
 ];
 
-export default function AiBuddyPage() {
-  const [activeTab, setActiveTab] = useState('analysis');
-
+function ComingSoonCard() {
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">AI Learning Buddy</h1>
-        <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded">Beta</span>
+    <div className="mt-8 p-4 bg-gradient-to-r from-yellow-100 via-yellow-50 to-white border-l-4 border-yellow-400 rounded-xl shadow flex items-center gap-4 animate-fade-in">
+      <div className="text-3xl">🤖</div>
+      <div>
+        <div className="font-bold text-yellow-700 mb-1">AI Conversation (Coming Soon)</div>
+        <div className="text-yellow-800 text-sm">Immersive English conversation, stay tuned!</div>
       </div>
-      <div className="flex gap-4 border-b mb-8">
-        {tabs.map(tab => (
+    </div>
+  );
+}
+
+export default function AiBuddyPage() {
+  const [tab, setTab] = useState('selftest');
+  return (
+    <ProfileLayout>
+      <AIBanner />
+      <div className="flex gap-4 mb-6">
+        {tabs.map(t => (
           <button
-            key={tab.key}
-            className={`px-4 py-2 -mb-px border-b-2 font-semibold transition-all ${activeTab === tab.key ? 'border-yellow-400 text-yellow-700' : 'border-transparent text-gray-500 hover:text-yellow-700'}`}
-            onClick={() => setActiveTab(tab.key)}
+            key={t.key}
+            type="button"
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg transition-all border shadow-md backdrop-blur-md
+              ${tab===t.key ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white scale-105 shadow-lg' : 'bg-white/80 text-blue-700 border-blue-100 hover:bg-blue-50 hover:scale-105'}`}
+            style={{boxShadow: tab===t.key ? '0 4px 24px 0 rgba(80,80,255,0.15)' : undefined}}
+            onClick={() => setTab(t.key)}
           >
-            {tab.label}
+            <span className="text-xl">{t.icon}</span>
+            {t.label}
           </button>
         ))}
       </div>
-      <div>
-        {activeTab === 'analysis' && (
-          <div className="p-6 bg-white rounded-xl shadow">Learning effect analysis feature coming soon...</div>
-        )}
-        {activeTab === 'assessment' && (
-          <div className="p-6 bg-white rounded-xl shadow">Level assessment feature coming soon...</div>
-        )}
-        {activeTab === 'mock-exam' && (
-          <div className="p-6 bg-white rounded-xl shadow">Mock exam feature coming soon...</div>
-        )}
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="bg-white/80 rounded-2xl shadow-2xl p-6 min-h-[340px] animate-fade-in">
+          {tab==='selftest' && <SelfTestPanel />}
+          {tab==='practice' && <PracticePanel />}
+          {tab==='history' && <HistoryPanel />}
+        </div>
       </div>
-    </div>
+      <ComingSoonCard />
+    </ProfileLayout>
   );
 } 

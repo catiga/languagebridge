@@ -30,28 +30,11 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         <div className="mb-8 text-2xl font-extrabold text-gray-700 tracking-wide text-center">Dashboard</div>
         {menu.map(item => {
           const active = pathname === item.path;
-          if (item.key === 'ai-buddy') {
-            return (
-              <a
-                key={item.key}
-                href="#"
-                onClick={handleAIBuddyClick}
-                className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-bold text-lg transition-all duration-200 shadow-md cursor-not-allowed opacity-60 bg-white text-gray-400`}
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                <span className="text-xl">{item.icon}</span>
-                {item.label}
-              </a>
-            );
-          }
           return (
-            <Link key={item.key} href={item.path} legacyBehavior>
-              <a className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-bold text-lg transition-all duration-200 shadow-md hover:scale-105 ${active ? `bg-gradient-to-r ${item.color} text-white` : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                style={{ boxShadow: active ? '0 4px 24px 0 rgba(0,0,0,0.08)' : undefined }}>
-                <span className="text-xl">{item.icon}</span>
-                {item.label}
-              </a>
+            <Link key={item.key} href={item.path} className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-bold text-lg transition-all duration-200 shadow-md hover:scale-105 ${active ? `bg-gradient-to-r ${item.color} text-white` : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+              style={{ boxShadow: active ? '0 4px 24px 0 rgba(0,0,0,0.08)' : undefined }}>
+              <span className="text-xl">{item.icon}</span>
+              {item.label}
             </Link>
           );
         })}
