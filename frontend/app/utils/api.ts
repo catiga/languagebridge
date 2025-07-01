@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import { getEnvConfig } from '../config/env';
 import Cookies from 'js-cookie';
+import { toast } from 'react-toastify';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>;
@@ -73,7 +74,42 @@ class ApiClient {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    if (result && result.code === 15) {
+      if (typeof window !== 'undefined') {
+        toast.error(result.msg || 'Please login');
+        if (window.location.pathname.startsWith('/tpa')) {
+          // 清除老师端缓存
+          localStorage.removeItem('teacherToken');
+          localStorage.removeItem('teacherInfo');
+          localStorage.removeItem('userType');
+          localStorage.removeItem('teacherLoginName');
+          localStorage.removeItem('teacherRemember');
+          sessionStorage.removeItem('teacherToken');
+          sessionStorage.removeItem('teacherInfo');
+          sessionStorage.removeItem('userType');
+          sessionStorage.removeItem('teacherLoginName');
+          sessionStorage.removeItem('teacherRemember');
+          Cookies.remove('teacherToken', { path: '/' });
+          Cookies.remove('teacherInfo', { path: '/' });
+          Cookies.remove('userType', { path: '/' });
+          Cookies.remove('teacherLoginName', { path: '/' });
+          Cookies.remove('teacherRemember', { path: '/' });
+          window.location.href = '/tpa/login';
+        } else {
+          // 清除用户端缓存
+          localStorage.removeItem('token');
+          localStorage.removeItem('userInfo');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('userInfo');
+          Cookies.remove('token', { path: '/' });
+          Cookies.remove('userInfo', { path: '/' });
+          window.location.href = '/login';
+        }
+      }
+      throw new Error(result.msg || 'Please login');
+    }
+    return result;
   }
 
   public async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
