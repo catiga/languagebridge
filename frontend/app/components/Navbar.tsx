@@ -80,13 +80,13 @@ export default function Navbar() {
           <span
             className="absolute -top-2 -right-6 flex items-center px-1.5 py-0.5 text-[10px] bg-pink-500 text-white rounded-full font-bold animate-bounce shadow"
             style={{ lineHeight: '1', minWidth: '36px', height: '18px' }}
-            title="We are hiring teachers!"
+            title="We are recruiting teachers!"
           >
             <svg className="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 2v2m6.364 1.636l-1.414 1.414M22 12h-2M19.364 19.364l-1.414-1.414M12 22v-2M4.636 19.364l1.414-1.414M2 12h2M4.636 4.636l1.414 1.414" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
               <circle cx="12" cy="12" r="5" fill="#f472b6" />
             </svg>
-            Hiring
+            Recruiting
           </span>
         )}
         {pathname === href && (
