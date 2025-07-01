@@ -638,12 +638,12 @@ func TeacherFetchList(c *gin.Context) {
 
 	// 统计总数
 	db.Model(&model.Teacher{}).
-		Where("status = ? AND flag != ?", "10", -1).
+		Where("status = ? AND flag != ?", "20", -1).
 		Count(&total)
 
 	// 获取当前页数据
 	err := db.Model(&model.Teacher{}).
-		Where("status = ? AND flag != ?", "10", -1).
+		Where("status = ? AND flag != ?", "20", -1).
 		Order("id ASC").
 		Offset(int((pageNo - 1) * pageSize)).
 		Limit(int(pageSize)).

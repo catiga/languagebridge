@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -39,6 +40,16 @@ type UpdateTeacherCertificateRequest struct {
 	IssueOrg    string `json:"issue_org"`
 	GetDate     string `json:"get_date"`
 	Document    string `json:"document"`
+}
+
+type TeacherResponse struct {
+	ID        uint64    `json:"id"`
+	Email     string    `gorm:"column:email" json:"email"`
+	Name      string    `gorm:"column:name" json:"name"`
+	AddTime   time.Time `json:"add_time"`
+	Status    string    `json:"status"`
+	TeacherNo string    `json:"teacher_no"`
+	Avatar    string    `gorm:"column:avatar" json:"avatar"`
 }
 
 type SelectTimeSlot struct {
@@ -109,6 +120,9 @@ func TeacherOverview(c *gin.Context) {
 	var lessonUpcomingCount int64
 	var lessonPastCount int64
 	var totalStudentCount int64
+	var teacherInfo model.Teacher
+
+	db.Model(&model.Teacher{}).Where("id = ?", teacherId).First(&teacherInfo)
 
 	var currentWeekCourseList []SimpleCourseBookObject
 
@@ -156,12 +170,22 @@ func TeacherOverview(c *gin.Context) {
 		LessonPastCount     int64                    `json:"lesson_past_count"`
 		TotalStudentCount   int64                    `json:"total_student_count"`
 		CurrentWeekCourses  []SimpleCourseBookObject `json:"current_week_courses"`
+		UpdatedTeacher      TeacherResponse          `json:"updated_teacher"`
 	}{
 		MyCourseCount:       teacherCourseCount,
 		LessonUpcomingCount: lessonUpcomingCount,
 		LessonPastCount:     lessonPastCount,
 		TotalStudentCount:   totalStudentCount,
 		CurrentWeekCourses:  currentWeekCourseList,
+		UpdatedTeacher: TeacherResponse{
+			ID:        teacherInfo.ID,
+			Email:     teacherInfo.Email,
+			Name:      teacherInfo.Name,
+			AddTime:   teacherInfo.AddTime,
+			TeacherNo: teacherInfo.TeacherNo,
+			Avatar:    teacherInfo.Avatar,
+			Status:    teacherInfo.Status,
+		},
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -1214,5 +1238,164 @@ func TeacherCourseAddReview(c *gin.Context) {
 	}
 	db.Save(&review)
 
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherEmailSend(c *gin.Context) {
+	var req EmailSendRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(req.Email) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Invalid email format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	err = utils.SendVerifyCodeMail(req.Email, string(codes.VerificationSortTeacher))
+	if err != nil {
+		log.Error("send email err", err)
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = "send email failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userInfo model.Teacher
+
+	db.Model(&model.Teacher{}).Where("id = ?", userId).First(&userInfo)
+	if userInfo.Status == "20" && req.Email == userInfo.Email {
+		res.Code = codes.CODE_ERR_REPEAT
+		res.Msg = "unverified email or change email needs reverify"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherEmailCheck(c *gin.Context) {
+	var req EmailCheckRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(req.Email) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Invalid email format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Code) != 6 || !regexp.MustCompile(`^\d{6}$`).MatchString(req.Code) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "Code must be a 6-digit number"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userInfo model.Teacher
+	db.Model(&model.Teacher{}).Where("id = ?", userID).First(&userInfo)
+
+	if userInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "user record not existed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if req.Email != userInfo.Email {
+		// change email check
+		var existEmailuser model.Teacher
+		err = db.Model(&model.Teacher{}).Where("email = ?", req.Email).First(&existEmailuser).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			res.Code = codes.CODE_ERR_UNKNOWN
+			res.Msg = "user email check error"
+			log.Error("query user email err", err)
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		if err == nil {
+			res.Code = codes.CODE_ERR_EXIST_OBJ
+			res.Msg = "Email already registered"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		userInfo.Email = req.Email
+	}
+
+	var verifyProcess model.VerificationProcess
+	db.Model(&model.VerificationProcess{}).
+		Where("target = ? and code = ? and type = ? and sort = ?", req.Email, req.Code, codes.VerificationTypeEmail, codes.VerificationSortTeacher).
+		First(&verifyProcess)
+	if verifyProcess.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "verification code not sent"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if time.Now().After(verifyProcess.AddTime.Add(time.Duration(verifyProcess.ValidatePeriod) * time.Second)) {
+		res.Code = codes.CODE_ERR_REQ_EXPIRED
+		res.Msg = "verification code expired"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	userInfo.Status = "20"
+	db.Save(&userInfo)
+	verifyProcess.Status = "100"
+	db.Save(&verifyProcess)
 	c.JSON(http.StatusOK, res)
 }

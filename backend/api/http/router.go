@@ -73,6 +73,8 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.GET("/course/histories", auth.TeacherCourseGetHistories)
 	teacherAuthGroup.GET("/course/review/fetch", auth.TeacherCourseGetReview)
 	teacherAuthGroup.POST("/course/review/add", auth.TeacherCourseAddReview)
+	teacherAuthGroup.POST("/email/check", auth.TeacherEmailCheck)
+	teacherAuthGroup.POST("/email/send", auth.TeacherEmailSend)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

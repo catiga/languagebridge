@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { apiClient } from '@/app/utils/api';
+import TeacherEmailVerifyBanner from './TeacherEmailVerifyBanner';
 
 // This interface represents the a successful API response structure
 interface ApiResponse<T> {
@@ -49,6 +50,7 @@ interface TeacherProfile {
   phone_code: string;
   phone: string;
   status: string;
+  email_verified: boolean;
 }
 
 export default function ProfileManagement() {
@@ -74,6 +76,7 @@ export default function ProfileManagement() {
     totalLessons: 0,
     certificates: [] as string[],
     detail: '',
+    email_verified: false,
   });
 
   const [formData, setFormData] = useState(profile);
@@ -103,6 +106,7 @@ export default function ProfileManagement() {
           bio: teacherData.introduction,
           detail: teacherData.detail,
           avatar: teacherData.avatar || '/default-avatar.svg',
+          email_verified: teacherData.email_verified,
         };
         setProfile(updatedProfile);
         setFormData(updatedProfile);
@@ -198,6 +202,22 @@ export default function ProfileManagement() {
 
   return (
     <div className="space-y-8">
+      <TeacherEmailVerifyBanner
+        email={profile.email}
+        emailVerified={profile.email_verified}
+        onRefresh={async () => {
+          try {
+            const res = await apiClient.get<ApiResponse<TeacherProfile>>('/spwapi/tpa/auth/profile/retrieve');
+            if (res && res.data) {
+              setProfile({
+                ...profile,
+                email: res.data.email,
+                email_verified: res.data.email_verified,
+              });
+            }
+          } catch {}
+        }}
+      />
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
