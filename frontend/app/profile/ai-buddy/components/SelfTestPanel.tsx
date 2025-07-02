@@ -6,10 +6,10 @@ import { apiClient } from '@/app/utils/api';
 import ReactMarkdown from 'react-markdown';
 
 const examTypes = [
-  { key: 'ket', label: 'KET' },
-  { key: 'pet', label: 'PET' },
-  { key: 'toefl', label: 'TOEFL Junior' },
-  { key: 'ielts', label: 'IELTS' },
+  { key: 'ket', label: '📘 Beginner (KET Level, Grades 1–4)' },
+  { key: 'pet', label: '📗 Intermediate (PET Level, Grades 5–8)' },
+  { key: 'toefl', label: '📙 TOEFL Junior (Middle School Focus)' },
+  { key: 'ielts', label: '📕 IELTS Practice (Advanced/High School)' },
 ];
 
 const mockResult = {
@@ -143,10 +143,24 @@ export default function SelfTestPanel() {
       {mode==='exam' && !showResult && (
         <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
           <div>
-            <label className="block mb-1 font-medium">Select Exam Type:</label>
-            <select className="border rounded px-3 py-2" value={examType} onChange={e=>setExamType(e.target.value)}>
-              {examTypes.map(e=>(<option key={e.key} value={e.key}>{e.label}</option>))}
-            </select>
+            <label className="block mb-2 font-medium">Select Exam Type:</label>
+            <div className="flex flex-row flex-wrap gap-3 mb-4">
+              {examTypes.map(e => (
+                <label key={e.key} className={`flex-1 flex items-center justify-center gap-2 min-w-[180px] px-3 py-2 rounded-lg cursor-pointer border transition-all font-medium text-sm shadow-sm select-none h-12
+                  ${examType === e.key ? 'border-2 border-blue-500 bg-blue-50 text-blue-700 font-bold' : 'border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'}`}
+                >
+                  <input
+                    type="radio"
+                    name="examType"
+                    value={e.key}
+                    checked={examType === e.key}
+                    onChange={() => setExamType(e.key)}
+                    className="hidden"
+                  />
+                  <span>{e.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="space-y-3">
             {mockQuestions.map(q=>(
