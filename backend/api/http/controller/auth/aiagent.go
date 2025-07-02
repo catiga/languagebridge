@@ -319,7 +319,141 @@ func SelfAssessmentExam(c *gin.Context) {
 
 	//handle content of response
 	jsonContent := agentResp.Content
-	log.Info(jsonContent)
+
+	responseData, err := cleanAndParse(jsonContent)
+	if err != nil {
+		res.Code = codes.CODE_ERR_GPT_COMPLETE
+		res.Msg = "AI agent complete error: " + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	responseJson, _ := extractJSON(agentResp.Content)
+
+	// insert record for user generation ai result
+	ur := model.UserAgentRecord{
+		AddTime:       time.Now(),
+		Flag:          0,
+		CategoryPath:  categoryPath,
+		CategoryLevel: categoryLevel,
+		Input:         levelMap[req.Level],
+		Result:        responseJson,
+		UserID:        uint64(userID),
+	}
+	db.Save(&ur)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = gin.H{
+		"exam_id":    ur.ID,
+		"user_input": req.Level,
+		"ai_reply":   responseData,
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func SelfAssessmentExamMark(c *gin.Context) {
+	var req request.ExamMarkRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if req.Level < 1 || req.Level > 4 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please choose the correct level"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// query template for prompt context
+	db := system.GetDb()
+	categoryPath := "self-assessment/exam"
+	categoryLevel := "free"
+
+	// query if there is generated data
+	var generatedData model.UserAgentRecord
+	db.Model(&model.UserAgentRecord{}).
+		Where("user_id = ? AND category_path = ? AND category_level = ? AND DATE(add_time) = CURRENT_DATE", userID, categoryPath, categoryLevel).
+		First(&generatedData)
+	if generatedData.ID > 0 {
+		var r GPTResponse
+		err := json.Unmarshal([]byte(generatedData.Result), &r)
+		if err != nil {
+			log.Error(err)
+		}
+		res.Code = codes.CODE_SUCCESS
+		res.Msg = "success"
+		res.Data = gin.H{
+			"user_input": req.Level,
+			"ai_reply":   r,
+		}
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var tpls []model.PromptContext
+	db.Model(&model.PromptContext{}).
+		Where("category_path = ? AND category_level = ? AND flag != ?", categoryPath, categoryLevel, -1).
+		Order("sort ASC").
+		Find(&tpls)
+
+	if len(tpls) == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Agent service unavailable, due to internal configuration"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var vmap map[string]string = make(map[string]string)
+	vmap["level"] = levelMap[req.Level]
+	vmap["min_question_count"] = "20"
+
+	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, vmap), "")
+	if len(messages) == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Agent service unavailable, due to internal configuration"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	agentReq := agent.AgentRequest{
+		Model:    agent.ModelDeepSeek,
+		Messages: messages,
+	}
+
+	agentResp, err := agentReq.Chat(c.Request.Context())
+	if err != nil {
+		res.Code = codes.CODE_ERR_GPT_COMPLETE
+		res.Msg = "AI agent failed: " + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	//handle content of response
+	jsonContent := agentResp.Content
+
 	responseData, err := cleanAndParse(jsonContent)
 	if err != nil {
 		res.Code = codes.CODE_ERR_GPT_COMPLETE

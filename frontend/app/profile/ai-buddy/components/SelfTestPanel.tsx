@@ -97,7 +97,7 @@ async function postSelfAssessment(content: string) {
 }
 
 async function postSelfAssessmentExam(level: number) {
-  const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam', { level });
+  const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam.generate', { level });
   if (!res || res.code !== 0) throw new Error(res?.msg || 'API error');
   return res.data;
 }
