@@ -19,6 +19,6 @@ type ExamQuiz struct {
 }
 
 type ExamMarkRequest struct {
-	ExamID    uint64     `json:"exam_id`
+	ExamID    uint64     `json:"exam_id"`
 	Questions []ExamQuiz `json:"questions"`
 }

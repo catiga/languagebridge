@@ -97,7 +97,7 @@ async function postSelfAssessment(content: string) {
 }
 
 async function postSelfAssessmentExam(level: number) {
-  const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam.generate', { level });
+  const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam/generate', { level });
   if (!res || res.code !== 0) throw new Error(res?.msg || 'API error');
   return res.data;
 }
@@ -109,8 +109,9 @@ export default function SelfTestPanel() {
   const [showResult, setShowResult] = useState(false);
   const [answers, setAnswers] = useState<{[id:number]:string}>({});
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<typeof mockResult | null>(null);
+  const [result, setResult] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [examId, setExamId] = useState<number|null>(null);
 
   const handleGenerateQuestions = async () => {
     if (!examTypeMap[examType]) {
@@ -120,9 +121,11 @@ export default function SelfTestPanel() {
     setLoading(true);
     setQuestions([]);
     setAnswers({});
+    setExamId(null);
     try {
       const data = await postSelfAssessmentExam(examTypeMap[examType]);
       setQuestions(data.ai_reply?.questions || []);
+      setExamId(data.exam_id || null);
     } catch (err: any) {
       toast.error(err.message || 'Failed to load questions');
     } finally {
@@ -158,13 +161,45 @@ export default function SelfTestPanel() {
       setLoading(true);
       setShowResult(false);
       try {
-        // Simulate answer submission
-        const data = await postSelfAssessmentExam(examTypeMap[examType]);
-        setResult(data || mockResult);
+        // 1. 前端判分，组装user_answer和correct
+        const markedQuestions = questions.map((q, idx) => {
+          const userAnswer = answers[idx];
+          const correct = userAnswer === q.answer;
+          return { ...q, user_answer: userAnswer, correct };
+        });
+        // 2. 计算分数
+        const correctCount = markedQuestions.filter(q => q.correct).length;
+        const score = Math.round((correctCount / markedQuestions.length) * 100);
+        // 3. 提交到后端
+        const payload = {
+          exam_id: examId,
+          questions: markedQuestions,
+        };
+        const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam/mark', payload);
+        // 4. 展示结果
+        setResult({
+          score,
+          level: res.data?.level || '',
+          strengths: res.data?.strengths || [],
+          weaknesses: res.data?.weaknesses || [],
+          suggestions: res.data?.suggestions || '',
+          questions: markedQuestions,
+        });
         setShowResult(true);
       } catch (err: any) {
         toast.error(err.message || 'Assessment failed');
-        setResult(mockResult);
+        setResult({
+          score: 0,
+          level: '',
+          strengths: [],
+          weaknesses: [],
+          suggestions: '',
+          questions: questions.map((q, idx) => ({
+            ...q,
+            user_answer: answers[idx],
+            correct: false,
+          })),
+        });
         setShowResult(true);
       } finally {
         setLoading(false);
@@ -273,6 +308,33 @@ export default function SelfTestPanel() {
           <div className="animate-fade-in">
             <ResultProgress score={result.score} />
             <AIFeedback result={result} />
+            <div className="mt-6">
+              <div className="font-bold text-blue-700 mb-2">Question Review</div>
+              <div className="space-y-4">
+                {result.questions && result.questions.map((q:any, idx:number) => (
+                  <div key={idx} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 shadow">
+                    <div className="mb-2 font-medium text-blue-900">{idx + 1}. {q.question}</div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Your answer: </span>
+                      <span className={q.correct ? "text-green-600 font-bold" : "text-red-600 font-bold"}>{q.user_answer}</span>
+                      {q.correct ? (
+                        <span className="ml-2 text-green-500">✔️ Correct</span>
+                      ) : (
+                        <span className="ml-2 text-red-500">❌ Incorrect</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Correct answer: </span>
+                      <span className="text-blue-700">{q.answer}</span>
+                    </div>
+                    <div className="text-gray-600 mt-1">
+                      <span className="font-semibold">Explanation: </span>
+                      {q.explanation}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <button className="mt-6 w-full px-4 py-2 bg-gray-200 rounded-xl font-semibold hover:bg-gray-300" onClick={()=>setShowResult(false)}>Try Again</button>
           </div>
         )}

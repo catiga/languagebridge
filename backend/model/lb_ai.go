@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 type PromptContext struct {
 	ID              uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -34,4 +38,17 @@ type UserAgentRecord struct {
 
 func (UserAgentRecord) TableName() string {
 	return "user_agent_record"
+}
+
+type ExamQuizRecord struct {
+	ID            uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
+	AgentRecordID uint64          `gorm:"column:agent_record_id" json:"agent_record_id"`
+	UserID        uint64          `gorm:"column:user_id" json:"user_id"`
+	Score         decimal.Decimal `gorm:"column:score" json:"score"`
+	Result        string          `gorm:"column:result" json:"result"`
+}
+
+func (ExamQuizRecord) TableName() string {
+	return "exam_quiz_record"
 }

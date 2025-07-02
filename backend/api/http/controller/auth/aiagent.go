@@ -19,6 +19,7 @@ import (
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
 	"github.com/sashabaranov/go-openai"
+	"github.com/shopspring/decimal"
 )
 
 var levelMap = map[int]string{
@@ -273,6 +274,7 @@ func SelfAssessmentExam(c *gin.Context) {
 		res.Code = codes.CODE_SUCCESS
 		res.Msg = "success"
 		res.Data = gin.H{
+			"exam_id":    generatedData.ID,
 			"user_input": req.Level,
 			"ai_reply":   r,
 		}
@@ -365,12 +367,6 @@ func SelfAssessmentExamMark(c *gin.Context) {
 		return
 	}
 
-	if req.Level < 1 || req.Level > 4 {
-		res.Code = codes.CODE_ERR_BAD_PARAMS
-		res.Msg = "Please choose the correct level"
-		c.JSON(http.StatusOK, res)
-		return
-	}
 	currentUser, exist := c.Get("user_id")
 
 	if !exist {
@@ -390,98 +386,49 @@ func SelfAssessmentExamMark(c *gin.Context) {
 
 	// query template for prompt context
 	db := system.GetDb()
-	categoryPath := "self-assessment/exam"
-	categoryLevel := "free"
-
 	// query if there is generated data
-	var generatedData model.UserAgentRecord
-	db.Model(&model.UserAgentRecord{}).
-		Where("user_id = ? AND category_path = ? AND category_level = ? AND DATE(add_time) = CURRENT_DATE", userID, categoryPath, categoryLevel).
-		First(&generatedData)
-	if generatedData.ID > 0 {
-		var r GPTResponse
-		err := json.Unmarshal([]byte(generatedData.Result), &r)
-		if err != nil {
-			log.Error(err)
-		}
-		res.Code = codes.CODE_SUCCESS
-		res.Msg = "success"
-		res.Data = gin.H{
-			"user_input": req.Level,
-			"ai_reply":   r,
-		}
-		c.JSON(http.StatusOK, res)
-		return
-	}
-
-	var tpls []model.PromptContext
-	db.Model(&model.PromptContext{}).
-		Where("category_path = ? AND category_level = ? AND flag != ?", categoryPath, categoryLevel, -1).
-		Order("sort ASC").
-		Find(&tpls)
-
-	if len(tpls) == 0 {
-		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
-		res.Msg = "Agent service unavailable, due to internal configuration"
-		c.JSON(http.StatusOK, res)
-		return
-	}
-
-	var vmap map[string]string = make(map[string]string)
-	vmap["level"] = levelMap[req.Level]
-	vmap["min_question_count"] = "20"
-
-	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, vmap), "")
-	if len(messages) == 0 {
-		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
-		res.Msg = "Agent service unavailable, due to internal configuration"
-		c.JSON(http.StatusOK, res)
-		return
-	}
-	agentReq := agent.AgentRequest{
-		Model:    agent.ModelDeepSeek,
-		Messages: messages,
-	}
-
-	agentResp, err := agentReq.Chat(c.Request.Context())
+	var recordedData model.UserAgentRecord
+	err = db.Model(&model.UserAgentRecord{}).
+		Where("user_id = ? AND id = ?", userID, req.ExamID).
+		First(&recordedData).Error
 	if err != nil {
-		res.Code = codes.CODE_ERR_GPT_COMPLETE
-		res.Msg = "AI agent failed: " + err.Error()
+		log.Error(err)
+	}
+
+	if recordedData.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no quiz record found"
 		c.JSON(http.StatusOK, res)
 		return
 	}
 
-	//handle content of response
-	jsonContent := agentResp.Content
-
-	responseData, err := cleanAndParse(jsonContent)
-	if err != nil {
-		res.Code = codes.CODE_ERR_GPT_COMPLETE
-		res.Msg = "AI agent complete error: " + err.Error()
-		c.JSON(http.StatusOK, res)
-		return
+	var score = decimal.NewFromInt(0)
+	var step = decimal.NewFromInt(1)
+	var _100 = decimal.NewFromInt(100)
+	var size = decimal.NewFromInt(int64(len(req.Questions)))
+	for _, r := range req.Questions {
+		if r.Correct {
+			score = score.Add(step)
+		}
 	}
 
-	responseJson, _ := extractJSON(agentResp.Content)
-
-	// insert record for user generation ai result
-	ur := model.UserAgentRecord{
-		AddTime:       time.Now(),
-		Flag:          0,
-		CategoryPath:  categoryPath,
-		CategoryLevel: categoryLevel,
-		Input:         levelMap[req.Level],
-		Result:        responseJson,
+	v, e := json.Marshal(req.Questions)
+	var vs string
+	if e == nil {
+		vs = string(v)
+	}
+	saveRecord := model.ExamQuizRecord{
 		UserID:        uint64(userID),
+		AgentRecordID: recordedData.ID,
+		AddTime:       time.Now(),
+		Score:         score.Div(size).Mul(_100).Round(0),
+		Result:        vs,
 	}
-	db.Save(&ur)
+	db.Save(&saveRecord)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
-	res.Data = gin.H{
-		"user_input": req.Level,
-		"ai_reply":   responseData,
-	}
+	res.Data = nil
 
 	c.JSON(http.StatusOK, res)
 }
