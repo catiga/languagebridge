@@ -48,17 +48,33 @@ export default function AiBuddyPage() {
       <div className="flex justify-center relative z-10 mb-[-32px]">
         <div className="flex gap-4 bg-white/90 rounded-2xl shadow-lg px-6 py-3 border border-blue-100">
           {tabs.map(t => (
-            <button
-              key={t.key}
-              type="button"
-              className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg transition-all border shadow-sm
-                ${tab===t.key ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white scale-105 shadow-lg' : 'bg-white/80 text-blue-700 border-blue-100 hover:bg-blue-50 hover:scale-105'}`}
-              style={{boxShadow: tab===t.key ? '0 4px 24px 0 rgba(80,80,255,0.15)' : undefined}}
-              onClick={() => setTab(t.key)}
-            >
-              <span className="text-xl">{t.icon}</span>
-              {t.label}
-            </button>
+            t.key === 'practice' ? (
+              <button
+                key={t.key}
+                type="button"
+                className="flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg border shadow-sm bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                disabled
+                tabIndex={-1}
+                aria-disabled="true"
+                title="Coming soon!"
+                style={{pointerEvents: 'none'}}
+              >
+                <span className="text-xl">{t.icon}</span>
+                {t.label}
+              </button>
+            ) : (
+              <button
+                key={t.key}
+                type="button"
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-lg transition-all border shadow-sm
+                  ${tab===t.key ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white scale-105 shadow-lg' : 'bg-white/80 text-blue-700 border-blue-100 hover:bg-blue-50 hover:scale-105'}`}
+                style={{boxShadow: tab===t.key ? '0 4px 24px 0 rgba(80,80,255,0.15)' : undefined}}
+                onClick={() => setTab(t.key)}
+              >
+                <span className="text-xl">{t.icon}</span>
+                {t.label}
+              </button>
+            )
           ))}
         </div>
       </div>

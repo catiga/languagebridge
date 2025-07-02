@@ -220,7 +220,14 @@ export default function SelfTestPanel() {
         </div>
         <div className="flex gap-2">
           <button className={`px-4 py-1.5 rounded-full font-semibold shadow bg-gradient-to-r from-blue-400 to-purple-400 text-white hover:scale-105 transition text-sm ${mode==='free' ? 'ring-2 ring-white/80' : ''}`} onClick={()=>{setMode('free');setShowResult(false);}}>Self Assessment</button>
-          <button className={`px-4 py-1.5 rounded-full font-semibold shadow bg-gradient-to-r from-blue-400 to-purple-400 text-white hover:scale-105 transition text-sm`} disabled>Practice</button>
+          <button
+            className={`px-4 py-1.5 rounded-full font-semibold shadow bg-gradient-to-r from-blue-400 to-purple-400 text-white opacity-50 cursor-not-allowed text-sm`}
+            type="button"
+            tabIndex={-1}
+            disabled
+            aria-disabled="true"
+            style={{pointerEvents: 'none'}}
+          >Practice</button>
           <button className={`px-4 py-1.5 rounded-full font-semibold shadow bg-gradient-to-r from-blue-400 to-purple-400 text-white hover:scale-105 transition text-sm`} disabled>History</button>
         </div>
       </div>
@@ -246,6 +253,9 @@ export default function SelfTestPanel() {
         )}
         {mode==='exam' && !showResult && (
           <div className="space-y-4 animate-fade-in">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-3 rounded mb-2 text-sm">
+              <b>Notice:</b> Each user can generate a new AI self-assessment exam only once per day. You can practice and submit answers repeatedly.
+            </div>
             <div>
               <label className="block mb-2 font-medium text-gray-700">Select Exam Type:</label>
               <div className="flex flex-row flex-wrap gap-3 mb-4">
