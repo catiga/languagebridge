@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaRobot } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { apiClient } from '@/app/utils/api';
@@ -79,6 +79,13 @@ interface ApiResponse<T = any> {
   msg?: string;
 }
 
+const examTypeMap: Record<string, number> = {
+  ket: 1,
+  pet: 2,
+  toefl: 3,
+  ielts: 4,
+};
+
 async function postSelfAssessment(content: string) {
   try {
     const res: ApiResponse<typeof mockResult> = await apiClient.post('/spwapi/auth/aiagent/selfassessment', { content });
@@ -89,6 +96,12 @@ async function postSelfAssessment(content: string) {
   }
 }
 
+async function postSelfAssessmentExam(level: number) {
+  const res: ApiResponse<any> = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam', { level });
+  if (!res || res.code !== 0) throw new Error(res?.msg || 'API error');
+  return res.data;
+}
+
 export default function SelfTestPanel() {
   const [mode, setMode] = useState<'free'|'exam'>('free');
   const [text, setText] = useState('');
@@ -97,6 +110,32 @@ export default function SelfTestPanel() {
   const [answers, setAnswers] = useState<{[id:number]:string}>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<typeof mockResult | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (mode === 'exam' && examType) {
+      fetchExamQuestions();
+    } else {
+      setQuestions([]);
+      setAnswers({});
+    }
+    // eslint-disable-next-line
+  }, [examType, mode]);
+
+  async function fetchExamQuestions() {
+    setLoading(true);
+    setQuestions([]);
+    setAnswers({});
+    try {
+      const data = await postSelfAssessmentExam(examTypeMap[examType]);
+      // 取后端返回的data.ai_reply.questions
+      setQuestions(data.ai_reply?.questions || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load questions');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +144,6 @@ export default function SelfTestPanel() {
       setShowResult(false);
       try {
         const data = await postSelfAssessment(text);
-        // 假设后端返回结构与mockResult一致，否则可做适配
         setResult(data || mockResult);
         setShowResult(true);
       } catch (err: any) {
@@ -116,8 +154,33 @@ export default function SelfTestPanel() {
         setLoading(false);
       }
     } else {
-      setShowResult(true);
-      setResult(mockResult);
+      // exam模式下校验
+      if (!examTypeMap[examType]) {
+        toast.error('Please select an exam type');
+        return;
+      }
+      if (questions.length === 0) {
+        toast.error('No questions loaded');
+        return;
+      }
+      if (Object.keys(answers).length < questions.length) {
+        toast.error('Please answer all questions');
+        return;
+      }
+      setLoading(true);
+      setShowResult(false);
+      try {
+        // 暂用postSelfAssessmentExam模拟提交答案
+        const data = await postSelfAssessmentExam(examTypeMap[examType]);
+        setResult(data || mockResult);
+        setShowResult(true);
+      } catch (err: any) {
+        toast.error(err.message || 'Assessment failed');
+        setResult(mockResult);
+        setShowResult(true);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -163,19 +226,26 @@ export default function SelfTestPanel() {
             </div>
           </div>
           <div className="space-y-3">
-            {mockQuestions.map(q=>(
-              <div key={q.id} className="bg-gray-50 rounded-xl p-4 shadow">
-                <div className="mb-2 font-medium">{q.id}. {q.question}</div>
-                <div className="flex gap-3">
-                  {q.options.map(opt=>(
+            {questions.length > 0 ? questions.map((q, idx) => (
+              <div key={idx} className="bg-gray-50 rounded-xl p-4 shadow">
+                <div className="mb-2 font-medium">{idx + 1}. {q.question}</div>
+                <div className="flex gap-3 flex-wrap">
+                  {q.options && q.options.map((opt: string) => (
                     <label key={opt} className="flex items-center gap-1">
-                      <input type="radio" name={`q${q.id}`} value={opt} checked={answers[q.id]===opt} onChange={()=>setAnswers(a=>({...a,[q.id]:opt}))} />
+                      <input
+                        type="radio"
+                        name={`q${idx}`}
+                        value={opt}
+                        checked={answers[idx] === opt}
+                        onChange={() => setAnswers(a => ({ ...a, [idx]: opt }))}
+                      />
                       {opt}
                     </label>
                   ))}
                 </div>
+                <div className="text-xs text-gray-400 mt-1">{q.type}</div>
               </div>
-            ))}
+            )) : <div className="text-gray-400">No questions loaded.</div>}
           </div>
           <button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-indigo-400 text-white px-6 py-3 rounded-xl font-bold text-lg shadow hover:scale-105 transition">Submit</button>
         </form>
