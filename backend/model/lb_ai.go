@@ -52,3 +52,12 @@ type ExamQuizRecord struct {
 func (ExamQuizRecord) TableName() string {
 	return "exam_quiz_record"
 }
+
+type UserAgentRecordHistorical struct {
+	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
+	Score         decimal.Decimal `gorm:"column:score" json:"score"`
+	AiPromptID    uint64          `gorm:"column:arid" json:"arid"`
+	Input         string          `gorm:"column:input" json:"input"`
+	CategoryPath  string          `gorm:"column:category_path" json:"category_path"`
+	CategoryLevel string          `gorm:"column:category_level" json:"category_level"`
+}

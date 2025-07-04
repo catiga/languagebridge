@@ -432,3 +432,46 @@ func SelfAssessmentExamMark(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+func ExamRecordHistorical(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// query template for prompt context
+	db := system.GetDb()
+	// query if there is generated data
+	var recordedData []model.UserAgentRecordHistorical
+
+	err = db.Table("exam_quiz_record as b").
+		Select(`b.score as score, b.add_time as add_time, b.agent_record_id as arid, c.category_path, c.category_level, c.input`).
+		Joins("JOIN user_agent_record c ON b.agent_record_id = c.id").
+		Where("b.user_id = ? AND c.category_path = ?", userID, "self-assessment/exam").
+		Order("b.add_time asc").
+		Scan(&recordedData).Error
+	if err != nil {
+		log.Error("overview-fetch week course list error", err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = recordedData
+
+	c.JSON(http.StatusOK, res)
+}
