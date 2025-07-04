@@ -18,7 +18,7 @@ interface CountryOption {
 
 const schema = yup.object().shape({
   first_name: yup.string().required('First name is required'),
-  last_name: yup.string().required('Last name is required'),
+  last_name: yup.string(),
   email: yup.string().email('Invalid email format').required('Email is required'),
   password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
   confirm_password: yup.string()
@@ -29,7 +29,7 @@ const schema = yup.object().shape({
   first_language: yup.string().required('First language is required'),
   teach_language: yup.string().required('Teachable languages are required'),
   introduction: yup.string().min(6, 'Introduction must be at least 6 characters').required('Introduction is required'),
-  invite_code: yup.string().required('Invite code is required'),
+  invite_code: yup.string(),
 });
 
 function TeacherRegisterPageInner() {
@@ -42,7 +42,7 @@ function TeacherRegisterPageInner() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await apiClient.get('/spwapi/public/countries');
+        const res = await apiClient.get<any>('/spwapi/public/countries');
         if (res && res.data) {
           const options = res.data.map((item: any) => ({
             value: String(item.id),

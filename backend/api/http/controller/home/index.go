@@ -46,13 +46,13 @@ type TeacherRegisterRequest struct {
 	Password        string `json:"password" binding:"required,min=8"`
 	Name            string `json:"name" binding:"required,min=2"`
 	FirstName       string `json:"first_name" binding:"required,min=1"`
-	LastName        string `json:"last_name" binding:"required,min=1"`
+	LastName        string `json:"last_name"`
 	NationalityID   uint64 `json:"nationality_id"`
 	LivingCountryID uint64 `json:"living_country_id"`
 	Introduction    string `json:"introduction" binding:"required,min=6"`
 	FirstLanguage   string `json:"first_language" binding:"required"`
 	TeachLanguage   string `json:"teach_language" binding:"required"`
-	InviteCode      string `json:"invite_code" binding:"required"`
+	InviteCode      string `json:"invite_code"`
 }
 
 type TeacherCertificateResponse struct {
@@ -503,6 +503,9 @@ func TeacherRegister(c *gin.Context) {
 
 	//find teacher by invitation code
 	var masterTeacher model.Teacher
+	if len(req.InviteCode) == 0 {
+		req.InviteCode = fixedSysInviteCode
+	}
 	if req.InviteCode != fixedSysInviteCode {
 		db.Model(&model.Teacher{}).Where("invite_code = ?", req.InviteCode).First(&masterTeacher)
 		if masterTeacher.ID == 0 {
