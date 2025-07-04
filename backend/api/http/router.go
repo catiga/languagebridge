@@ -53,6 +53,9 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/course/review/add", auth.CourseAddReview)
 	authGroup.GET("/course/histories", auth.CourseGetHistories)
 
+	authGroup.POST("/security/check", auth.SecurityCheck)
+	authGroup.POST("/security/set", auth.SecuritySet)
+
 	authGroup.POST("/aiagent/selfassessment", auth.SelfAssessment)
 	authGroup.POST("/aiagent/selfassessment/exam/generate", auth.SelfAssessmentExam)
 	authGroup.POST("/aiagent/selfassessment/exam/mark", auth.SelfAssessmentExamMark)

@@ -20,6 +20,7 @@ const (
 	CODE_ERR_REMOTE           = 16
 	CODE_ERR_REPEAT           = 17
 	CODE_ERR_OKX              = 18
+	CODE_ERR_PASSCODE         = 19
 
 	CODE_BOOKING_CONFLICT = 301
 

@@ -13,10 +13,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // All pages with a navbar need top padding
   const mainContentPadding = 'pt-16';
 
+  // 不在meet页面渲染Navbar
+  const hideNavbar = pathname.startsWith('/course/meet/');
+
   return (
     <div className={pageBackgroundColor}>
-      <Navbar />
-      <main className={mainContentPadding}>
+      {!hideNavbar && <Navbar />}
+      <main className={!hideNavbar ? mainContentPadding : ''}>
         {children}
       </main>
     </div>

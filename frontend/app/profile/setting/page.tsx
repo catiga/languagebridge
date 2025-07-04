@@ -57,12 +57,60 @@ const ToggleSwitch = ({
   </button>
 );
 
+const PasscodeInput = ({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) => (
+  <input
+    type="password"
+    inputMode="numeric"
+    pattern="\\d{6}"
+    maxLength={6}
+    minLength={6}
+    className="w-32 px-4 py-2 border rounded-lg text-lg text-center tracking-widest"
+    placeholder="******"
+    value={value}
+    onChange={e => {
+      const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+      onChange(v);
+    }}
+    disabled={disabled}
+    autoComplete="off"
+  />
+);
+
 export default function ProfileSettingPage() {
   const [settings, setSettings] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const notificationEnabled = settings['notifications.email.enabled'] === 'true';
+  const [passcodeInput, setPasscodeInput] = useState(settings['security.passcode'] || '');
+  useEffect(() => {
+    setPasscodeInput(settings['security.passcode'] || '');
+  }, [settings['security.passcode']]);
+  const [passcodeError, setPasscodeError] = useState('');
+  const [passcodeSaving, setPasscodeSaving] = useState(false);
+  const handlePasscodeSave = async () => {
+    if (!/^\d{6}$/.test(passcodeInput)) {
+      setPasscodeError('Passcode must be 6 digits.');
+      return;
+    }
+    setPasscodeSaving(true);
+    setPasscodeError('');
+    try {
+      const res = await apiClient.post<ApiResponse<null>>('/spwapi/auth/security/set', {
+        passcode: passcodeInput
+      });
+      if (res.code === 0) {
+        setSettings((prev) => ({ ...prev, 'security.passcode': passcodeInput }));
+        toast.success('Security passcode updated!');
+      } else {
+        setPasscodeError(res.msg || 'Failed to update passcode.');
+      }
+    } catch (error: any) {
+      setPasscodeError(error.message || 'An error occurred.');
+    } finally {
+      setPasscodeSaving(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -138,7 +186,24 @@ export default function ProfileSettingPage() {
                   disabled={isSaving}
                 />
               </SettingRow>
-               {/* You can add more settings here in the future following the same pattern */}
+              {settings['security.passcode'] !== undefined && (
+                <SettingRow
+                  label="Security Passcode"
+                  description="Set a 6-digit numeric passcode for security verification."
+                >
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <PasscodeInput value={passcodeInput} onChange={setPasscodeInput} disabled={passcodeSaving} />
+                      <button
+                        className="ml-2 px-5 py-2 bg-blue-600 text-white rounded-lg font-bold disabled:opacity-50"
+                        disabled={passcodeSaving || passcodeInput === settings['security.passcode'] || !/^\d{6}$/.test(passcodeInput)}
+                        onClick={handlePasscodeSave}
+                      >Confirm</button>
+                    </div>
+                    {passcodeError && <div className="text-red-500 text-sm">{passcodeError}</div>}
+                  </div>
+                </SettingRow>
+              )}
             </div>
           )}
         </div>

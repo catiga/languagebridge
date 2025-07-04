@@ -63,6 +63,10 @@ type CourseReviewAddRequest struct {
 	Rate    int8   `json:"rate"`
 }
 
+type SecurityCheckRequest struct {
+	Passcode string `json:"passcode"`
+}
+
 func CourseJoin(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -985,5 +989,96 @@ func CourseGetHistories(c *gin.Context) {
 		"total":       total,
 		"total_pages": totalPages,
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func SecurityCheck(c *gin.Context) {
+	var req SecurityCheckRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var passSetting model.UserSetting
+	db := system.GetDb()
+	db.Model(&model.UserSetting{}).Where("user_id = ? and spec_name = ?", userID, "security.passcode").First(&passSetting)
+
+	if passSetting.ID > 0 && passSetting.SpecValue != req.Passcode {
+		res.Code = codes.CODE_ERR_PASSCODE
+		res.Msg = "Passcode check failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func SecuritySet(c *gin.Context) {
+	var req SecurityCheckRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var passSetting model.UserSetting
+	db := system.GetDb()
+	db.Model(&model.UserSetting{}).Where("user_id = ? and spec_name = ?", userID, "security.passcode").First(&passSetting)
+
+	if passSetting.ID == 0 {
+		passSetting = model.UserSetting{
+			UserID:    uint64(userID),
+			SpecName:  "security.passcode",
+			SpecValue: req.Passcode,
+		}
+		db.Save(&passSetting)
+	} else {
+		passSetting.SpecValue = req.Passcode
+		db.Save(&passSetting)
+	}
+
 	c.JSON(http.StatusOK, res)
 }

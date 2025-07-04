@@ -1,7 +1,7 @@
 'use client';
 
 import { JitsiMeeting } from '@jitsi/react-sdk';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '../../../utils/api';
 import { toast } from 'react-toastify';
@@ -33,6 +33,16 @@ export default function MeetPage() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
+  // 专注模式相关
+  const [focusPrompt, setFocusPrompt] = useState(true);
+  const [focusActive, setFocusActive] = useState(false);
+  // 退出专注模式密码
+  const [showExitPwd, setShowExitPwd] = useState(false);
+  const [exitPwd, setExitPwd] = useState('');
+  const [exitPwdError, setExitPwdError] = useState('');
+  const EXIT_PASSWORD = 'letmein123'; // 可自定义
+  // ESC锁，防止多次弹出密码框
+  const escLock = useRef(false);
 
   useEffect(() => {
     if (!id) {
@@ -184,6 +194,130 @@ export default function MeetPage() {
     ? `${formatTime(details.lesson_date, details.start_time)} - ${formatTime(details.lesson_date, details.end_time)}`
     : 'Time not specified';
   
+  // 进入全屏
+  const enterFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+    else if ((el as any).msRequestFullscreen) (el as any).msRequestFullscreen();
+    setFocusPrompt(false);
+    setFocusActive(true);
+  }, []);
+
+  // 拦截ESC和全屏退出
+  useEffect(() => {
+    if (!focusActive || showExitPwd) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !escLock.current) {
+        escLock.current = true;
+        setShowExitPwd(true);
+        setExitPwd('');
+        setExitPwdError('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      escLock.current = false;
+    };
+  }, [focusActive, showExitPwd]);
+
+  // 拦截全屏变动
+  useEffect(() => {
+    if (!focusActive) return;
+    let restoring = false;
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement && focusActive && !showExitPwd && !restoring) {
+        restoring = true;
+        setShowExitPwd(true);
+        setExitPwd('');
+        setExitPwdError('');
+        setTimeout(() => {
+          if (!showExitPwd) {
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+            else if ((el as any).msRequestFullscreen) (el as any).msRequestFullscreen();
+          }
+          restoring = false;
+        }, 400);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      restoring = false;
+    };
+  }, [focusActive, showExitPwd]);
+
+  // 极致专注模式：隐藏页面导航栏、禁止滚动、禁止右键/选中/拖拽
+  useEffect(() => {
+    if (focusActive) {
+      // 隐藏页面导航栏（假设有id或class为navbar/header等）
+      const nav = document.querySelector('.navbar, header, .main-navbar, .site-header');
+      if (nav) (nav as HTMLElement).style.display = 'none';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.userSelect = 'none';
+      document.body.style.pointerEvents = 'auto';
+      const prevent = (e: Event) => e.preventDefault();
+      window.addEventListener('contextmenu', prevent, true);
+      window.addEventListener('selectstart', prevent, true);
+      window.addEventListener('dragstart', prevent, true);
+      return () => {
+        if (nav) (nav as HTMLElement).style.display = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('contextmenu', prevent, true);
+        window.removeEventListener('selectstart', prevent, true);
+        window.removeEventListener('dragstart', prevent, true);
+      };
+    }
+  }, [focusActive]);
+
+  // 密码校验逻辑
+  const handleExitPwdSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await apiClient.post('/spwapi/auth/security/check', { passcode: exitPwd }) as { code: number; msg?: string };
+      if (res && res.code === 0) {
+        setShowExitPwd(false);
+        setFocusActive(false);
+        setExitPwd('');
+        setExitPwdError('');
+        // 只退出全屏和专注，不做登出
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+        else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
+      } else {
+        setExitPwdError('Password verification failed.');
+      }
+    } catch (err: any) {
+      setExitPwdError('Password verification failed.');
+    }
+  };
+
+  // 全屏按钮逻辑
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+    };
+  }, []);
+
+  const handleEnterFullscreen = () => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+    else if ((el as any).msRequestFullscreen) (el as any).msRequestFullscreen();
+    setFocusActive(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -202,6 +336,40 @@ export default function MeetPage() {
 
   return (
     <div className="h-screen flex">
+      {/* 全屏按钮，未全屏时显示 */}
+      {!isFullscreen && (
+        <button
+          className="fixed top-6 right-6 z-50 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold text-lg shadow-lg hover:scale-105 transition-all duration-200"
+          onClick={handleEnterFullscreen}
+        >Enter Fullscreen</button>
+      )}
+      {/* 极致专注遮罩，防止鼠标右键/选中/拖拽 */}
+      {focusActive && !focusPrompt && !showExitPwd && (
+        <div className="fixed inset-0 z-40 pointer-events-none select-none" style={{background: 'transparent'}}></div>
+      )}
+      {/* 退出专注模式密码弹窗 */}
+      {showExitPwd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <form className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center relative" onSubmit={handleExitPwdSubmit}>
+            <div className="text-2xl font-bold mb-4 text-blue-700">Exit Focus Mode</div>
+            <div className="text-gray-700 mb-6">Please enter the exit password to leave focus mode.</div>
+            <input
+              type="password"
+              className="w-full px-4 py-3 border rounded-lg mb-3 text-lg"
+              placeholder="Enter password"
+              value={exitPwd}
+              onChange={e => setExitPwd(e.target.value)}
+              autoFocus
+            />
+            {exitPwdError && <div className="text-red-500 mb-3">{exitPwdError}</div>}
+            <div className="flex gap-4 justify-center mt-4">
+              <button type="submit" className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-full font-bold text-lg shadow hover:from-blue-600 hover:to-blue-500 transition">Confirm</button>
+              <button type="button" className="px-8 py-3 bg-gray-200 text-gray-700 rounded-full font-bold text-lg shadow hover:bg-gray-300 transition" onClick={() => { setShowExitPwd(false); escLock.current = false; }}>Cancel</button>
+            </div>
+            <button type="button" aria-label="Close" className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold" onClick={() => { setShowExitPwd(false); escLock.current = false; }}>&times;</button>
+          </form>
+        </div>
+      )}
       {/* 左侧信息面板 */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
@@ -263,7 +431,7 @@ export default function MeetPage() {
         <JitsiMeeting
           domain="8x8.vc"
           roomName={`vpaas-magic-cookie-a72e88e466dd449c891fb37ea83a09ed/${getRoomName()}`}
-          userInfo={{ displayName: details?.student_name || 'Student' }}
+          userInfo={{ displayName: details?.student_name || 'Student', email: '' }}
           spinner={renderSpinner}
           configOverwrite={{
             subject: details?.course_name || 'English Bridge Class',
