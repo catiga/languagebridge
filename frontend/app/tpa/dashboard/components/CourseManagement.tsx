@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { FaSearch, FaChalkboardTeacher, FaChevronLeft, FaChevronRight, FaSpinner, FaUnlink, FaPlus, FaUpload } from 'react-icons/fa';
+import { FaSearch, FaChalkboardTeacher, FaChevronLeft, FaChevronRight, FaSpinner, FaUnlink, FaPlus, FaUpload, FaInfoCircle } from 'react-icons/fa';
 import { apiClient } from '@/app/utils/api';
 import { ApiResponse } from '@/app/utils/interfaces';
 import { toast } from 'react-toastify';
@@ -40,6 +40,7 @@ interface CourseListResponse {
 
 function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant = 'discover' }: { course: Course; onBind?: (course: Course) => void; onUnbind?: (course: Course) => void; isBinding?: boolean; isUnbinding?: boolean; variant?: 'discover' | 'mine' }) {
   const [imgError, setImgError] = useState(false);
+  const [showStatusTip, setShowStatusTip] = useState(false);
 
   const handleAction = () => {
     if (variant === 'discover' && onBind) {
@@ -72,6 +73,17 @@ function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant 
         ) : (
           <FaChalkboardTeacher className="text-gray-400 text-5xl" />
         )}
+        {/* 审核中icon，仅在我的课程卡片显示 */}
+        {variant === 'mine' && course.status === '000' && (
+          <button
+            type="button"
+            className="absolute top-2 right-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-full p-1 shadow focus:outline-none"
+            title="Under Review"
+            onClick={e => { e.stopPropagation(); setShowStatusTip(true); }}
+          >
+            <FaInfoCircle className="w-5 h-5" />
+          </button>
+        )}
       </div>
       <div className="p-5">
         <h3 className="text-lg font-bold text-gray-800 truncate">{course.name}</h3>
@@ -94,6 +106,21 @@ function CourseCard({ course, onBind, onUnbind, isBinding, isUnbinding, variant 
           </button>
         </div>
       </div>
+      {/* 审核说明弹窗 */}
+      {showStatusTip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowStatusTip(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center relative border border-blue-100" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center">
+              <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-300 via-yellow-200 to-blue-200 shadow mb-4">
+                <FaInfoCircle className="w-8 h-8 text-yellow-600 drop-shadow" />
+              </span>
+              <div className="text-xl font-bold text-gray-800 mb-2">Under Review</div>
+              <div className="text-gray-600 text-base mb-6">This course is under system review.<br/>Once approved, it will be available for student selection.</div>
+              <button className="px-8 py-2 bg-gradient-to-r from-blue-500 to-blue-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-blue-500 transition" onClick={() => setShowStatusTip(false)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }

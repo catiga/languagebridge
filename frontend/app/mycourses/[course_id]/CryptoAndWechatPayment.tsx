@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const WALLET_ADDRESSES: Record<string, string> = {
   ERC20: '0x16B2dafE491531b5DB409630203b5368aBb63987',
@@ -18,7 +19,7 @@ const CHAIN_OPTIONS = [
   { label: 'Arbitrum (ARB)', value: 'ARB' },
 ];
 
-export default function CryptoAndWechatPayment() {
+export default function CryptoAndWechatPayment({ wechatQrSrc }: { wechatQrSrc?: string }) {
   const [selectedChain, setSelectedChain] = useState('ERC20');
   const [copied, setCopied] = useState(false);
 
@@ -38,7 +39,16 @@ export default function CryptoAndWechatPayment() {
         {/* 微信支付 */}
         <div className="flex flex-col items-center bg-white rounded-xl border border-blue-100 shadow p-6">
           <div className="font-bold text-lg mb-2 text-gray-800">Pay via WeChat</div>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=weixin://fake" className="w-32 h-32 rounded-lg border mb-2 bg-gray-100" alt="WeChat QR" />
+          <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-lg border mb-2">
+            <QRCodeSVG
+              value={wechatQrSrc ? wechatQrSrc : 'https://u.wechat.com/EBL9aQu9Xr_Zg4DAmC13LX0?s=3'}
+              size={120}
+              bgColor="#F3F4F6"
+              fgColor="#22c55e"
+              level="H"
+              includeMargin={false}
+            />
+          </div>
           <div className="text-gray-600 text-sm text-center">Add our customer service on WeChat and mention your order number.</div>
           <div className="mt-2 text-xs text-gray-400">WeChat ID: <b>your_wechat_id</b></div>
         </div>

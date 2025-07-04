@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import DashboardLayout from '../../components/DashboardLayout';
 import { FaUpload } from 'react-icons/fa';
 import * as yup from 'yup';
 import { toast } from 'react-toastify';
@@ -12,8 +13,6 @@ const addCourseSchema = yup.object().shape({
   detail: yup.string().required('Detail is required'),
   language: yup.string().required('Language is required'),
   level: yup.number().required('Level is required').typeError('Level is required'),
-  cost_price: yup.string().required('Cost price is required'),
-  display_price: yup.string().required('Display price is required'),
   goal: yup.string().required('Goal is required'),
   duration: yup.number().required('Duration is required').typeError('Duration is required'),
   session_number: yup.number().required('Session number is required').typeError('Session number is required'),
@@ -28,8 +27,6 @@ export default function AddCoursePage() {
     detail: '',
     language: '',
     level: 1,
-    cost_price: '',
-    display_price: '',
     goal: '',
     duration: 0,
     session_number: 0,
@@ -85,8 +82,6 @@ export default function AddCoursePage() {
         detail: addForm.detail,
         language: addForm.language,
         level: Number(addForm.level),
-        cost_price: addForm.cost_price,
-        display_price: addForm.display_price,
         goal: addForm.goal,
         duration: Number(addForm.duration),
         session_number: Number(addForm.session_number),
@@ -113,73 +108,76 @@ export default function AddCoursePage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-10">
-      <div className="flex items-center mb-8">
-        <button type="button" onClick={() => router.push('/tpa/dashboard?tab=my-courses')} className="mr-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium shadow">
-          ← Back to Course List
-        </button>
-        <h2 className="text-2xl font-bold text-gray-800">Add New Course</h2>
-      </div>
-      <form onSubmit={handleAddCourse} className="space-y-6 bg-white rounded-2xl shadow-xl p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Course Name</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} />
-            {addErrors.name && <div className="text-red-500 text-xs mt-1">{addErrors.name}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Cost Price</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.cost_price} onChange={e => setAddForm(f => ({ ...f, cost_price: e.target.value }))} />
-            {addErrors.cost_price && <div className="text-red-500 text-xs mt-1">{addErrors.cost_price}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Introduction</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={addForm.introduction} onChange={e => setAddForm(f => ({ ...f, introduction: e.target.value }))} />
-            {addErrors.introduction && <div className="text-red-500 text-xs mt-1">{addErrors.introduction}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Display Price</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.display_price} onChange={e => setAddForm(f => ({ ...f, display_price: e.target.value }))} />
-            {addErrors.display_price && <div className="text-red-500 text-xs mt-1">{addErrors.display_price}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Goal</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={addForm.goal} onChange={e => setAddForm(f => ({ ...f, goal: e.target.value }))} />
-            {addErrors.goal && <div className="text-red-500 text-xs mt-1">{addErrors.goal}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Duration (minutes)</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.duration} onChange={e => setAddForm(f => ({ ...f, duration: Number(e.target.value) }))} />
-            {addErrors.duration && <div className="text-red-500 text-xs mt-1">{addErrors.duration}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Language</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={addForm.language} onChange={e => setAddForm(f => ({ ...f, language: e.target.value }))} />
-            {addErrors.language && <div className="text-red-500 text-xs mt-1">{addErrors.language}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Session Number</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.session_number} onChange={e => setAddForm(f => ({ ...f, session_number: Number(e.target.value) }))} />
-            {addErrors.session_number && <div className="text-red-500 text-xs mt-1">{addErrors.session_number}</div>}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">Level</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.level} onChange={e => setAddForm(f => ({ ...f, level: Number(e.target.value) }))} />
-            {addErrors.level && <div className="text-red-500 text-xs mt-1">{addErrors.level}</div>}
-          </div>
+    <DashboardLayout activeTab="courses" onTabChange={(tab) => {
+      // 跳转到dashboard主页面并切换tab
+      router.push(`/tpa/dashboard?tab=${tab}`);
+    }}>
+      <div className="max-w-2xl mx-auto py-10">
+        <div className="flex items-center mb-8">
+          <button type="button" onClick={() => router.push('/tpa/dashboard?tab=my-courses')} className="mr-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium shadow">
+            ← Back to Course List
+          </button>
+          <h2 className="text-2xl font-bold text-gray-800">Add New Course</h2>
         </div>
-        {/* course picture单独一行 */}
-        <div>
-          <label className="block text-gray-700 font-medium mb-1">Course Picture</label>
-          <div className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 relative"
-            onClick={handlePictureClick}>
-            {uploading ? (
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            ) : addForm.course_picture ? (
-              <div className="relative group">
-                <img src={addForm.course_picture} alt="preview" className="w-32 h-24 object-cover rounded-md" />
-                <button type="button" onClick={e => { e.stopPropagation(); handleRemovePicture(); }}
-                  className="absolute top-1 right-1 bg-white/80 hover:bg-red-500 hover:text-white text-gray-500 rounded-full p-1 shadow transition-all">
+        <form onSubmit={handleAddCourse} className="space-y-6 bg-white rounded-2xl shadow-xl p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-gray-700 font-medium mb-1">Course Name</label>
+              <input className="w-full border rounded-lg px-3 py-2" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} />
+              {addErrors.name && <div className="text-red-500 text-xs mt-1">{addErrors.name}</div>}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-gray-700 font-medium mb-1">Introduction</label>
+              <input className="w-full border rounded-lg px-3 py-2" value={addForm.introduction} onChange={e => setAddForm(f => ({ ...f, introduction: e.target.value }))} />
+              {addErrors.introduction && <div className="text-red-500 text-xs mt-1">{addErrors.introduction}</div>}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-gray-700 font-medium mb-1">Goal</label>
+              <input className="w-full border rounded-lg px-3 py-2" value={addForm.goal} onChange={e => setAddForm(f => ({ ...f, goal: e.target.value }))} />
+              {addErrors.goal && <div className="text-red-500 text-xs mt-1">{addErrors.goal}</div>}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Level</label>
+              <select className="w-full border rounded-lg px-3 py-2" value={addForm.level} onChange={e => setAddForm(f => ({ ...f, level: Number(e.target.value) }))}>
+                <option value={1}>1 - Easiest</option>
+                <option value={2}>2 - Easy</option>
+                <option value={3}>3 - Medium</option>
+                <option value={4}>4 - Hard</option>
+                <option value={5}>5 - Hardest</option>
+              </select>
+              {addErrors.level && <div className="text-red-500 text-xs mt-1">{addErrors.level}</div>}
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Language</label>
+              <input className="w-full border rounded-lg px-3 py-2" value={addForm.language} onChange={e => setAddForm(f => ({ ...f, language: e.target.value }))} />
+              {addErrors.language && <div className="text-red-500 text-xs mt-1">{addErrors.language}</div>}
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Duration (minutes) / Class</label>
+              <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.duration} onChange={e => setAddForm(f => ({ ...f, duration: Number(e.target.value) }))} />
+              {addErrors.duration && <div className="text-red-500 text-xs mt-1">{addErrors.duration}</div>}
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Session Number</label>
+              <input type="number" className="w-full border rounded-lg px-3 py-2" value={addForm.session_number} onChange={e => setAddForm(f => ({ ...f, session_number: Number(e.target.value) }))} />
+              {addErrors.session_number && <div className="text-red-500 text-xs mt-1">{addErrors.session_number}</div>}
+            </div>
+          </div>
+          {/* course picture单独一行 */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Course Picture</label>
+            <div className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 relative"
+              onClick={handlePictureClick}>
+              {uploading ? (
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              ) : addForm.course_picture ? (
+                <div className="relative group">
+                  <img src={addForm.course_picture} alt="preview" className="w-32 h-24 object-cover rounded-md" />
+                  <button type="button" onClick={e => { e.stopPropagation(); handleRemovePicture(); }}
+                    className="absolute top-1 right-1 bg-white/80 hover:bg-red-500 hover:text-white text-gray-500 rounded-full p-1 shadow transition-all">
                   ×
                 </button>
               </div>
@@ -205,5 +203,6 @@ export default function AddCoursePage() {
         </button>
       </form>
     </div>
+    </DashboardLayout>
   );
 } 

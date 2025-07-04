@@ -70,8 +70,8 @@ type AddCourseRequest struct {
 	Detail        string          `json:"detail" binding:"required"`
 	Language      string          `json:"language" binding:"required"`
 	Level         int             `json:"level" binding:"required"`
-	CostPrice     decimal.Decimal `json:"cost_price" binding:"required"`
-	DisplayPrice  decimal.Decimal `json:"display_price" binding:"required"`
+	CostPrice     decimal.Decimal `json:"cost_price"`
+	DisplayPrice  decimal.Decimal `json:"display_price"`
 	Goal          string          `json:"goal" binding:"required"`
 	Duration      int             `json:"duration" binding:"required"`
 	SessionNumber int             `json:"session_number" binding:"required"`

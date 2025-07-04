@@ -110,7 +110,7 @@ export default function CourseStatus01Panel({ course, params }: { course: any, p
       {/* 操作按钮 */}
       <div className="flex justify-end gap-4 mt-6">
         <button className="px-4 py-2 rounded bg-gray-200" onClick={handleCancel}>Cancel</button>
-        <button className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" onClick={handlePay}>Pay</button>
+        <button className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" onClick={handlePay}>Confirm</button>
       </div>
       {showPayment && <CryptoAndWechatPayment />}
       <ConfirmModal
