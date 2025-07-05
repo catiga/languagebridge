@@ -119,7 +119,6 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
       };
     });
     try {
-      console.log('这个课程', course)
       const res: any = await apiClient.post('/spwapi/auth/course/confirm', {
         course_id: course.id,
         teacher_id: selectedTeacher,
@@ -156,7 +155,6 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
         <div className="flex flex-wrap gap-6 text-gray-600 text-sm">
           <div><b>Language:</b> {course?.language}</div>
           <div><b>Level:</b> {course?.level}</div>
-          <div><b>Price/Week:</b> ${course?.display_price || course?.price_per_week || ''}</div>
           <div><b>Duration:</b> {course?.duration} min</div>
         </div>
       </div>
@@ -184,7 +182,7 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
                   </div>
                   <div className="text-center">
                     <div className="font-bold text-lg text-gray-800">{t.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{t.bio || t.introduction}</div>
+                    <div className="text-xs text-gray-500 mt-1 line-clamp-3">{t.bio || t.introduction}</div>
                   </div>
                   {selectedTeacher === t.id && (
                     <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full shadow">Selected</div>
