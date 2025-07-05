@@ -6,9 +6,7 @@ import { useRouter } from 'next/navigation';
 
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const payOptions = [
-  { value: 1, label: '1 Week' },
   { value: 4, label: '4 Weeks' },
-  { value: 12, label: '12 Weeks' },
 ];
 
 export default function CourseStatus00Panel({ course, params }: { course: any, params: { course_id: string } }) {
@@ -18,7 +16,7 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
   const [selectedTeacher, setSelectedTeacher] = useState<number | null>(null);
   const [slots, setSlots] = useState<{ [day: string]: { enabled: boolean; start: string; end: string } }>({});
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [selectedTimes, setSelectedTimes] = useState<{ [day: string]: string }>({});
+  const [selectedTimes, setSelectedTimes] = useState<{ [day: string]: string[] }>({});
   const [payWeeks, setPayWeeks] = useState(1);
   const [showPay, setShowPay] = useState(false);
   const [periodStartDate, setPeriodStartDate] = useState<string>('');
@@ -104,7 +102,7 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
       toast.error('End date must be after start date');
       return;
     }
-    const selected = Object.entries(selectedTimes).filter(([_, v]) => v);
+    const selected = Object.entries(selectedTimes).flatMap(([day, arr]) => (arr && arr.length ? arr.map(time => [day, time]) : []));
     if (selected.length === 0) {
       toast.error('Please select at least one class time');
       return;
@@ -209,7 +207,7 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
             <input
               type="date"
               className="ml-2 border rounded px-2 py-1"
-              min={getTomorrow()}
+              min={getToday()}
               value={periodStartDate}
               onChange={e => {
                 setPeriodStartDate(e.target.value);
@@ -224,7 +222,7 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
             <input
               type="date"
               className="ml-2 border rounded px-2 py-1"
-              min={periodStartDate ? addDays(periodStartDate, 1) : getTomorrow()}
+              min={periodStartDate ? addDays(periodStartDate, 1) : getToday()}
               value={periodEndDate}
               onChange={e => setPeriodEndDate(e.target.value)}
               disabled={!periodStartDate}
@@ -266,19 +264,29 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
                     {times.map(time => (
                       <button
                         key={time}
-                        className={`px-3 py-1 rounded border ${
-                          selectedTimes[day] === time ? 'bg-blue-600 text-white' : 'bg-gray-100'
-                        }`}
-                        onClick={() =>
-                          setSelectedTimes(prev => ({ ...prev, [day]: time }))
-                        }
+                        className={`px-3 py-1 rounded border ${selectedTimes[day]?.includes(time) ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                        onClick={() => {
+                          setSelectedTimes(prev => {
+                            const prevArr = prev[day] || [];
+                            if (prevArr.includes(time)) {
+                              // 取消选择
+                              return { ...prev, [day]: prevArr.filter(t => t !== time) };
+                            } else {
+                              if (prevArr.length >= 3) {
+                                toast.error('You can select up to 3 time slots per day');
+                                return prev;
+                              }
+                              return { ...prev, [day]: [...prevArr, time] };
+                            }
+                          });
+                        }}
                       >
                         {time}
                       </button>
                     ))}
                     <button
-                      className={`px-3 py-1 rounded border ${!selectedTimes[day] ? 'bg-gray-300' : 'bg-gray-100'}`}
-                      onClick={() => setSelectedTimes(prev => ({ ...prev, [day]: '' }))}
+                      className={`px-3 py-1 rounded border ${!selectedTimes[day]?.length ? 'bg-gray-300' : 'bg-gray-100'}`}
+                      onClick={() => setSelectedTimes(prev => ({ ...prev, [day]: [] }))}
                     >
                       None
                     </button>
@@ -353,9 +361,8 @@ export default function CourseStatus00Panel({ course, params }: { course: any, p
   );
 }
 
-function getTomorrow() {
+function getToday() {
   const d = new Date();
-  d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 function addDays(dateStr: string, days: number) {
