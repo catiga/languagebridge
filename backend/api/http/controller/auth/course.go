@@ -729,10 +729,11 @@ func CourseGetMeetingInfo(c *gin.Context) {
 	}
 
 	if bookTran.Ongoing == 0 {
-		res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
-		res.Msg = "please waiting for teacher start the classroom"
-		c.JSON(http.StatusOK, res)
-		return
+		// res.Code = codes.CODE_ERR_METHOD_UNSUPPORT
+		// res.Msg = "please waiting for teacher start the classroom"
+		// c.JSON(http.StatusOK, res)
+		// return
+		db.Model(&model.CourseBookTrans{}).Where("id = ?", bookTran.ID).Update("ongoing", 1)
 	}
 
 	// roomURI := fmt.Sprintf("https://meet.jit.si/%s_%s_%d", "langbridge", bookTran.BookingNo, bookTran.ID)
