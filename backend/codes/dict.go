@@ -21,6 +21,7 @@ const (
 	CODE_ERR_REPEAT           = 17
 	CODE_ERR_OKX              = 18
 	CODE_ERR_PASSCODE         = 19
+	CODE_ERR_SETTING          = 20
 
 	CODE_BOOKING_CONFLICT = 301
 

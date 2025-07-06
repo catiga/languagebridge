@@ -12,6 +12,7 @@ import (
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"github.com/langbridge/backend/utils"
 )
 
 type UserPlanScheduleResponse struct {
@@ -229,27 +230,66 @@ func AddStageTask(c *gin.Context) {
 
 	var overview model.UserPlanOverview
 	db.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).First(&overview)
-	if overview.UserID != uint64(userID) {
+	if overview.ID == 0 || overview.UserID != uint64(userID) {
 		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
 		res.Msg = "Overview not found"
 		c.JSON(http.StatusOK, res)
 		return
 	}
 
-	m := model.UserPlanSchedule{
-		Content:    req.Content,
-		Note:       req.Note,
-		ExeDate:    req.ExeDate,
-		StartTime:  req.StartTime,
-		EndTime:    req.EndTime,
-		Duration:   req.Duration,
-		Priority:   req.Priority,
-		OverviewID: req.OverviewID,
-		Flag:       0,
-		StudentID:  0,
-		AddTime:    time.Now(),
+	var saveList []model.UserPlanSchedule
+	if req.Repeat {
+		var firstDateStr = req.ExeDate
+		var endDateStr = overview.EndDate
+		if _, err := time.Parse("2006-01-02", endDateStr); err != nil {
+			res.Code = codes.CODE_ERR_SETTING
+			res.Msg = "Can't loop task because overview end date empty"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		for {
+			saveList = append(saveList, model.UserPlanSchedule{
+				Content:    req.Content,
+				Note:       req.Note,
+				ExeDate:    firstDateStr,
+				StartTime:  req.StartTime,
+				EndTime:    req.EndTime,
+				Duration:   req.Duration,
+				Priority:   req.Priority,
+				OverviewID: req.OverviewID,
+				Flag:       0,
+				StudentID:  0,
+				AddTime:    time.Now(),
+			})
+			if firstDateStr == endDateStr {
+				break
+			}
+			var err error
+			firstDateStr, err = utils.GetNextDate(firstDateStr)
+			if err != nil {
+				res.Code = codes.CODE_ERR_SETTING
+				res.Msg = "Invalid repeat date sequence"
+				c.JSON(http.StatusOK, res)
+				return
+			}
+		}
+	} else {
+		saveList = append(saveList, model.UserPlanSchedule{
+			Content:    req.Content,
+			Note:       req.Note,
+			ExeDate:    req.ExeDate,
+			StartTime:  req.StartTime,
+			EndTime:    req.EndTime,
+			Duration:   req.Duration,
+			Priority:   req.Priority,
+			OverviewID: req.OverviewID,
+			Flag:       0,
+			StudentID:  0,
+			AddTime:    time.Now(),
+		})
 	}
-	db.Save(&m)
+
+	db.CreateInBatches(&saveList, 30)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

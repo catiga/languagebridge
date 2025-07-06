@@ -93,6 +93,12 @@ export default function StudyPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [addTaskDate, setAddTaskDate] = useState<string | null>(null);
 
+  // 只显示当前阶段目标下的任务
+  const filteredTasks = tasks.filter(t => t.stageGoalId === currentStageGoalId);
+  const currentStageGoal = stageGoals.find(g => g.id === currentStageGoalId) || null;
+
+  // useEffect等其它逻辑必须在currentStageGoal声明之后
+
   // 拉取阶段目标和任务
   useEffect(() => {
     let ignore = false;
@@ -134,6 +140,18 @@ export default function StudyPlannerPage() {
     return () => { ignore = true; };
   }, []);
 
+  // 切换到Day视图时，selectedDate自动设为周期内的今天或startDate
+  useEffect(() => {
+    if (view === 'day' && currentStageGoal) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (today >= currentStageGoal.startDate && today <= currentStageGoal.endDate) {
+        setSelectedDate(today);
+      } else {
+        setSelectedDate(currentStageGoal.startDate);
+      }
+    }
+  }, [view, currentStageGoal]);
+
   // 任务数据增加stageGoalId
   // const [tasks, setTasks] = useState(dummyTasks.map(t => ({ ...t, stageGoalId: dummyStageGoals[0].id })));
   // const [showAdd, setShowAdd] = useState(false);
@@ -146,10 +164,6 @@ export default function StudyPlannerPage() {
   const deleteTask = (id: number) => {
     setTasks(ts => ts.filter(t => t.id !== id));
   };
-
-  // 只显示当前阶段目标下的任务
-  const filteredTasks = tasks.filter(t => t.stageGoalId === currentStageGoalId);
-  const currentStageGoal = stageGoals.find(g => g.id === currentStageGoalId) || null;
 
   // 添加阶段目标
   const handleAddStageGoal = (goal: Omit<StageGoal, 'id'>) => {
@@ -234,13 +248,23 @@ export default function StudyPlannerPage() {
               tasks={filteredTasks}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-              onAddTask={date => setAddTaskDate(date)}
+              onAddTask={(date: string) => setAddTaskDate(date)}
               periodStart={currentStageGoal.startDate}
               periodEnd={currentStageGoal.endDate}
             />
           )}
           {view === "week" && <WeekView tasks={filteredTasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
-          {view === "day" && <DayView tasks={filteredTasks} selectedDate={selectedDate} setTasks={setTasks} updateTaskStatus={updateTaskStatus} deleteTask={deleteTask} />}
+          {view === "day" && (
+            <DayView
+              tasks={filteredTasks}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              periodStart={currentStageGoal?.startDate}
+              periodEnd={currentStageGoal?.endDate}
+              onUpdateTask={(updatedTask: any) => setTasks(ts => ts.map(t => t.id === updatedTask.id ? updatedTask : t))}
+              onDeleteTask={(id: number) => setTasks(ts => ts.filter(t => t.id !== id))}
+            />
+          )}
         </div>
         {/* Statistics */}
         <div className="mt-8">
@@ -287,6 +311,17 @@ function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStar
   if (days.length === 0) {
     return <div className="text-gray-400 text-center py-8">No days in this period</div>;
   }
+  // 任务状态颜色映射
+  const statusColor: Record<string, string> = {
+    '00': 'text-gray-500', // create
+    '10': 'text-blue-500', // ongoing
+    '20': 'text-orange-500', // unfinished
+    '50': 'text-green-600', // fully complete
+    '51': 'text-yellow-500', // a few complete
+    '52': 'text-teal-500', // mostly complete
+    '53': 'text-purple-500', // just partially complete
+    '54': 'text-pink-500', // alternate complete
+  };
   // 计算首日是周几
   const firstDay = new Date(days[0]).getDay();
   const firstDayIdx = (firstDay + 6) % 7; // 0=Mon
@@ -310,10 +345,14 @@ function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStar
               onClick={() => { setSelectedDate(date); onAddTask(date); }}
             >
               <span className="font-semibold">{Number(date.slice(-2))}</span>
-              <span className="text-xs mt-1">{dayTasks.length > 0 ? `${dayTasks.length} tasks` : ""}</span>
-              <span className="text-xs mt-1">
-                {done === dayTasks.length && dayTasks.length > 0 ? "✅" : dayTasks.length > 0 ? "🕒" : ""}
-              </span>
+              <div className="flex flex-col gap-1 mt-1 w-full">
+                {dayTasks.map((t: any) => (
+                  <div key={t.id} className="flex items-center text-xs w-full">
+                    <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
+                    <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
             </button>
           );
         })}
@@ -333,6 +372,10 @@ function WeekView({ tasks, selectedDate, setSelectedDate }: any) {
     d.setDate(monday.getDate() + i);
     return d.toISOString().slice(0, 10);
   });
+  // 任务状态颜色映射
+  const statusColor: Record<string, string> = {
+    '00': 'text-gray-500', '10': 'text-blue-500', '20': 'text-orange-500', '50': 'text-green-600', '51': 'text-yellow-500', '52': 'text-teal-500', '53': 'text-purple-500', '54': 'text-pink-500',
+  };
   return (
     <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow">
       <div className="flex justify-between mb-2">
@@ -347,9 +390,9 @@ function WeekView({ tasks, selectedDate, setSelectedDate }: any) {
             <div key={date} className="flex-1 min-h-[80px] bg-white rounded-lg shadow p-2 flex flex-col gap-2">
               {dayTasks.length === 0 ? <div className="text-xs text-gray-300 text-center">No tasks</div> :
                 dayTasks.map((t: any) => (
-                  <div key={t.id} className="flex items-center gap-2 text-xs rounded px-2 py-1 border border-gray-100 bg-blue-50">
-                    <span>{statusMap[t.status as keyof typeof statusMap]?.emoji}</span>
-                    <span className="font-semibold">{t.title}</span>
+                  <div key={t.id} className="flex items-center text-xs w-full">
+                    <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
+                    <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
                   </div>
                 ))}
             </div>
@@ -360,30 +403,165 @@ function WeekView({ tasks, selectedDate, setSelectedDate }: any) {
   );
 }
 
-function DayView({ tasks, selectedDate, setTasks, updateTaskStatus, deleteTask }: any) {
+function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd, onUpdateTask, onDeleteTask }: any) {
   const dayTasks = tasks.filter((t: any) => t.date === selectedDate);
+  const today = new Date().toISOString().slice(0, 10);
+  const canEdit = selectedDate <= today; // 今天及以前的任务可以编辑
+  
+  // 任务状态颜色映射
+  const statusColor: Record<string, string> = {
+    '00': 'text-gray-500', '10': 'text-blue-500', '20': 'text-orange-500', '50': 'text-green-600', '51': 'text-yellow-500', '52': 'text-teal-500', '53': 'text-purple-500', '54': 'text-pink-500',
+  };
+  
+  // 状态选项
+  const statusOptions = [
+    { value: '00', label: 'Create' },
+    { value: '10', label: 'Ongoing' },
+    { value: '20', label: 'Unfinished' },
+    { value: '50', label: 'Fully complete' },
+    { value: '51', label: 'A few complete' },
+    { value: '52', label: 'Mostly complete' },
+    { value: '53', label: 'Just partially complete' },
+    { value: '54', label: 'Alternate complete' },
+  ];
+  
+  const [editingTask, setEditingTask] = useState<any>(null);
+  
   return (
     <div>
-      <div className="text-lg font-bold mb-4">Tasks for {selectedDate}</div>
+      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+        <div className="text-lg font-bold">Tasks for</div>
+        <input
+          type="date"
+          className="border rounded px-3 py-2"
+          value={selectedDate}
+          min={periodStart}
+          max={periodEnd}
+          onChange={e => setSelectedDate(e.target.value)}
+        />
+      </div>
       {dayTasks.length === 0 ? (
         <div className="text-gray-400">No tasks</div>
       ) : (
         <ul className="space-y-4">
           {dayTasks.map((t: any) => (
-            <li key={t.id} className="rounded-xl bg-white shadow p-4 flex items-center gap-4">
-              <span className="text-2xl">{statusMap[t.status as keyof typeof statusMap]?.emoji}</span>
-              <div className="flex-1">
-                <div className="font-bold text-lg">{t.title}</div>
-                <div className="text-xs text-gray-500 mt-1">Category: {t.category} | Priority: {t.priority}</div>
-                <div className="text-xs text-gray-400 mt-1">Status: {statusMap[t.status as keyof typeof statusMap]?.label}</div>
-              </div>
-              <button className="px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200" onClick={() => updateTaskStatus(t.id, nextStatus(t.status))}>Change Status</button>
-              <button className="px-3 py-1 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">Edit</button>
-              <button className="px-3 py-1 rounded bg-red-100 text-red-500 hover:bg-red-200" onClick={() => deleteTask(t.id)}>Delete</button>
+            <li key={t.id} className="rounded-xl bg-white shadow p-4 flex flex-col md:flex-row md:items-center gap-2">
+              <span className="inline-block w-16 text-left text-gray-400">{t.start_time || '-'}</span>
+              <span className={`flex-1 font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
+              {t.note && <span className="text-xs text-gray-500 ml-2">{t.note}</span>}
+              {canEdit && (
+                <div className="flex gap-2">
+                  <button 
+                    className="px-3 py-1 rounded bg-blue-100 text-blue-700 text-sm hover:bg-blue-200"
+                    onClick={() => setEditingTask(t)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="px-3 py-1 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200"
+                    onClick={() => onDeleteTask(t.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
       )}
+      
+      {editingTask && (
+        <EditTaskModal
+          task={editingTask}
+          statusOptions={statusOptions}
+          onClose={() => setEditingTask(null)}
+          onSubmit={(updatedTask: any) => {
+            onUpdateTask(updatedTask);
+            setEditingTask(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// 新增编辑任务弹窗组件
+function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
+  const [status, setStatus] = useState(task.status || '00');
+  const [note, setNote] = useState(task.note || '');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    try {
+      // 这里可以调用后端接口更新任务状态和备注
+      // await apiClient.post('/spwapi/auth/planner/task/update', {
+      //   id: task.id,
+      //   status,
+      //   note
+      // });
+      
+      onSubmit({
+        ...task,
+        status,
+        note
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to update task');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <form className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative" onSubmit={handleSubmit}>
+        <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold mb-4 text-blue-700">Edit Task</h2>
+        {error && <div className="mb-2 text-red-500 text-sm">{error}</div>}
+        
+        <div className="mb-4">
+          <div className="text-lg font-semibold text-gray-800">{task.title}</div>
+          <div className="text-sm text-gray-500">{task.date} {task.start_time}</div>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          <div>
+            <label className="block font-semibold mb-1">Status</label>
+            <select 
+              className="w-full border rounded px-3 py-2" 
+              value={status} 
+              onChange={e => setStatus(e.target.value)}
+            >
+              {statusOptions.map((option: any) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">Note</label>
+            <textarea 
+              className="w-full border rounded px-3 py-2" 
+              value={note} 
+              onChange={e => setNote(e.target.value)} 
+              rows={3} 
+              maxLength={200}
+              placeholder="Add notes about this task..."
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-end gap-4">
+          <button type="button" className="px-4 py-2 rounded bg-gray-200" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
+            Update
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
