@@ -13,6 +13,7 @@ const menu = [
   { key: 'courses', label: 'My Courses', icon: <FaBookOpen />, path: '/profile/courses', color: 'from-green-400 to-green-300' },
   { key: 'students', label: 'Students', icon: <FaUsers />, path: '/profile/students', color: 'from-blue-400 to-green-300' },
   { key: 'schedule', label: 'Schedule', icon: <FaCalendarAlt />, path: '/profile/schedule', color: 'from-yellow-400 to-yellow-300' },
+  { key: 'study-planner', label: 'Study Planner', icon: <span className="text-2xl">📅</span>, path: '/profile/study-planner', color: 'from-blue-300 to-purple-200' },
   { key: 'ai-buddy', label: 'AI Buddy', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a2 2 0 110 4 2 2 0 010-4zm0 12a8 8 0 01-6.32-3.16c.03-2.67 4-4.14 6.32-4.14s6.29 1.47 6.32 4.14A8 8 0 0112 20z" /></svg>, path: '/profile/ai-buddy', color: 'from-yellow-300 to-yellow-200' },
   { key: 'setting', label: 'Settings', icon: <FaCog />, path: '/profile/setting', color: 'from-purple-400 to-purple-300' },
 ];

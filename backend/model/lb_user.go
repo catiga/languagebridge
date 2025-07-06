@@ -173,3 +173,39 @@ func (auth AuthMessage) Format() string {
 	)
 	return data
 }
+
+type UserPlanOverview struct {
+	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint64    `gorm:"column:user_id" json:"user_id"`
+	StudentID   uint64    `gorm:"column:student_id" json:"student_id"`
+	Title       string    `gorm:"column:title" json:"title"`
+	Description string    `gorm:"column:description" json:"description"`
+	Goal        string    `gorm:"column:goal" json:"goal"`
+	StartDate   string    `gorm:"column:start_date" json:"start_date"`
+	EndDate     string    `gorm:"column:end_date" json:"end_date"`
+	AddTime     time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag        int       `gorm:"column:flag" json:"flag"`
+}
+
+func (UserPlanOverview) TableName() string {
+	return "user_plan_overview"
+}
+
+type UserPlanSchedule struct {
+	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	OverviewID uint64    `gorm:"column:overview_id" json:"overview_id"`
+	StudentID  uint64    `gorm:"column:student_id" json:"student_id"`
+	ExeDate    string    `gorm:"column:exe_date" json:"exe_date"`
+	StartTime  string    `gorm:"column:start_time" json:"start_time"`
+	EndTime    string    `gorm:"column:end_time" json:"end_time"`
+	Duration   int       `gorm:"column:duration" json:"duration"`
+	Priority   int       `gorm:"column:priority" json:"priority"`
+	Content    string    `gorm:"column:content" json:"content"`
+	Note       string    `gorm:"column:note" json:"note"`
+	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag       int       `gorm:"column:flag" json:"flag"`
+}
+
+func (UserPlanSchedule) TableName() string {
+	return "user_plan_schedule"
+}
