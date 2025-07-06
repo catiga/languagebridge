@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FaUserCircle } from 'react-icons/fa';
 import Image from 'next/image';
+import Cookies from 'js-cookie';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -102,10 +103,18 @@ export default function Navbar() {
     localStorage.removeItem('userInfo');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('userInfo');
-    if (typeof window !== 'undefined' && window.Cookies) {
-      window.Cookies.remove('token', { path: '/' });
-      window.Cookies.remove('userInfo', { path: '/' });
-    }
+    // 兼容多路径和domain的cookie清理
+    const cookieOptionsList = [
+      {},
+      { path: '/' },
+      { path: '/', domain: window.location.hostname },
+      { path: '/', domain: '.' + window.location.hostname },
+    ];
+    ['token', 'userInfo'].forEach(key => {
+      cookieOptionsList.forEach(opt => {
+        Cookies.remove(key, opt);
+      });
+    });
     setMenuOpen(false);
     window.dispatchEvent(new Event('userChanged'));
     router.push('/');

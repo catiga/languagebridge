@@ -5,26 +5,8 @@ import { useRef } from "react";
 import { apiClient } from '../../utils/api';
 import * as yup from 'yup';
 
-const dummyTasks = [
-  { id: 1, title: "Finish KET grammar exercises", date: "2024-06-10", category: "Writing", priority: "High", status: "not_started" },
-  { id: 2, title: "Listening practice 30min", date: "2024-06-10", category: "Listening", priority: "Medium", status: "done" },
-  { id: 3, title: "Memorize 20 words", date: "2024-06-11", category: "Vocabulary", priority: "Low", status: "partial" },
-  { id: 4, title: "Read a short story", date: "2024-06-12", category: "Reading", priority: "High", status: "little" },
-  { id: 5, title: "Practice speaking", date: "2024-06-12", category: "Speaking", priority: "Medium", status: "not_done" },
-  { id: 6, title: "Review notes", date: "2024-06-13", category: "Review", priority: "Low", status: "reserved" },
-  { id: 7, title: "Write a diary", date: "2024-06-14", category: "Writing", priority: "High", status: "done" },
-  { id: 8, title: "Grammar quiz", date: "2024-06-15", category: "Grammar", priority: "Medium", status: "not_started" },
-  { id: 9, title: "Watch English video", date: "2024-06-15", category: "Listening", priority: "Low", status: "partial" },
-  { id: 10, title: "Group discussion", date: "2024-06-16", category: "Speaking", priority: "High", status: "done" },
-  { id: 11, title: "Mock test", date: "2024-06-16", category: "Test", priority: "High", status: "not_done" },
-  { id: 12, title: "Vocabulary review", date: "2024-06-17", category: "Vocabulary", priority: "Medium", status: "done" },
-];
-
-const courseOptions = [
-  { id: 1, name: "PET English Exam" },
-  { id: 2, name: "KET Grammar" },
-  { id: 3, name: "IELTS Speaking" },
-];
+// 课程选项如需后续对接接口再补充
+const courseOptions: any[] = [];
 const categoryOptions = ["Listening", "Writing", "Reading", "Speaking", "Vocabulary", "Grammar", "Test", "Review"];
 const priorityOptions = ["High", "Medium", "Low"];
 const statusOptions = [
@@ -53,7 +35,6 @@ const statusMap = {
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// 新增阶段目标类型和dummy数据
 interface StageGoal {
   id: number;
   title: string;
@@ -63,32 +44,13 @@ interface StageGoal {
   endDate: string;
 }
 
-const dummyStageGoals: StageGoal[] = [
-  {
-    id: 1,
-    title: "Summer English Sprint",
-    description: "Focus on improving listening and writing skills.",
-    goal: "Finish 20 listening practices and 10 essays.",
-    startDate: "2024-06-01",
-    endDate: "2024-06-30"
-  },
-  {
-    id: 2,
-    title: "Exam Preparation",
-    description: "Prepare for PET exam.",
-    goal: "Complete all PET mock tests.",
-    startDate: "2024-07-01",
-    endDate: "2024-07-31"
-  }
-];
-
 export default function StudyPlannerPage() {
   const [view, setView] = useState("month");
-  const [selectedDate, setSelectedDate] = useState("2024-06-10");
-  const [stageGoals, setStageGoals] = useState<StageGoal[]>(dummyStageGoals);
-  const [currentStageGoalId, setCurrentStageGoalId] = useState<number | null>(stageGoals.length > 0 ? stageGoals[0].id : null);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [stageGoals, setStageGoals] = useState<StageGoal[]>([]);
+  const [currentStageGoalId, setCurrentStageGoalId] = useState<number | null>(null);
   const [showAddStage, setShowAddStage] = useState(false);
-  const [tasks, setTasks] = useState(dummyTasks.map(t => ({ ...t, stageGoalId: dummyStageGoals[0].id })));
+  const [tasks, setTasks] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(true);
   const [addTaskDate, setAddTaskDate] = useState<string | null>(null);
@@ -105,7 +67,7 @@ export default function StudyPlannerPage() {
     setLoading(true);
     apiClient.get('/spwapi/auth/planner/pull').then((res: any) => {
       if (ignore) return;
-      if (res && res.code === 0 && Array.isArray(res.data)) {
+      if (res && res.code === 0 && Array.isArray(res.data) && res.data.length > 0) {
         // 字段名转换
         const goals = res.data.map((g: any) => ({
           ...g,
@@ -113,11 +75,7 @@ export default function StudyPlannerPage() {
           endDate: g.end_date,
         }));
         setStageGoals(goals);
-        if (goals.length > 0) {
-          setCurrentStageGoalId(goals[0].id);
-        } else {
-          setCurrentStageGoalId(null);
-        }
+        setCurrentStageGoalId(goals[0].id);
         // 合并所有tasks
         const allTasks: any[] = [];
         for (const g of res.data) {
@@ -133,6 +91,18 @@ export default function StudyPlannerPage() {
           }
         }
         setTasks(allTasks);
+        // 默认选中周期内的今天或startDate
+        const today = new Date().toISOString().slice(0, 10);
+        if (today >= goals[0].startDate && today <= goals[0].endDate) {
+          setSelectedDate(today);
+        } else {
+          setSelectedDate(goals[0].startDate);
+        }
+      } else {
+        setStageGoals([]);
+        setCurrentStageGoalId(null);
+        setTasks([]);
+        setSelectedDate("");
       }
     }).finally(() => {
       if (!ignore) setLoading(false);
@@ -182,7 +152,7 @@ export default function StudyPlannerPage() {
     setShowAdd(false);
   };
 
-  // 若无阶段目标，显示创建表单
+  // 加载中
   if (loading) {
     return (
       <ProfileLayout>
@@ -191,12 +161,15 @@ export default function StudyPlannerPage() {
     );
   }
 
+  // 没有任何阶段目标
   if (stageGoals.length === 0) {
     return (
       <ProfileLayout>
         <div className="max-w-xl mx-auto mt-24 bg-white/90 rounded-3xl shadow-xl p-8 flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-4 text-blue-700">Create Your First Stage Goal</h2>
-          <AddStageGoalModal onClose={() => {}} onSubmit={handleAddStageGoal} />
+          <h2 className="text-2xl font-bold mb-4 text-blue-700">No Study Plan Found</h2>
+          <div className="text-gray-600 mb-6 text-center">You have not created any study plan yet.<br/>Click the button below to create your first stage goal and start your learning journey!</div>
+          <button className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold text-lg shadow hover:bg-blue-700 transition" onClick={() => setShowAddStage(true)}>+ Create Stage Goal</button>
+          {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
         </div>
       </ProfileLayout>
     );
