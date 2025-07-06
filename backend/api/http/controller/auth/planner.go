@@ -25,6 +25,7 @@ type UserPlanScheduleResponse struct {
 	Content   string    `json:"content"`
 	Note      string    `json:"note"`
 	AddTime   time.Time `json:"add_time"`
+	Status    string    `json:"status"`
 }
 
 type UserPlanOverviewResponse struct {
@@ -170,6 +171,7 @@ func PulltageGoal(c *gin.Context) {
 						Content:   s.Content,
 						Note:      s.Note,
 						AddTime:   s.AddTime,
+						Status:    s.Status,
 					})
 				}
 			}

@@ -204,6 +204,7 @@ type UserPlanSchedule struct {
 	Note       string    `gorm:"column:note" json:"note"`
 	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
 	Flag       int       `gorm:"column:flag" json:"flag"`
+	Status     string    `gorm:"column:status" json:"status"`
 }
 
 func (UserPlanSchedule) TableName() string {
