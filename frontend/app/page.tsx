@@ -300,7 +300,7 @@ export default function Home() {
             LangBridge pairs you with elite educators and a personal AI co-pilot that analyzes your speech, pinpoints your weaknesses, and creates your unique path to fluency.
           </p>
           <button className="bg-cyan-500 text-white px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-cyan-400 transform hover:scale-105 transition-all duration-300">
-            Find Your Perfect Teacher
+            Meet Your English Mentor
           </button>
         </div>
       </section>
