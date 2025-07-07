@@ -22,6 +22,8 @@ type MemberFormRequest struct {
 	Birthday    string `json:"birthday"`
 	Personality string `json:"personality"`
 	Character   string `json:"character"`
+	LoginID     string `json:"login_id"`
+	Password    string `json:"password"`
 }
 
 type UserSetting struct {
@@ -97,6 +99,13 @@ func FetchMemberAdd(c *gin.Context) {
 
 	if req.ID > 0 {
 		db.Model(&model.UserMember{}).Where("user_id = ? and flag != ? and id = ?", userID, -1, req.ID).First(&member)
+	}
+
+	if len(req.LoginID) > 0 {
+		member.LoginID = req.LoginID
+	}
+	if len(req.Password) > 0 {
+		member.Password = req.Password
 	}
 
 	if member.ID > 0 {

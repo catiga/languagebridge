@@ -15,6 +15,8 @@ interface Member {
   gender: number;
   birthday: string;
   flag: number;
+  login_id?: string;
+  password?: string;
 }
 
 const genderMap: Record<number, string> = {
@@ -58,14 +60,19 @@ const memberSchema = yup.object({
   gender: yup.number().oneOf([0, 1, 2]).required('Gender is required'),
   rel_type: yup.string().oneOf(["100", "101", "200", "900"]).required('Relationship is required'),
   birthday: yup.string().matches(/^\d{4}-\d{2}-\d{2}$/, 'Birthday must be in yyyy-MM-dd format').required('Birthday is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  rel_desc: yup.string().required('Relationship description is required'),
+  email: yup.string().email('Invalid email'),
+  rel_desc: yup.string(),
   personality: yup.string().required('Personality is required'),
   character: yup.string().required('Character is required'),
+  login_id: yup.string(),
+  password: yup.string(),
 });
 
 // Define the form type
-type MemberFormType = InferType<typeof memberSchema>;
+type MemberFormType = Omit<InferType<typeof memberSchema>, 'login_id' | 'password'> & {
+  login_id?: string;
+  password?: string;
+};
 
 // API response type
 interface ApiResponse<T> {
@@ -96,6 +103,8 @@ export default function StudentList({ onLoading }: MemberListProps) {
     rel_desc: '',
     personality: '',
     character: '',
+    login_id: '',
+    password: '',
   };
 
   const {
@@ -104,11 +113,11 @@ export default function StudentList({ onLoading }: MemberListProps) {
     reset,
     formState: { errors, isSubmitting }
   } = useForm<MemberFormType>({
-    resolver: yupResolver(memberSchema),
+    resolver: yupResolver(memberSchema) as any,
     defaultValues: {
       ...defaultMemberForm,
       rel_type: '100' as MemberFormType['rel_type'],
-    }
+    } as MemberFormType
   });
 
   useEffect(() => {
@@ -151,6 +160,8 @@ export default function StudentList({ onLoading }: MemberListProps) {
       rel_desc: member.rel_desc || '',
       personality: member.personality || '',
       character: member.character || '',
+      login_id: member.login_id || '',
+      password: '', // 编辑时密码不回显
     });
     setShowModal(true);
     setShowModalEdit(true);
@@ -193,6 +204,8 @@ export default function StudentList({ onLoading }: MemberListProps) {
       birthday: data.birthday,
       personality: data.personality,
       character: data.character,
+      login_id: data.login_id,
+      password: data.password,
     };
     try {
       const res = await apiClient.post<ApiResponse<any>>('/spwapi/auth/profile/member/add', payload);
@@ -315,6 +328,19 @@ export default function StudentList({ onLoading }: MemberListProps) {
                   {errors.character && <p className="text-red-500 text-xs mt-1">{errors.character.message as string}</p>}
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelStyle}>Login ID</label>
+                  <input type="text" {...register('login_id')} className={inputStyle} />
+                  {errors.login_id && <p className="text-red-500 text-xs mt-1">{errors.login_id.message as string}</p>}
+                </div>
+                <div>
+                  <label className={labelStyle}>Password</label>
+                  <input type="password" {...register('password')} className={inputStyle} autoComplete="new-password" />
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message as string}</p>}
+                </div>
+              </div>
+              <div className="text-xs text-blue-600 mt-2 mb-1 font-semibold">If you set both Login ID and Password, the student can log in to the student portal. If left blank, login is not enabled for this student.</div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" onClick={() => setShowModal(false)} disabled={isSubmitting}>
                   Cancel
