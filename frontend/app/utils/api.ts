@@ -1,5 +1,5 @@
 import CryptoJS from 'crypto-js';
-import { getEnvConfig } from '../config/env';
+import { getEnvConfig, fallbackApiClient } from '../config/env';
 import Cookies from 'js-cookie';
 import { toast } from 'react-toastify';
 
@@ -8,13 +8,11 @@ interface RequestOptions extends RequestInit {
 }
 
 class ApiClient {
-  private baseUrl: string;
   private appKey: string;
   private appId: string;
 
   constructor() {
     const config = getEnvConfig();
-    this.baseUrl = config.API_BASE_URL;
     this.appKey = config.APP_KEY;
     this.appId = config.APP_ID;
   }
@@ -55,61 +53,66 @@ class ApiClient {
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { params, ...fetchOptions } = options;
-    let url = `${this.baseUrl}${endpoint}`;
+    let url = endpoint;
 
     if (params) {
       const queryString = new URLSearchParams(params).toString();
       url += `?${queryString}`;
     }
 
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers: {
-        ...this.getHeaders(),
-        ...options.headers,
-      },
-    });
+    try {
+      const response = await fallbackApiClient.fetch(url, {
+        ...fetchOptions,
+        headers: {
+          ...this.getHeaders(),
+          ...options.headers,
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (result && result.code === 15) {
-      if (typeof window !== 'undefined') {
-        toast.error(result.msg || 'Please login');
-        if (window.location.pathname.startsWith('/tpa')) {
-          // 清除老师端缓存
-          localStorage.removeItem('teacherToken');
-          localStorage.removeItem('teacherInfo');
-          localStorage.removeItem('userType');
-          localStorage.removeItem('teacherLoginName');
-          localStorage.removeItem('teacherRemember');
-          sessionStorage.removeItem('teacherToken');
-          sessionStorage.removeItem('teacherInfo');
-          sessionStorage.removeItem('userType');
-          sessionStorage.removeItem('teacherLoginName');
-          sessionStorage.removeItem('teacherRemember');
-          Cookies.remove('teacherToken', { path: '/' });
-          Cookies.remove('teacherInfo', { path: '/' });
-          Cookies.remove('userType', { path: '/' });
-          Cookies.remove('teacherLoginName', { path: '/' });
-          Cookies.remove('teacherRemember', { path: '/' });
-          window.location.href = '/tpa/login';
-        } else {
-          // 清除用户端缓存
-          localStorage.removeItem('token');
-          localStorage.removeItem('userInfo');
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('userInfo');
-          Cookies.remove('token', { path: '/' });
-          Cookies.remove('userInfo', { path: '/' });
-          window.location.href = '/login';
+      const result = await response.json();
+      
+      if (result && result.code === 15) {
+        if (typeof window !== 'undefined') {
+          toast.error(result.msg || 'Please login');
+          if (window.location.pathname.startsWith('/tpa')) {
+            // 清除老师端缓存
+            localStorage.removeItem('teacherToken');
+            localStorage.removeItem('teacherInfo');
+            localStorage.removeItem('userType');
+            localStorage.removeItem('teacherLoginName');
+            localStorage.removeItem('teacherRemember');
+            sessionStorage.removeItem('teacherToken');
+            sessionStorage.removeItem('teacherInfo');
+            sessionStorage.removeItem('userType');
+            sessionStorage.removeItem('teacherLoginName');
+            sessionStorage.removeItem('teacherRemember');
+            Cookies.remove('teacherToken', { path: '/' });
+            Cookies.remove('teacherInfo', { path: '/' });
+            Cookies.remove('userType', { path: '/' });
+            Cookies.remove('teacherLoginName', { path: '/' });
+            Cookies.remove('teacherRemember', { path: '/' });
+            window.location.href = '/tpa/login';
+          } else {
+            // 清除用户端缓存
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('userInfo');
+            Cookies.remove('token', { path: '/' });
+            Cookies.remove('userInfo', { path: '/' });
+            window.location.href = '/login';
+          }
         }
+        throw new Error(result.msg || 'Please login');
       }
-      throw new Error(result.msg || 'Please login');
+      
+      return result;
+    } catch (error) {
+      // 如果是网络错误，fallbackApiClient已经处理了重试逻辑
+      // 这里只需要处理业务逻辑错误
+      console.error('API request failed:', error);
+      throw error;
     }
-    return result;
   }
 
   public async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
@@ -132,6 +135,21 @@ class ApiClient {
 
   public async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  // 获取当前活跃的API地址（用于调试）
+  public getCurrentApiUrl(): string {
+    return fallbackApiClient.getCurrentUrl();
+  }
+
+  // 获取失败的API地址列表（用于监控）
+  public getFailedApiUrls(): string[] {
+    return fallbackApiClient.getFailedUrls();
+  }
+
+  // 重置故障转移状态
+  public resetFallback(): void {
+    fallbackApiClient.reset();
   }
 }
 
