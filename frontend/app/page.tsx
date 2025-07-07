@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { FaRobot, FaCubes, FaUsers, FaUserPlus, FaBrain, FaChalkboardTeacher, FaCertificate, FaUserTie, FaCogs, FaCheckCircle, FaHourglassHalf, FaCube, FaArrowRight } from 'react-icons/fa';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 // New Mock Data reflecting the updated narrative
 const communityStories = [
@@ -299,9 +300,11 @@ export default function Home() {
           <p className="text-xl max-w-3xl mx-auto mb-10 text-gray-300 animate-fadeInUp">
             LangBridge pairs you with elite educators and a personal AI co-pilot that analyzes your speech, pinpoints your weaknesses, and creates your unique path to fluency.
           </p>
-          <button className="bg-cyan-500 text-white px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-cyan-400 transform hover:scale-105 transition-all duration-300">
-            Meet Your English Mentor
-          </button>
+          <Link href="/register">
+            <span className="inline-block bg-cyan-500 text-white px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-cyan-400 transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              Meet Your English Mentor
+            </span>
+          </Link>
         </div>
       </section>
 
