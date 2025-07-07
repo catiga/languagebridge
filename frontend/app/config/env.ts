@@ -13,7 +13,7 @@ export const ENV: Record<string, EnvConfig> = {
   },
   production: {
     API_BASE_URLS: [
-      'https://api.langbridge.one',
+      'https://api.langbridge1.one',
       'https://langbridge.one/api', // 备用API地址
       // 可以继续添加更多备用地址
     ],
