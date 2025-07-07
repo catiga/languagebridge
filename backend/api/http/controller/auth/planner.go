@@ -115,7 +115,7 @@ func CreateStageGoal(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func PulltageGoal(c *gin.Context) {
+func PullStageGoal(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
 
@@ -294,6 +294,88 @@ func AddStageTask(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}
+
+func StatStageGoal(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overviewIdStr, exist := c.GetQuery("overview_id")
+	overview_id := int64(0)
+	if !exist {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select overview"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overview_id, _ = strconv.ParseInt(overviewIdStr, 10, 64)
+
+	db := system.GetDb()
+
+	var userOverView model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview_id).First(&userOverView)
+	if userOverView.ID == 0 || userOverView.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Study planner not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	var statResult []model.UserPlanSchedule
+	db.Model(&model.UserPlanSchedule{}).Where("overview_id = ? and flag != ?", userOverView.ID, -1).Find(&statResult)
+
+	type StatStruct struct {
+		Create            int
+		Ongoing           int
+		Unfinished        int
+		FullyComplete     int
+		FewComplete       int
+		MostlyComplete    int
+		PartiallyComplete int
+		LatelyComplete    int
+	}
+	var stat StatStruct
+	for _, v := range statResult {
+		switch v.Status {
+		case common.StudyPlannerScheduleCreate:
+			stat.Create += 1
+		case common.StudyPlannerScheduleOngoing:
+			stat.Ongoing += 1
+		case common.StudyPlannerScheduleUnfinished:
+			stat.Unfinished += 1
+		case common.StudyPlannerScheduleFullyComplete:
+			stat.FullyComplete += 1
+		case common.StudyPlannerScheduleFewComplete:
+			stat.FewComplete += 1
+		case common.StudyPlannerScheduleMostlyComplete:
+			stat.MostlyComplete += 1
+		case common.StudyPlannerSchedulePartiallyComplete:
+			stat.PartiallyComplete += 1
+		case common.StudyPlannerScheduleLatelyComplete:
+			stat.LatelyComplete += 1
+		}
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = stat
 
 	c.JSON(http.StatusOK, res)
 }

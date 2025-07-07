@@ -54,6 +54,8 @@ export default function StudyPlannerPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(true);
   const [addTaskDate, setAddTaskDate] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // 只显示当前阶段目标下的任务
   const filteredTasks = tasks.filter(t => t.stageGoalId === currentStageGoalId);
@@ -98,17 +100,45 @@ export default function StudyPlannerPage() {
         } else {
           setSelectedDate(goals[0].startDate);
         }
+        // 拉取统计数据
+        fetchStats(goals[0].id);
       } else {
         setStageGoals([]);
         setCurrentStageGoalId(null);
         setTasks([]);
         setSelectedDate("");
+        setStats(null);
       }
     }).finally(() => {
       if (!ignore) setLoading(false);
     });
     return () => { ignore = true; };
   }, []);
+
+  // 拉取统计数据
+  const fetchStats = async (overviewId: number) => {
+    if (!overviewId) return;
+    setStatsLoading(true);
+    try {
+      const res = await apiClient.get(`/spwapi/auth/planner/stat?overview_id=${overviewId}`) as any;
+      if (res && res.code === 0) {
+        setStats(res.data);
+      } else {
+        setStats(null);
+      }
+    } catch {
+      setStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // 切换阶段目标时拉取统计数据
+  useEffect(() => {
+    if (currentStageGoalId) {
+      fetchStats(currentStageGoalId);
+    }
+  }, [currentStageGoalId]);
 
   // 切换到Day视图时，selectedDate自动设为周期内的今天或startDate
   useEffect(() => {
@@ -241,7 +271,7 @@ export default function StudyPlannerPage() {
         </div>
         {/* Statistics */}
         <div className="mt-8">
-          <StatsPanel tasks={filteredTasks} />
+          <StatsPanel stats={stats} loading={statsLoading} />
         </div>
         {(showAdd || addTaskDate) && (
           <AddTaskModal
@@ -546,45 +576,73 @@ function nextStatus(status: string) {
   return order[(idx + 1) % order.length];
 }
 
-function StatsPanel({ tasks }: any) {
-  const total = tasks.length;
-  const done = tasks.filter((t: any) => t.status === "done").length;
-  const partial = tasks.filter((t: any) => t.status === "partial").length;
-  const little = tasks.filter((t: any) => t.status === "little").length;
-  const notDone = tasks.filter((t: any) => t.status === "not_done").length;
-  const reserved = tasks.filter((t: any) => t.status === "reserved").length;
-  const notStarted = tasks.filter((t: any) => t.status === "not_started").length;
+function StatsPanel({ stats, loading }: any) {
+  if (loading) {
+    return (
+      <div className="rounded-xl bg-gradient-to-r from-green-100 to-blue-100 p-6 flex items-center gap-8">
+        <div className="text-gray-400">Loading statistics...</div>
+      </div>
+    );
+  }
+  if (!stats) {
+    return (
+      <div className="rounded-xl bg-gradient-to-r from-green-100 to-blue-100 p-6 flex items-center gap-8">
+        <div className="text-gray-400">No statistics available</div>
+      </div>
+    );
+  }
+  // 新的后端返回字段
+  const {
+    Create = 0,
+    Ongoing = 0,
+    Unfinished = 0,
+    FullyComplete = 0,
+    FewComplete = 0,
+    MostlyComplete = 0,
+    PartiallyComplete = 0,
+    LatelyComplete = 0
+  } = stats;
+  const total = Create + Ongoing + Unfinished + FullyComplete + FewComplete + MostlyComplete + PartiallyComplete + LatelyComplete;
+  const completion = total > 0 ? ((FullyComplete + FewComplete + MostlyComplete + PartiallyComplete + LatelyComplete) / total * 100).toFixed(0) : "0";
   return (
-    <div className="rounded-xl bg-gradient-to-r from-green-100 to-blue-100 p-6 flex items-center gap-8">
+    <div className="rounded-xl bg-gradient-to-r from-green-100 to-blue-100 p-6 flex items-center gap-8 flex-wrap">
       <div>
         <div className="text-2xl font-bold">{total}</div>
-        <div className="text-gray-500">Total tasks this month</div>
+        <div className="text-gray-500">Total tasks this period</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{done}</div>
-        <div className="text-gray-500">Very good</div>
+        <div className="text-2xl font-bold">{Create}</div>
+        <div className="text-gray-500">Created (Not started)</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{partial}</div>
-        <div className="text-gray-500">Medium</div>
+        <div className="text-2xl font-bold">{Ongoing}</div>
+        <div className="text-gray-500">Ongoing</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{little}</div>
-        <div className="text-gray-500">Little done</div>
+        <div className="text-2xl font-bold">{Unfinished}</div>
+        <div className="text-gray-500">Unfinished</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{notDone}</div>
-        <div className="text-gray-500">Not done</div>
+        <div className="text-2xl font-bold">{FullyComplete}</div>
+        <div className="text-gray-500">Fully complete</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{reserved}</div>
-        <div className="text-gray-500">Reschedule</div>
+        <div className="text-2xl font-bold">{FewComplete}</div>
+        <div className="text-gray-500">A few complete</div>
       </div>
       <div>
-        <div className="text-2xl font-bold">{notStarted}</div>
-        <div className="text-gray-500">Not started</div>
+        <div className="text-2xl font-bold">{MostlyComplete}</div>
+        <div className="text-gray-500">Mostly complete</div>
       </div>
-      <div className="ml-auto text-green-700 font-bold text-lg">{total > 0 ? `Completion rate ${(done / total * 100).toFixed(0)}%` : ""}</div>
+      <div>
+        <div className="text-2xl font-bold">{PartiallyComplete}</div>
+        <div className="text-gray-500">Partially complete</div>
+      </div>
+      <div>
+        <div className="text-2xl font-bold">{LatelyComplete}</div>
+        <div className="text-gray-500">Lately complete</div>
+      </div>
+      <div className="ml-auto text-green-700 font-bold text-lg">{total > 0 ? `Completion rate ${completion}%` : ""}</div>
     </div>
   );
 }

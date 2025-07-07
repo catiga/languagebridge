@@ -62,7 +62,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/aiagent/exam/history", auth.ExamRecordHistorical)
 
 	authGroup.POST("/planner/add", auth.CreateStageGoal)
-	authGroup.GET("/planner/pull", auth.PulltageGoal)
+	authGroup.GET("/planner/pull", auth.PullStageGoal)
+	authGroup.GET("/planner/stat", auth.StatStageGoal)
 	authGroup.POST("/planner/task/add", auth.AddStageTask)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())

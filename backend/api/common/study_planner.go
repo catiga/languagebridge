@@ -10,5 +10,5 @@ const (
 	StudyPlannerScheduleFewComplete       = "51"
 	StudyPlannerScheduleMostlyComplete    = "52"
 	StudyPlannerSchedulePartiallyComplete = "53"
-	StudyPlannerScheduleAlternateComplete = "54"
+	StudyPlannerScheduleLatelyComplete    = "54"
 )
