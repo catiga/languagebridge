@@ -12,3 +12,20 @@ const (
 	StudyPlannerSchedulePartiallyComplete = "53"
 	StudyPlannerScheduleLatelyComplete    = "54"
 )
+
+func StatusCheck(ss string) bool {
+	switch ss {
+	case
+		StudyPlannerScheduleCreate,
+		StudyPlannerScheduleOngoing,
+		StudyPlannerScheduleUnfinished,
+		StudyPlannerScheduleFullyComplete,
+		StudyPlannerScheduleFewComplete,
+		StudyPlannerScheduleMostlyComplete,
+		StudyPlannerSchedulePartiallyComplete,
+		StudyPlannerScheduleLatelyComplete:
+		return true
+	default:
+		return false
+	}
+}

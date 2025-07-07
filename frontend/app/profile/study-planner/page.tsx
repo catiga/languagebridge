@@ -4,6 +4,8 @@ import ProfileLayout from '../ProfileLayout';
 import { useRef } from "react";
 import { apiClient } from '../../utils/api';
 import * as yup from 'yup';
+import ConfirmModal from '../../components/ConfirmModal';
+import { toast } from 'react-toastify';
 
 // 课程选项如需后续对接接口再补充
 const courseOptions: any[] = [];
@@ -323,7 +325,7 @@ function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStar
     '51': 'text-yellow-500', // a few complete
     '52': 'text-teal-500', // mostly complete
     '53': 'text-purple-500', // just partially complete
-    '54': 'text-pink-500', // alternate complete
+    '54': 'text-pink-500', // lately complete
   };
   // 计算首日是周几
   const firstDay = new Date(days[0]).getDay();
@@ -425,11 +427,14 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
     { value: '51', label: 'A few complete' },
     { value: '52', label: 'Mostly complete' },
     { value: '53', label: 'Just partially complete' },
-    { value: '54', label: 'Alternate complete' },
+    { value: '54', label: 'Lately complete' },
   ];
   
   const [editingTask, setEditingTask] = useState<any>(null);
-  
+  const [deletingTask, setDeletingTask] = useState<any>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
@@ -462,7 +467,7 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
                   </button>
                   <button 
                     className="px-3 py-1 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200"
-                    onClick={() => onDeleteTask(t.id)}
+                    onClick={() => setDeletingTask(t)}
                   >
                     Delete
                   </button>
@@ -478,18 +483,65 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
           task={editingTask}
           statusOptions={statusOptions}
           onClose={() => setEditingTask(null)}
-          onSubmit={(updatedTask: any) => {
-            onUpdateTask(updatedTask);
-            setEditingTask(null);
+          onSubmit={async (updatedTask: any) => {
+            setEditLoading(true);
+            try {
+              // 调用后端接口
+              const res = await apiClient.post('/spwapi/auth/planner/task/update', {
+                id: updatedTask.id,
+                status: updatedTask.status,
+                note: updatedTask.note || ''
+              }) as any;
+              if (res && res.code === 0) {
+                toast.success('Task updated successfully');
+                onUpdateTask(updatedTask);
+                setEditingTask(null);
+              } else {
+                toast.error(res?.msg || 'Failed to update task');
+              }
+            } catch (e: any) {
+              toast.error(e?.message || 'Failed to update task');
+            } finally {
+              setEditLoading(false);
+            }
           }}
+          loading={editLoading}
         />
       )}
+      {/* 删除确认弹窗 */}
+      <ConfirmModal
+        isOpen={!!deletingTask}
+        title="Delete Task"
+        content="Are you sure you want to delete this task? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={deleteLoading}
+        onCancel={() => setDeletingTask(null)}
+        onConfirm={async () => {
+          if (!deletingTask) return;
+          setDeleteLoading(true);
+          try {
+            const res = await apiClient.get(`/spwapi/auth/planner/task/delete?id=${deletingTask.id}`) as any;
+            if (res && res.code === 0) {
+              toast.success('Task deleted successfully');
+              onDeleteTask(deletingTask.id);
+              setDeletingTask(null);
+            } else {
+              toast.error(res?.msg || 'Failed to delete task');
+            }
+          } catch (e: any) {
+            toast.error(e?.message || 'Failed to delete task');
+          } finally {
+            setDeleteLoading(false);
+          }
+        }}
+      />
     </div>
   );
 }
 
 // 新增编辑任务弹窗组件
-function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
+function EditTaskModal({ task, statusOptions, onClose, onSubmit, loading }: any) {
   const [status, setStatus] = useState(task.status || '00');
   const [note, setNote] = useState(task.note || '');
   const [error, setError] = useState('');
@@ -497,16 +549,8 @@ function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
     try {
-      // 这里可以调用后端接口更新任务状态和备注
-      // await apiClient.post('/spwapi/auth/planner/task/update', {
-      //   id: task.id,
-      //   status,
-      //   note
-      // });
-      
-      onSubmit({
+      await onSubmit({
         ...task,
         status,
         note
@@ -519,15 +563,13 @@ function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
       <form className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative" onSubmit={handleSubmit}>
-        <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose}>&times;</button>
+        <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose} disabled={loading}>&times;</button>
         <h2 className="text-2xl font-bold mb-4 text-blue-700">Edit Task</h2>
         {error && <div className="mb-2 text-red-500 text-sm">{error}</div>}
-        
         <div className="mb-4">
           <div className="text-lg font-semibold text-gray-800">{task.title}</div>
           <div className="text-sm text-gray-500">{task.date} {task.start_time}</div>
         </div>
-        
         <div className="grid grid-cols-1 gap-4 mb-6">
           <div>
             <label className="block font-semibold mb-1">Status</label>
@@ -535,6 +577,7 @@ function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
               className="w-full border rounded px-3 py-2" 
               value={status} 
               onChange={e => setStatus(e.target.value)}
+              disabled={loading}
             >
               {statusOptions.map((option: any) => (
                 <option key={option.value} value={option.value}>
@@ -552,16 +595,16 @@ function EditTaskModal({ task, statusOptions, onClose, onSubmit }: any) {
               rows={3} 
               maxLength={200}
               placeholder="Add notes about this task..."
+              disabled={loading}
             />
           </div>
         </div>
-        
         <div className="flex justify-end gap-4">
-          <button type="button" className="px-4 py-2 rounded bg-gray-200" onClick={onClose}>
+          <button type="button" className="px-4 py-2 rounded bg-gray-200" onClick={onClose} disabled={loading}>
             Cancel
           </button>
-          <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
-            Update
+          <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>
+            {loading ? 'Updating...' : 'Update'}
           </button>
         </div>
       </form>

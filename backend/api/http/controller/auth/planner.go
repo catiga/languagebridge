@@ -260,6 +260,7 @@ func AddStageTask(c *gin.Context) {
 				Flag:       0,
 				StudentID:  0,
 				AddTime:    time.Now(),
+				Status:     common.StudyPlannerScheduleCreate,
 			})
 			if firstDateStr == endDateStr {
 				break
@@ -376,6 +377,135 @@ func StatStageGoal(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = stat
+
+	c.JSON(http.StatusOK, res)
+}
+
+func UpdateStageTask(c *gin.Context) {
+	var req request.UpdateStageTaskRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var overview model.UserPlanOverview
+	var stageTask model.UserPlanSchedule
+	db.Model(&model.UserPlanSchedule{}).Where("id = ?", req.ID).First(&stageTask)
+	if stageTask.ID == 0 || stageTask.Flag == -1 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Task not found or be deleted"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", stageTask.OverviewID).First(&overview)
+	if overview.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Task not found or be deleted"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if !common.StatusCheck(req.Status) {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select the correct status"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var note string = stageTask.Note
+	if len(note) == 0 {
+		note = req.Note
+	} else {
+		note = stageTask.Note + "\n" + req.Note
+	}
+	var updatesMap map[string]interface{} = map[string]interface{}{
+		"status": req.Status,
+		"note":   note,
+	}
+	db.Model(&model.UserPlanSchedule{}).Where("id = ?", stageTask.ID).Updates(updatesMap)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}
+
+func DeleteStageTask(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	idStr, exist := c.GetQuery("id")
+	id := int64(0)
+	if !exist {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select task for deleting"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	id, _ = strconv.ParseInt(idStr, 10, 64)
+
+	db := system.GetDb()
+	var overview model.UserPlanOverview
+	var stageTask model.UserPlanSchedule
+	db.Model(&model.UserPlanSchedule{}).Where("id = ?", id).First(&stageTask)
+	if stageTask.ID == 0 || stageTask.Flag == -1 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Task not found or be deleted"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", stageTask.OverviewID).First(&overview)
+	if overview.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Task not found or be deleted"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db.Model(&model.UserPlanSchedule{}).Where("id = ?", id).Update("flag", -1)
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
 
 	c.JSON(http.StatusOK, res)
 }

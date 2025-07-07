@@ -65,6 +65,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/planner/pull", auth.PullStageGoal)
 	authGroup.GET("/planner/stat", auth.StatStageGoal)
 	authGroup.POST("/planner/task/add", auth.AddStageTask)
+	authGroup.POST("/planner/task/update", auth.UpdateStageTask)
+	authGroup.GET("/planner/task/delete", auth.DeleteStageTask)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
 	teacherAuthGroup.GET("/overview", auth.TeacherOverview)

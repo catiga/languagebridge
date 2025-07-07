@@ -19,3 +19,9 @@ type AddStageTaskRequest struct {
 	Note       string `json:"note"`
 	Repeat     bool   `json:"repeat"`
 }
+
+type UpdateStageTaskRequest struct {
+	ID     uint64 `json:"id"`
+	Status string `json:"status"`
+	Note   string `json:"note"`
+}
