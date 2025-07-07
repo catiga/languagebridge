@@ -434,9 +434,11 @@ export default function Home() {
           <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-12 rounded-2xl transform hover:scale-[1.02] transition-transform duration-500">
             <h2 className="text-4xl font-bold mb-4">Ready to Begin?</h2>
             <p className="text-xl max-w-2xl mx-auto mb-8 text-gray-200">Your journey to fluency starts with a single step. Let's find the perfect teacher for you.</p>
-            <button className="bg-white text-blue-700 px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-gray-200 transform hover:scale-105 transition-all duration-300">
-              Start Your Journey
-            </button>
+            <Link href="/register">
+              <span className="bg-white text-blue-700 px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:bg-gray-200 transform hover:scale-105 transition-all duration-300 cursor-pointer">
+                Start Your Journey
+              </span>
+            </Link>
           </div>
         </motion.section>
       </div>
