@@ -27,3 +27,16 @@ type CourseBookWithJoin struct {
 	TeacherName string `json:"teacher_name"`
 	CourseName  string `json:"course_name"`
 }
+
+type CourseMeetingNote struct {
+	ID        uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	BtID      uint64    `gorm:"column:bt_id" json:"bt_id"`
+	UserID    uint64    `gorm:"column:user_id" json:"user_id"`
+	StudentID uint64    `gorm:"column:student_id" json:"student_id"`
+	Note      string    `gorm:"column:note" json:"note"`
+	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
+}
+
+func (CourseMeetingNote) TableName() string {
+	return "course_meeting_note"
+}
