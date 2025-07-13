@@ -59,12 +59,13 @@ func (Teacher) TableName() string {
 }
 
 type UserCourse struct {
-	ID       uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID   uint64    `gorm:"column:user_id" json:"user_id"`
-	CourseID uint64    `gorm:"column:course_id" json:"course_id"`
-	AddTime  time.Time `gorm:"column:add_time" json:"add_time"`
-	Status   string    `gorm:"column:status" json:"status"`
-	Flag     int       `gorm:"column:flag" json:"flag"`
+	ID        uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uint64    `gorm:"column:user_id" json:"user_id"`
+	CourseID  uint64    `gorm:"column:course_id" json:"course_id"`
+	StudentID uint64    `gorm:"column:student_id" json:"student_id"`
+	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
+	Status    string    `gorm:"column:status" json:"status"`
+	Flag      int       `gorm:"column:flag" json:"flag"`
 }
 
 func (UserCourse) TableName() string {
@@ -85,14 +86,18 @@ type UserCourseWithCourse struct {
 	Detail        string          `gorm:"column:detail" json:"detail"`
 	Language      string          `gorm:"column:language" json:"language"`
 	Level         int             `gorm:"column:level" json:"level"`
-	CostPrice     decimal.Decimal `gorm:"column:cost_price" json:"cost_price"`
-	DisplayPrice  decimal.Decimal `gorm:"column:display_price" json:"display_price"`
+	CostPrice     decimal.Decimal `gorm:"column:cost_price" json:"-"`
+	DisplayPrice  decimal.Decimal `gorm:"column:display_price" json:"-"`
 	Goal          string          `gorm:"column:goal" json:"goal"`
 	CourseAddTime time.Time       `gorm:"column:course_add_time" json:"course_add_time"`
 	CourseUpdTime time.Time       `gorm:"column:course_update_time" json:"course_update_time"`
 	CourseStatus  string          `gorm:"column:course_status" json:"course_status"`
 	CourseFlag    int             `gorm:"column:course_flag" json:"course_flag"`
 	CoursePicture string          `gorm:"column:course_picture" json:"course_picture"`
+
+	// student 字段
+	StudentID   uint64 `gorm:"column:student_id" json:"student_id"`
+	StudentName string `gorm:"column:student_name" json:"student_name"`
 }
 
 type TeacherTimeSlotTemplate struct {

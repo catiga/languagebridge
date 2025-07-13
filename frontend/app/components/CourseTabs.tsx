@@ -148,6 +148,44 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [myCoursesLoading, setMyCoursesLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showBindModal, setShowBindModal] = useState(false);
+  const [bindTargetCourse, setBindTargetCourse] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [bindLoading, setBindLoading] = useState(false);
+
+  const handleBindStudent = (course: any) => {
+    setBindTargetCourse(course);
+    setShowBindModal(true);
+    fetchStudents();
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const res = await apiClient.post('/spwapi/auth/profile/member/list');
+      if (res && res.code === 0) setStudents(res.data || []);
+      else setStudents([]);
+    } catch {
+      setStudents([]);
+    }
+  };
+
+  const handleBindConfirm = async (studentId: number) => {
+    if (!bindTargetCourse) return;
+    setBindLoading(true);
+    try {
+      await apiClient.post('/spwapi/auth/course/bind_student', {
+        user_course_id: bindTargetCourse.user_course_id,
+        student_id: studentId
+      });
+      setShowBindModal(false);
+      setBindTargetCourse(null);
+      fetchMyCourses(statusFilter);
+    } catch {
+      // 可加错误提示
+    } finally {
+      setBindLoading(false);
+    }
+  };
 
   // 监听tab参数变化，动态切换tab
   useEffect(() => {
@@ -268,14 +306,24 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
                     )}
                   </div>
                   <div className="p-4 flex-1 flex flex-col">
-                    <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{course.course_name}</h4>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course.introduction}</p>
+                    <h4 className="text-lg font-bold text-gray-900 mb-1">{course.course_name}</h4>
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                       <span className="bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">{course.language}</span>
                       <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Level {course.level}</span>
-                      
                     </div>
-                    <div className="flex items-center justify-between mt-auto">
+                    {/* 学生信息和绑定按钮 */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs text-blue-600 font-semibold">
+                        Student: {course.student_name ? course.student_name : 'N/A'}
+                      </span>
+                      <button
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        onClick={e => { e.stopPropagation(); handleBindStudent(course); }}
+                      >Bind Student</button>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{course.introduction}</p>
+                    <div className="flex-1"></div>
+                    <div className="flex items-center justify-between mt-2">
                       <span className="text-xs text-gray-500">{course.goal}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
@@ -292,6 +340,29 @@ export default function CourseTabs({ onLoading }: { onLoading?: (loading: boolea
       {activeTab === 'timetable' && viewMode === 'list' && <TimetableListView />}
       {activeTab === 'timetable' && viewMode === 'week' && <TimetableWeekView />}
       {activeTab === 'history' && <CourseHistoryPanel />}
+      {/* 绑定学生弹窗 */}
+      {showBindModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-lg">
+            <h3 className="text-lg font-bold mb-4">Select a student to bind</h3>
+            <ul className="mb-6 max-h-60 overflow-y-auto">
+              {students.length === 0 ? (
+                <li className="text-gray-400 text-sm">No available students</li>
+              ) : students.map(stu => (
+                <li key={stu.id} className="flex items-center justify-between py-2 border-b">
+                  <span>{stu.name}</span>
+                  <button
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                    disabled={bindLoading}
+                    onClick={() => handleBindConfirm(stu.id)}
+                  >{bindLoading ? 'Binding...' : 'Bind'}</button>
+                </li>
+              ))}
+            </ul>
+            <button className="px-4 py-2 bg-gray-200 rounded" onClick={() => setShowBindModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -72,6 +72,11 @@ type CourseMeetingNoteAddRequest struct {
 	BtID uint64 `json:"btid"`
 }
 
+type CourseBindStudentRequest struct {
+	StudentID    uint64 `json:"student_id"`
+	UserCourseID uint64 `json:"user_course_id"`
+}
+
 func CourseJoin(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -205,6 +210,7 @@ func CourseList(c *gin.Context) {
 
 	err = db.Table("user_course AS uc").
 		Joins("JOIN course_info AS c ON c.id = uc.course_id").
+		Joins("LEFT JOIN user_member AS um on uc.student_id = um.id").
 		Select(`
 		uc.id AS uc_id,
 		uc.user_id,
@@ -216,14 +222,14 @@ func CourseList(c *gin.Context) {
 		c.detail,
 		c.language,
 		c.level,
-		c.cost_price,
-		c.display_price,
 		c.goal,
 		c.course_picture,
 		c.add_time AS course_add_time,
 		c.update_time AS course_update_time,
 		c.status AS course_status,
-		c.flag AS course_flag
+		c.flag AS course_flag,
+		uc.student_id AS student_id,
+		um.name AS student_name
 	`).
 		Where("uc.user_id = ? AND uc.flag != ? AND c.flag != ? and uc.status IN ?", userID, -1, -1, statusList).
 		Order("uc.add_time DESC").
@@ -1270,6 +1276,60 @@ func CourseMeetingNodeFetch(c *gin.Context) {
 		})
 	}
 	res.Data = retData
+
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseBindStudent(c *gin.Context) {
+	var req CourseBindStudentRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userCourse model.UserCourse
+	var userMember model.UserMember
+	err = db.Model(&model.UserCourse{}).Where("id = ? and user_id = ?", req.UserCourseID, userID).First(&userCourse).Error
+	if err != nil {
+		log.Error("fetch UserCourse error", err)
+	}
+	err = db.Model(&model.UserMember{}).Where("id = ? and user_id = ?", req.StudentID, userID).First(&userMember).Error
+	if err != nil {
+		log.Error("fetch UserMember error", err)
+	}
+
+	if userCourse.ID == 0 || userMember.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Course or Student not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	userCourse.StudentID = userMember.ID
+	db.Updates(&userCourse)
 
 	c.JSON(http.StatusOK, res)
 }
