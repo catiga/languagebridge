@@ -225,53 +225,73 @@ export default function StudentList({ onLoading }: MemberListProps) {
   const labelStyle = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="bg-white rounded-2xl shadow p-6 w-full max-w-5xl mx-auto mt-6">
-      <div className="flex items-center mb-4">
-        <h1 className="text-xl font-bold text-gray-800 mr-4">Student Management</h1>
+    <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-6xl mx-auto mt-10 flex flex-col items-center overflow-x-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full mb-6 gap-4">
+        <h1 className="text-2xl font-extrabold text-blue-700 tracking-wide">Student Management</h1>
         <button
           onClick={handleAdd}
-          className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl shadow-lg font-semibold text-base transition-all duration-300 transform hover:-translate-y-1"
         >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           Add Student
         </button>
       </div>
-      <table className="w-full border-t border-gray-100 text-sm">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="py-2 px-3 font-semibold text-gray-600">Name</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Email</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Relationship</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Gender</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Birthday</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Status</th>
-            <th className="py-2 px-3 font-semibold text-gray-600">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="py-6 text-center text-gray-400">No members found.</td>
+      <div className="w-full">
+        <table className="w-full rounded-2xl overflow-hidden text-base table-fixed">
+          <thead>
+            <tr className="bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700">
+              <th className="py-2 px-2 font-bold w-24">Name</th>
+              <th className="py-2 px-2 font-bold w-40">Email</th>
+              <th className="py-2 px-2 font-bold w-28">Relationship</th>
+              <th className="py-2 px-2 font-bold w-20">Gender</th>
+              <th className="py-2 px-2 font-bold w-28">Birthday</th>
+              <th className="py-2 px-2 font-bold w-24">Login ID</th>
+              <th className="py-2 px-2 font-bold w-20">Status</th>
+              <th className="py-2 px-2 font-bold w-44">Actions</th>
             </tr>
-          ) : (
-            members.map(member => (
-              <tr key={member.id} className="border-b border-gray-100 hover:bg-blue-50/40 transition">
-                <td className="py-2 px-3 whitespace-nowrap">{member.name}</td>
-                <td className="py-2 px-3 whitespace-nowrap">{member.email}</td>
-                <td className="py-2 px-3 whitespace-nowrap">{relTypeOptions.find(o => o.value === String(member.rel_type))?.label || member.rel_type}</td>
-                <td className="py-2 px-3 whitespace-nowrap">{genderMap[member.gender] || 'Unknown'}</td>
-                <td className="py-2 px-3 whitespace-nowrap">{member.birthday?.split('T')[0]}</td>
-                <td className="py-2 px-3 whitespace-nowrap">{statusMap[member.flag] || 'Unknown'}</td>
-                <td className="py-2 px-3 whitespace-nowrap">
-                  <button className="text-blue-600 hover:underline font-medium mr-2" onClick={() => handleEdit(member)}>Edit</button>
-                  <button className="text-red-500 hover:underline font-medium" onClick={() => handleDeleteClick(member)}>
-                    Delete
-                  </button>
-                </td>
+          </thead>
+          <tbody>
+            {members.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-gray-400 text-lg bg-gray-50">No students found.</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              members.map((member, idx) => (
+                <tr key={member.id} className={`transition ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'} hover:bg-blue-100/60`}>
+                  <td className="py-2 px-2 font-semibold text-gray-800 whitespace-nowrap align-middle">{member.name}</td>
+                  <td className="py-2 px-2 text-gray-700 whitespace-nowrap align-middle">{member.email}</td>
+                  <td className="py-2 px-2 text-gray-700 whitespace-nowrap align-middle">{relTypeOptions.find(o => o.value === String(member.rel_type))?.label || member.rel_type}</td>
+                  <td className="py-2 px-2 text-gray-700 whitespace-nowrap align-middle">{genderMap[member.gender] || 'Unknown'}</td>
+                  <td className="py-2 px-2 text-gray-700 whitespace-nowrap align-middle">{member.birthday?.split('T')[0]}</td>
+                  <td className="py-2 px-2 whitespace-nowrap align-middle">
+                    {member.login_id ? (
+                      <span className="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs shadow-sm whitespace-nowrap">
+                        {member.login_id}
+                        <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs font-bold">Login enabled</span>
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2 py-1 rounded-full bg-gray-100 text-gray-400 text-xs shadow-sm whitespace-nowrap">Not enabled</span>
+                    )}
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${member.flag === 0 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{statusMap[member.flag] || 'Unknown'}</span>
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap flex gap-3">
+                    <button className="min-w-[70px] px-2 py-1 rounded-lg bg-gradient-to-r from-blue-400 to-blue-600 text-white font-semibold shadow hover:from-blue-500 hover:to-blue-700 transition flex items-center gap-1 text-sm" onClick={() => handleEdit(member)}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.828 1.172H7v-2a4 4 0 011.172-2.828z" /></svg>
+                      Edit
+                    </button>
+                    <button className="min-w-[70px] px-2 py-1 rounded-lg bg-gradient-to-r from-red-400 to-pink-500 text-white font-semibold shadow hover:from-red-500 hover:to-pink-600 transition flex items-center gap-1 text-sm" onClick={() => handleDeleteClick(member)}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-blue-100">
