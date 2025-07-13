@@ -13,6 +13,9 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import LoginModal from '../../components/LoginModal';
 import { motion } from 'framer-motion';
+import dynamic from "next/dynamic";
+
+const ApplyTrialLessonModal = dynamic(() => import("@/app/profile/trial-lessons/ApplyTrialLessonModal"), { ssr: false });
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -26,6 +29,7 @@ export default function CourseDetailPage() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [isJoining, setIsJoining] = useState(false);
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -260,6 +264,19 @@ export default function CourseDetailPage() {
                             <InfoRow icon={<FaLanguage/>} text={`Conducted in ${course.language}`} />
                             <InfoRow icon={<FaBullseye/>} text={`Level ${course.level}`} />
                         </ul>
+                        <button
+                            className="w-full px-6 py-3 mb-4 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold text-lg shadow hover:scale-105 transition"
+                            onClick={() => setShowTrialModal(true)}
+                        >
+                            Apply for Trial Lesson
+                        </button>
+                        <ApplyTrialLessonModal
+                            open={showTrialModal}
+                            onClose={() => setShowTrialModal(false)}
+                            courseId={course.id}
+                            courseName={course.name}
+                            teachers={teachers}
+                        />
                     </div>
                 </div>
             </div>

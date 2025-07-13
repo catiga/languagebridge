@@ -12,7 +12,8 @@ import {
   FaPlay as FaPlayIcon,
   FaCalendarAlt as FaCalendarAltIcon,
   FaStar as FaStarIcon,
-  FaRobot
+  FaRobot,
+  FaVideo
 } from 'react-icons/fa';
 import Cookies from 'js-cookie';
 import DashboardLayout from './components/DashboardLayout';
@@ -45,7 +46,7 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai' | 'courseHistory';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai' | 'courseHistory' | 'trialLessons';
 
 function WeekRangeTitle() {
   // 取本地时间的本周一
@@ -203,6 +204,15 @@ function AIToolsPanel() {
   );
 }
 
+function TrialLessonsPanel() {
+  return (
+    <div className="bg-white rounded-2xl shadow p-8 max-w-3xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FaVideo className="text-blue-500" /> Trial Lessons</h2>
+      <div className="text-gray-500 text-lg text-center py-12">No trial lesson requests yet.<br/>When a student applies for a trial lesson, you will see it here.</div>
+    </div>
+  );
+}
+
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [stats, setStats] = useState({
@@ -351,6 +361,8 @@ export default function TeacherDashboard() {
         return <AIToolsPanel />;
       case 'courseHistory':
         return <TeacherCourseHistoryPanel />;
+      case 'trialLessons':
+        return <TrialLessonsPanel />;
       default:
         return (
           <div className="space-y-8">

@@ -17,7 +17,8 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaGraduationCap,
-  FaRobot
+  FaRobot,
+  FaVideo
 } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -38,6 +39,7 @@ const menuItems = [
   { id: 'schedule', label: 'Time Slots', icon: FaCalendarAlt },
   { id: 'schedule2', label: 'Schedule', icon: FaCalendarWeek },
   { id: 'courseHistory', label: 'Class Logs', icon: FaBook },
+  { id: 'trialLessons', label: 'Trial Lessons', icon: FaVideo },
   //{ id: 'analytics', label: 'Analytics', icon: FaChartBar },
   { id: 'ai', label: 'AI Tools', icon: FaRobot, beta: true },
 ];

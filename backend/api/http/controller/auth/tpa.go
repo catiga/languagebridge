@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/langbridge/backend/api/common"
+	"github.com/langbridge/backend/api/http/request"
 	"github.com/langbridge/backend/codes"
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
@@ -1521,6 +1522,96 @@ func TeacherCourseMeetingNodeFetch(c *gin.Context) {
 		})
 	}
 	res.Data = retData
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherTrialLessonFetch(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var trialLessons []model.TrialLesson
+
+	db.Model(&model.TrialLesson{}).Where("teacher_id = ?", userID).Order("apply_time DESC").Find(&trialLessons)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = trialLessons
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherTrialLessonAssign(c *gin.Context) {
+	var req request.TrialLessonAssignRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var trialLesson model.TrialLesson
+
+	db.Model(&model.TrialLesson{}).Where("id = ? and teacher_id = ?", req.ID, userID).First(&trialLesson)
+
+	if trialLesson.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Trial lesson not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var updatesMap = map[string]interface{}{
+		"apply_time": &req.ApplyTime,
+		"status":     common.TrialLessonWaitingConfirm,
+	}
+	err = db.Model(&model.TrialLesson{}).Where("id = ?", req.ID).Updates(updatesMap).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
 
 	c.JSON(http.StatusOK, res)
 }

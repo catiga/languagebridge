@@ -173,3 +173,19 @@ type TeacherInvite struct {
 func (TeacherInvite) TableName() string {
 	return "teacher_invite"
 }
+
+type TrialLesson struct {
+	ID        uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	TeacherID uint64     `gorm:"column:teacher_id" json:"teacher_id"`
+	UserID    uint64     `gorm:"column:user_id" json:"user_id"`
+	AddTime   time.Time  `gorm:"column:add_time" json:"add_time"`
+	CourseID  uint64     `gorm:"column:course_id" json:"course_id"`
+	ApplyTime *time.Time `gorm:"column:apply_time" json:"apply_time"`
+	Status    string     `gorm:"column:status" json:"status"`
+	Comment   string     `gorm:"column:comment" json:"comment"`
+	Rate      int        `gorm:"column:rate" json:"rate"`
+}
+
+func (TrialLesson) TableName() string {
+	return "trial_lesson"
+}

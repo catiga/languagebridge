@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaTachometerAlt, FaUser, FaBookOpen, FaCalendarAlt, FaCog, FaUsers } from 'react-icons/fa';
+import { FaTachometerAlt, FaUser, FaBookOpen, FaCalendarAlt, FaCog, FaUsers, FaVideo } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,6 +11,7 @@ const menu = [
   { key: 'overview', label: 'Overview', icon: <FaTachometerAlt />, path: '/profile/overview', color: 'from-pink-400 to-pink-300' },
   { key: 'info', label: 'Profile', icon: <FaUser />, path: '/profile/info', color: 'from-blue-400 to-blue-300' },
   { key: 'courses', label: 'My Courses', icon: <FaBookOpen />, path: '/profile/courses', color: 'from-green-400 to-green-300' },
+  { key: 'trial-lessons', label: 'Trial Lessons', icon: <FaVideo />, path: '/profile/trial-lessons', color: 'from-purple-400 to-blue-300' },
   { key: 'students', label: 'Students', icon: <FaUsers />, path: '/profile/students', color: 'from-blue-400 to-green-300' },
   { key: 'schedule', label: 'Schedule', icon: <FaCalendarAlt />, path: '/profile/schedule', color: 'from-yellow-400 to-yellow-300' },
   { key: 'study-planner', label: 'Study Planner', icon: <span className="text-2xl">📅</span>, path: '/profile/study-planner', color: 'from-blue-300 to-purple-200' },
