@@ -311,6 +311,88 @@ func AddStageTask(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func BindStageGoal(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overviewIdStr, exist := c.GetQuery("overview_id")
+	overview_id := int64(0)
+	if !exist {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select overview"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overview_id, _ = strconv.ParseInt(overviewIdStr, 10, 64)
+
+	studentIdStr, exist := c.GetQuery("student_id")
+	studentId := uint64(0)
+	if !exist {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select student for binding"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	studentId, err = strconv.ParseUint(studentIdStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select student for binding"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var userOverView model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview_id).First(&userOverView)
+	if userOverView.ID == 0 || userOverView.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Study planner not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	nowStr := time.Now().Format("2006-01-02")
+	if userOverView.EndDate < nowStr {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Can not change binding for ended plan"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var userMember model.UserMember
+	db.Model(&model.UserMember{}).Where("id = ? and flag != ?", studentId, -1).First(&userMember)
+	if userMember.ID == 0 || userMember.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Student not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", userOverView.ID).Update("student_id", userMember.ID)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
+	c.JSON(http.StatusOK, res)
+}
+
 func StatStageGoal(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()

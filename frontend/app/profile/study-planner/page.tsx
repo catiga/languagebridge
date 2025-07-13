@@ -6,7 +6,7 @@ import { apiClient } from '../../utils/api';
 import * as yup from 'yup';
 import ConfirmModal from '../../components/ConfirmModal';
 import { toast } from 'react-toastify';
-import { FaUser } from 'react-icons/fa';
+import { FaUser, FaLink } from 'react-icons/fa';
 
 // 课程选项如需后续对接接口再补充
 const courseOptions: any[] = [];
@@ -45,6 +45,8 @@ interface StageGoal {
   goal: string;
   startDate: string;
   endDate: string;
+  student_id?: string | number;
+  student_name?: string;
 }
 
 // 执行人类型：自己或member
@@ -64,6 +66,12 @@ export default function StudyPlannerPage() {
   const [addTaskDate, setAddTaskDate] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  // 绑定学生弹窗相关状态
+  const [bindModalOpen, setBindModalOpen] = useState(false);
+  const [bindPlanId, setBindPlanId] = useState<number | null>(null);
+  const [bindLoading, setBindLoading] = useState(false);
+  const [bindSelected, setBindSelected] = useState<string>('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // 拉取成员列表
   useEffect(() => {
@@ -230,17 +238,29 @@ export default function StudyPlannerPage() {
   return (
     <ProfileLayout>
       <div className="max-w-5xl mx-auto mt-6 bg-white/80 rounded-3xl shadow-xl p-6 min-h-[70vh]">
-        {/* 顶部：执行人选择器+阶段目标切换与展示 */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        {/* 顶部：执行人选择区域 */}
+        <div className="mb-2">
+          <div className="flex items-center gap-3 mb-2">
             <span className="font-bold text-lg text-blue-700 flex items-center"><FaUser className="mr-1" /> Executor:</span>
-            <select className="border rounded px-3 py-2" value={executorId} onChange={e => setExecutorId(e.target.value)}>
-              <option value="0">All</option>
-              {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <label className={`cursor-pointer px-4 py-2 rounded-xl border-2 transition-all font-semibold flex items-center gap-2 shadow-sm ${executorId === '0' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:border-blue-400'}`}
+              style={{minWidth: 80}}
+            >
+              <input type="radio" className="hidden" value="0" checked={executorId === '0'} onChange={() => setExecutorId('0')} />
+              <FaUser className="w-4 h-4" /> All
+            </label>
+            {members.map(m => (
+              <label key={m.id} className={`cursor-pointer px-4 py-2 rounded-xl border-2 transition-all font-semibold flex items-center gap-2 shadow-sm ${executorId === String(m.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:border-blue-400'}`}
+                style={{minWidth: 80}}
+              >
+                <input type="radio" className="hidden" value={m.id} checked={executorId === String(m.id)} onChange={() => setExecutorId(String(m.id))} />
+                <FaUser className="w-4 h-4" /> {m.name}
+              </label>
+            ))}
           </div>
         </div>
-        {/* 阶段目标切换与展示 */}
+        {/* 阶段目标切换与展示区域 */}
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg text-blue-700">Stage Goal:</span>
@@ -250,11 +270,47 @@ export default function StudyPlannerPage() {
             <button className="ml-2 px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200" onClick={() => setShowAddStage(true)}>+ New</button>
           </div>
           {currentStageGoal && (
-            <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-700 max-w-xl">
-              <div><b>Theme:</b> {currentStageGoal.title}</div>
-              <div><b>Description:</b> {currentStageGoal.description}</div>
-              <div><b>Goal:</b> {currentStageGoal.goal}</div>
-              <div><b>Period:</b> {currentStageGoal.startDate} ~ {currentStageGoal.endDate}</div>
+            <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-700 max-w-xl flex items-center gap-4">
+              <div>
+                <div><b>Theme:</b> {currentStageGoal.title}</div>
+                <div><b>Description:</b> {currentStageGoal.description}</div>
+                <div><b>Goal:</b> {currentStageGoal.goal}</div>
+                <div><b>Period:</b> {currentStageGoal.startDate} ~ {currentStageGoal.endDate}</div>
+                {/* Executor信息展示保持原样 */}
+                <div className="flex items-center gap-2 mt-2">
+                  <b>Executor:</b>
+                  {currentStageGoal.student_id && members.length > 0 ? (
+                    (() => {
+                      const stu = members.find(m => String(m.id) === String(currentStageGoal.student_id));
+                      if (stu) {
+                        return (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 font-bold text-base shadow-sm gap-2">
+                            <FaUser className="w-4 h-4 text-green-500" />
+                            {stu.name}
+                            <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs font-bold">Bound</span>
+                          </span>
+                        );
+                      }
+                      return <span className="text-red-500 font-bold">Unknown</span>;
+                    })()
+                  ) : (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-400 font-bold text-base shadow-sm gap-2">
+                      <FaUser className="w-4 h-4" />
+                      Not bound
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                className="ml-4 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
+                onClick={() => {
+                  setBindPlanId(currentStageGoal.id);
+                  setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
+                  setBindModalOpen(true);
+                }}
+              >
+                <FaLink className="mr-1 w-4 h-4" /> Bind Student
+              </button>
             </div>
           )}
         </div>
@@ -331,6 +387,75 @@ export default function StudyPlannerPage() {
         )}
         {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
       </div>
+      {bindModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
+            <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={() => setBindModalOpen(false)}>&times;</button>
+            <h2 className="text-xl font-bold mb-4 text-blue-700">Bind Student</h2>
+            <div className="mb-4">Please select a student to bind to this plan:</div>
+            <div className="space-y-2 mb-6">
+              {members.length === 0 && <div className="text-gray-400">No students available</div>}
+              {members.map(m => (
+                <label key={m.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bind-student"
+                    value={m.id}
+                    checked={bindSelected === m.id}
+                    onChange={() => setBindSelected(m.id)}
+                    className="accent-blue-600"
+                  />
+                  <span>{m.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-4">
+              <button className="px-4 py-2 rounded bg-gray-200" onClick={() => setBindModalOpen(false)} disabled={bindLoading}>Cancel</button>
+              <button
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                disabled={bindLoading || !bindSelected}
+                onClick={() => setConfirmOpen(true)}
+              >{bindLoading ? 'Binding...' : 'Confirm'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 带样式的确认弹窗 */}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Bind Student"
+        content={`Are you sure you want to bind this plan to the selected student?`}
+        confirmText="Bind"
+        cancelText="Cancel"
+        loading={bindLoading}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          if (!bindPlanId || !bindSelected) return;
+          setBindLoading(true);
+          try {
+            // GET接口，参数overview_id, student_id
+            const res = await apiClient.get(`/spwapi/auth/planner/bind?overview_id=${bindPlanId}&student_id=${bindSelected}`) as { code?: number; msg?: string };
+            if (res && res.code === 0) {
+              toast.success('Student bound successfully');
+              setBindModalOpen(false);
+              setConfirmOpen(false);
+              // 重新拉取计划数据
+              let url = '/spwapi/auth/planner/pull';
+              if (executorId !== '0') url += `?student_id=${executorId}`;
+              const newRes = await apiClient.get(url) as { code?: number; data?: any[] };
+              if (newRes && newRes.code === 0 && Array.isArray(newRes.data)) {
+                setStageGoals(newRes.data.map((g: any) => ({ ...g, startDate: g.start_date, endDate: g.end_date })));
+              }
+            } else {
+              toast.error(res?.msg || 'Failed to bind student');
+            }
+          } catch (e: any) {
+            toast.error(e?.message || 'Failed to bind student');
+          } finally {
+            setBindLoading(false);
+          }
+        }}
+      />
     </ProfileLayout>
   );
 }
