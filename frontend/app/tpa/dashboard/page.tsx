@@ -297,17 +297,48 @@ export default function TeacherDashboard() {
                     if (isPast) cardClass = 'bg-gray-100 text-gray-400 border border-gray-200';
                     else if (isToday) cardClass = 'bg-blue-50 border border-blue-300 shadow-blue-100 text-blue-900';
                     else if (isFuture) cardClass = 'bg-green-50 border border-green-300 text-green-900';
+                    // 进入课堂规则
+                    let canEnter = false;
+                    let enterTip = '';
+                    if (isToday) {
+                      const now = new Date();
+                      const lessonStart = new Date(`${lesson.lesson_date.slice(0, 10)}T${lesson.start_time}`);
+                      const diffMinutes = (now.getTime() - lessonStart.getTime()) / 60000;
+                      if (diffMinutes >= -120 && diffMinutes <= 120) {
+                        canEnter = true;
+                      } else {
+                        enterTip = 'You can only enter within 2 hours before or after the start time.';
+                      }
+                    }
+                    // 新增：如果可进入，整条li闪烁，并按钮放右侧
                     return (
-                      <li key={lesson.book_id || i} className={`rounded-xl px-5 py-4 shadow-sm flex flex-col ${cardClass}`}>
-                        <div className="font-semibold text-base mb-1 truncate">{lesson.course_name}</div>
-                        <div className="flex items-center gap-4 text-xs">
-                          <span>{lesson.start_time} - {lesson.end_time}</span>
-                          <span>|</span>
-                          <span>{lesson.lesson_date?.slice(0, 10)}</span>
-                          {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
-                          {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
-                          {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                      <li
+                        key={lesson.book_id || i}
+                        className={`rounded-xl px-5 py-4 shadow-sm flex items-center justify-between ${cardClass} ${canEnter ? 'animate-pulse ring-2 ring-purple-400' : ''}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-base mb-1 truncate">{lesson.course_name}</div>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span>{lesson.start_time} - {lesson.end_time}</span>
+                            <span>|</span>
+                            <span>{lesson.lesson_date?.slice(0, 10)}</span>
+                            {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
+                            {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
+                            {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                          </div>
+                          {!canEnter && isToday && (
+                            <div className="mt-2 text-xs text-red-400 font-semibold">{enterTip}</div>
+                          )}
                         </div>
+                        {/* 右侧按钮 */}
+                        {canEnter && (
+                          <button
+                            className="ml-6 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-500 text-white font-bold text-lg shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2 animate-none"
+                            onClick={() => window.open(`/tpa/classroom/${lesson.id || lesson.book_id}`, '_blank', 'noopener,noreferrer')}
+                          >
+                            <FaPlayIcon className="mr-1" /> Enter Classroom
+                          </button>
+                        )}
                       </li>
                     );
                   })}

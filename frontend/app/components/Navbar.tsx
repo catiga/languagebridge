@@ -120,6 +120,9 @@ export default function Navbar() {
     router.push('/');
   };
 
+  // /tpa路径下隐藏Login和Register按钮
+  const isTpaPage = pathname && pathname.startsWith('/tpa');
+
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ease-in-out ${navClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -185,7 +188,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <>
+              !isTpaPage && <>
                 <Link
                   href="/login"
                   className={`px-5 py-2 rounded-lg font-bold transition-colors duration-200 bg-gradient-to-r from-blue-500 to-pink-500 text-white shadow-lg hover:scale-105 hover:from-blue-600 hover:to-pink-600 animate-pulse`}

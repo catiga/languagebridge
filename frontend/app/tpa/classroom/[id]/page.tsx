@@ -1,22 +1,93 @@
 "use client";
 import { JitsiMeeting } from '@jitsi/react-sdk';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '../../../utils/api';
 import { toast } from 'react-toastify';
 import { FaBook, FaChalkboardTeacher, FaUserGraduate, FaClock, FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaHandPaper, FaComments } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 export default function ClassroomPage() {
   const params = useParams();
   const btid = params?.id;
-  const apiRef = useRef();
+  const apiRef = useRef<any>(null);
   const [classInfo, setClassInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [logItems, updateLog] = useState([]);
-  const [knockingParticipants, updateKnockingParticipants] = useState([]);
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [isVideoMuted, setIsVideoMuted] = useState(false);
-  const [isHandRaised, setIsHandRaised] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [logItems, updateLog] = useState<any[]>([]);
+  const [knockingParticipants, updateKnockingParticipants] = useState<any[]>([]);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+  const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
+  const [isHandRaised, setIsHandRaised] = useState<boolean>(false);
+  const router = useRouter();
+
+  // 课程笔记相关（对接老师端接口）
+  interface NoteItem { id: string; content: string; createdAt: string; }
+  const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [noteInput, setNoteInput] = useState('');
+  const [noteError, setNoteError] = useState('');
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [addNoteLoading, setAddNoteLoading] = useState(false);
+
+  // 拉取课程笔记列表
+  const fetchNotes = useCallback(async () => {
+    if (!btid) return;
+    setNotesLoading(true);
+    try {
+      const res = await apiClient.get('/spwapi/tpa/auth/course/meeting/note/fetch', { btid }) as any;
+      if (res && res.code === 0 && Array.isArray(res.data)) {
+        setNotes(res.data.map((n: any) => ({
+          id: String(n.id),
+          content: n.note,
+          createdAt: n.created_at ? n.created_at.slice(11, 16) : '' // 取HH:mm
+        })));
+      } else {
+        setNotes([]);
+      }
+    } catch {
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, [btid]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+
+  // 添加笔记
+  const handleAddNote = async () => {
+    const content = noteInput.trim();
+    if (!content) {
+      setNoteError('Note cannot be empty');
+      return;
+    }
+    if (content.length > 100) {
+      setNoteError('Note must be within 100 characters');
+      return;
+    }
+    setAddNoteLoading(true);
+    try {
+      const res = await apiClient.post('/spwapi/tpa/auth/course/meeting/note/add', { note: content, btid: Number(btid) }) as any;
+      if (res && res.code === 0) {
+        setNoteInput('');
+        setNoteError('');
+        fetchNotes();
+      } else {
+        setNoteError(res?.msg || 'Failed to add note');
+      }
+    } catch (e: any) {
+      setNoteError(e?.message || 'Failed to add note');
+    } finally {
+      setAddNoteLoading(false);
+    }
+  };
+
+  const handleNoteInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddNote();
+    }
+  };
 
   // 获取课程信息
   useEffect(() => {
@@ -100,12 +171,12 @@ export default function ClassroomPage() {
     apiRef.current.on('raiseHandUpdated', handleHandRaiseChange);
     apiRef.current.on('titleViewChanged', printEventOutput);
     apiRef.current.on('chatUpdated', printEventOutput);
-    updateLog((items: any[]) => [...items, 'Jitsi API ready']);
+    updateLog((items: any[]) => [...items, 'Meeting is ready']);
   };
 
   const handleReadyToClose = () => {
     toast.info('Meeting ended');
-    // 可以在这里添加离开会议的逻辑
+    router.push('/tpa/dashboard');
   };
 
   const handleIFrameRef = (iframeRef: any) => {
@@ -232,15 +303,46 @@ export default function ClassroomPage() {
         {/* 控制按钮 */}
         {renderControlButtons()}
         
-        {/* 日志区域 */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <h3 className="font-semibold text-gray-700 mb-2">Activity Log</h3>
-          <div className="space-y-1 text-xs text-gray-600">
-            {logItems.map((item, index) => (
-              <div key={index} className="font-mono p-1 bg-gray-50 rounded">
-                {item}
-              </div>
-            ))}
+        {/* 课程笔记区域 */}
+        <div className="p-4 border-t border-gray-100 flex-1 flex flex-col">
+          <h3 className="font-semibold text-gray-700 mb-2">Course Notes</h3>
+          <div className="flex gap-2 mb-2">
+            <textarea
+              className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 resize-none min-h-[40px] max-h-[120px]"
+              placeholder="Add a note (max 100 chars)"
+              value={noteInput}
+              onChange={e => {
+                setNoteInput(e.target.value);
+                setNoteError('');
+              }}
+              onKeyDown={handleNoteInputKeyDown}
+              maxLength={100}
+              disabled={addNoteLoading}
+              rows={2}
+            />
+            <button
+              className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 transition self-end mb-1"
+              onClick={handleAddNote}
+              disabled={noteInput.trim().length === 0 || noteInput.length > 100 || addNoteLoading}
+              style={{minWidth: '64px'}}
+            >{addNoteLoading ? 'Adding...' : 'Add'}</button>
+          </div>
+          {noteError && <div className="text-xs text-red-500 mb-2">{noteError}</div>}
+          <div className="flex-1 overflow-y-auto max-h-60 min-h-[60px] pr-1">
+            {notesLoading ? (
+              <div className="text-gray-400 text-sm text-center mt-6">Loading notes...</div>
+            ) : notes.length === 0 ? (
+              <div className="text-gray-400 text-sm text-center mt-6">Add your first note for this lesson!</div>
+            ) : (
+              <ul className="space-y-2">
+                {notes.map(note => (
+                  <li key={note.id} className="bg-blue-50 rounded-lg px-3 py-2 flex items-start gap-2">
+                    <span className="text-xs text-gray-400 w-12 pt-1">[{note.createdAt}]</span>
+                    <span className="text-gray-800 text-sm break-words flex-1 whitespace-pre-line">{note.content}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
@@ -251,7 +353,7 @@ export default function ClassroomPage() {
           domain="8x8.vc"
           roomName={`vpaas-magic-cookie-a72e88e466dd449c891fb37ea83a09ed/${getRoomName()}`}
           jwt={getJwtToken()}
-          userInfo={{ displayName: classInfo?.teacher_name || 'Teacher' }}
+          userInfo={{ displayName: classInfo?.teacher_name || 'Teacher', email: '' }}
           spinner={renderSpinner}
           configOverwrite={{
             subject: classInfo?.course_name || 'English Bridge Class',

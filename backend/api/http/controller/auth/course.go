@@ -1143,9 +1143,11 @@ func CourseMeetingNodeAdd(c *gin.Context) {
 	var note = model.CourseMeetingNote{
 		BtID:      bookTran.ID,
 		UserID:    bookTran.UserID,
+		TeacherID: bookTran.TeacherID,
 		StudentID: 0,
 		Note:      req.Note,
 		AddTime:   time.Now(),
+		Source:    "0",
 	}
 	db.Save(&note)
 
@@ -1185,7 +1187,7 @@ func CourseMeetingNodeFetch(c *gin.Context) {
 
 	db := system.GetDb()
 	var notes []model.CourseMeetingNote
-	err = db.Model(&model.CourseMeetingNote{}).Where("bt_id = ? and user_id = ?", btid, userID).Order("add_time DESC").Find(&notes).Error
+	err = db.Model(&model.CourseMeetingNote{}).Where("bt_id = ? and user_id = ? and source = ?", btid, userID, 0).Order("add_time DESC").Find(&notes).Error
 
 	if err != nil {
 		log.Error("fetch course meeting error", err)

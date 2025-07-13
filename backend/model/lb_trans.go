@@ -33,8 +33,10 @@ type CourseMeetingNote struct {
 	BtID      uint64    `gorm:"column:bt_id" json:"bt_id"`
 	UserID    uint64    `gorm:"column:user_id" json:"user_id"`
 	StudentID uint64    `gorm:"column:student_id" json:"student_id"`
+	TeacherID uint64    `gorm:"column:teacher_id" json:"teacher_id"`
 	Note      string    `gorm:"column:note" json:"note"`
 	AddTime   time.Time `gorm:"column:add_time" json:"add_time"`
+	Source    string    `gorm:"column:source" json:"source"`
 }
 
 func (CourseMeetingNote) TableName() string {

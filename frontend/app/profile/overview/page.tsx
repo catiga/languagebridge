@@ -138,21 +138,53 @@ export default function ProfileOverviewPage() {
                 if (isPast) cardClass = 'bg-gray-100 text-gray-400 border border-gray-200';
                 else if (isToday) cardClass = 'bg-blue-50 border border-blue-300 shadow-blue-100 text-blue-900';
                 else if (isFuture) cardClass = 'bg-green-50 border border-green-300 text-green-900';
+                // 进入课堂规则
+                let canEnter = false;
+                let enterTip = '';
+                if (isToday) {
+                  const now = new Date();
+                  const lessonStart = new Date(`${lesson.lesson_date.slice(0, 10)}T${lesson.start_time}`);
+                  const diffMinutes = (now.getTime() - lessonStart.getTime()) / 60000;
+                  if (diffMinutes >= -120 && diffMinutes <= 120) {
+                    canEnter = true;
+                  } else {
+                    enterTip = 'You can only enter within 2 hours before or after the start time.';
+                  }
+                }
                 return (
                   <motion.div
                     key={lesson.book_id || i}
-                    className={`w-full h-full min-h-[120px] flex flex-col justify-between rounded-xl px-6 py-4 font-semibold shadow-md ${cardClass}`}
+                    className={`w-full h-full min-h-[80px] flex items-center justify-between rounded-xl px-6 py-3 font-semibold shadow-md relative ${cardClass} ${canEnter ? 'ring-2 ring-purple-400 animate-pulse' : ''}`}
                     whileHover={{ scale: 1.04 }}
                     transition={{ type: 'spring', stiffness: 300 }}
                   >
-                    <div className="font-bold text-lg mb-1">{lesson.course_name}</div>
-                    <div className="text-xs mb-1">
-                      {lesson.start_time} - {lesson.end_time} | {lesson.lesson_date?.slice(0, 10)}
-                      {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
-                      {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
-                      {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-base mb-1 truncate">{lesson.course_name}</div>
+                      <div className="text-xs mb-1">
+                        {lesson.start_time} - {lesson.end_time} | {lesson.lesson_date?.slice(0, 10)}
+                        {isPast && <span className="ml-2 px-2 py-0.5 rounded bg-gray-300 text-gray-600 text-xs">Past</span>}
+                        {isToday && <span className="ml-2 px-2 py-0.5 rounded bg-blue-500 text-white text-xs">Today</span>}
+                        {isFuture && <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs">Upcoming</span>}
+                      </div>
+                      <div className="text-xs text-gray-500">Teacher: {lesson.teacher_name}</div>
                     </div>
-                    <div className="text-xs text-gray-500">Teacher: {lesson.teacher_name}</div>
+                    {/* 进入课堂按钮-右侧小巧美观 */}
+                    {canEnter ? (
+                      <button
+                        className="ml-4 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-500 text-white font-semibold rounded-lg shadow hover:scale-105 transition-all duration-200 flex items-center gap-1 text-sm animate-none whitespace-nowrap"
+                        onClick={() => window.open(`/course/meet/${lesson.book_id || lesson.id}`, '_blank', 'noopener,noreferrer')}
+                      >
+                        <FaRocket className="mr-1 w-4 h-4" /> Enter
+                      </button>
+                    ) : isToday ? (
+                      <button
+                        className="ml-4 px-3 py-1.5 bg-gray-200 text-gray-400 font-semibold rounded-lg shadow text-sm cursor-not-allowed whitespace-nowrap"
+                        onClick={() => alert(enterTip)}
+                        disabled
+                      >
+                        <FaRocket className="mr-1 w-4 h-4" /> Enter
+                      </button>
+                    ) : null}
                   </motion.div>
                 );
               })

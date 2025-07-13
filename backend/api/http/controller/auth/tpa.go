@@ -1402,3 +1402,125 @@ func TeacherEmailCheck(c *gin.Context) {
 	db.Save(&verifyProcess)
 	c.JSON(http.StatusOK, res)
 }
+
+func TeacherCourseMeetingNodeAdd(c *gin.Context) {
+	var req CourseMeetingNoteAddRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Note) == 0 {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please enter note"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var bookTran model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).Where("id = ? and teacher_id = ?", req.BtID, userID).First(&bookTran).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var note = model.CourseMeetingNote{
+		BtID:      bookTran.ID,
+		UserID:    bookTran.UserID,
+		TeacherID: bookTran.TeacherID,
+		StudentID: 0,
+		Note:      req.Note,
+		AddTime:   time.Now(),
+		Source:    "1",
+	}
+	db.Save(&note)
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherCourseMeetingNodeFetch(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course meeting invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var notes []model.CourseMeetingNote
+	err = db.Model(&model.CourseMeetingNote{}).Where("bt_id = ? and teacher_id = ? and source = ?", btid, userID, 1).Order("add_time DESC").Find(&notes).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	type NoteResponse struct {
+		ID      uint64    `json:"id"`
+		Note    string    `json:"note"`
+		AddTime time.Time `json:"add_time"`
+	}
+	var retData []NoteResponse
+	for _, r := range notes {
+		retData = append(retData, NoteResponse{
+			ID:      r.ID,
+			Note:    r.Note,
+			AddTime: r.AddTime,
+		})
+	}
+	res.Data = retData
+
+	c.JSON(http.StatusOK, res)
+}
