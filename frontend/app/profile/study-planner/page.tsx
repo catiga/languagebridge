@@ -6,6 +6,7 @@ import { apiClient } from '../../utils/api';
 import * as yup from 'yup';
 import ConfirmModal from '../../components/ConfirmModal';
 import { toast } from 'react-toastify';
+import { FaUser } from 'react-icons/fa';
 
 // 课程选项如需后续对接接口再补充
 const courseOptions: any[] = [];
@@ -46,7 +47,12 @@ interface StageGoal {
   endDate: string;
 }
 
+// 执行人类型：自己或member
+type Executor = { id: string; name: string };
+
 export default function StudyPlannerPage() {
+  const [members, setMembers] = useState<Executor[]>([]);
+  const [executorId, setExecutorId] = useState<string>('0');
   const [view, setView] = useState("month");
   const [selectedDate, setSelectedDate] = useState("");
   const [stageGoals, setStageGoals] = useState<StageGoal[]>([]);
@@ -59,6 +65,15 @@ export default function StudyPlannerPage() {
   const [stats, setStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  // 拉取成员列表
+  useEffect(() => {
+    apiClient.post('/spwapi/auth/profile/member/list').then((res: any) => {
+      if (res && res.code === 0 && Array.isArray(res.data)) {
+        setMembers(res.data.map((m: any) => ({ id: String(m.id), name: m.name })));
+      }
+    });
+  }, []);
+
   // 只显示当前阶段目标下的任务
   const filteredTasks = tasks.filter(t => t.stageGoalId === currentStageGoalId);
   const currentStageGoal = stageGoals.find(g => g.id === currentStageGoalId) || null;
@@ -69,7 +84,12 @@ export default function StudyPlannerPage() {
   useEffect(() => {
     let ignore = false;
     setLoading(true);
-    apiClient.get('/spwapi/auth/planner/pull').then((res: any) => {
+    // 拉取当前执行人的学习计划
+    let url = '/spwapi/auth/planner/pull';
+    if (executorId !== '0') {
+      url += `?student_id=${executorId}`;
+    }
+    apiClient.get(url).then((res: any) => {
       if (ignore) return;
       if (res && res.code === 0 && Array.isArray(res.data) && res.data.length > 0) {
         // 字段名转换
@@ -115,7 +135,7 @@ export default function StudyPlannerPage() {
       if (!ignore) setLoading(false);
     });
     return () => { ignore = true; };
-  }, []);
+  }, [executorId]);
 
   // 拉取统计数据
   const fetchStats = async (overviewId: number) => {
@@ -210,6 +230,16 @@ export default function StudyPlannerPage() {
   return (
     <ProfileLayout>
       <div className="max-w-5xl mx-auto mt-6 bg-white/80 rounded-3xl shadow-xl p-6 min-h-[70vh]">
+        {/* 顶部：执行人选择器+阶段目标切换与展示 */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="font-bold text-lg text-blue-700 flex items-center"><FaUser className="mr-1" /> Executor:</span>
+            <select className="border rounded px-3 py-2" value={executorId} onChange={e => setExecutorId(e.target.value)}>
+              <option value="0">All</option>
+              {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+        </div>
         {/* 阶段目标切换与展示 */}
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-2">

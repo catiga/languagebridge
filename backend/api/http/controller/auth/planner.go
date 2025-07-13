@@ -135,13 +135,25 @@ func PullStageGoal(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
+	studentIdStr, exist := c.GetQuery("student_id")
+	var studentId = uint64(0)
+	if exist {
+		studentId, _ = strconv.ParseUint(studentIdStr, 10, 64)
+	}
 
 	db := system.GetDb()
 
 	var overviewList []model.UserPlanOverview
 	var taskList []model.UserPlanSchedule
 	var overIds []uint64
-	err = db.Model(&model.UserPlanOverview{}).Where("user_id = ? and flag != ?", userID, -1).Find(&overviewList).Error
+
+	var sql = "user_id = ? and flag != ?"
+	var params = []interface{}{userID, -1}
+	if studentId > 0 {
+		sql = sql + " and student_id = ?"
+		params = append(params, studentId)
+	}
+	err = db.Model(&model.UserPlanOverview{}).Where(sql, params...).Find(&overviewList).Error
 	if err != nil {
 		log.Error(err)
 	}
@@ -149,7 +161,7 @@ func PullStageGoal(c *gin.Context) {
 		overIds = append(overIds, v.ID)
 	}
 	if len(overIds) > 0 {
-		err = db.Model(&model.UserPlanSchedule{}).Where("overview_id IN ? and flag != ?", overIds, -1).Find(&taskList).Error
+		err = db.Model(&model.UserPlanSchedule{}).Where("overview_id IN ? and flag != ?", overIds, -1).Order(("start_date DESC")).Find(&taskList).Error
 		if err != nil {
 			log.Error(err)
 		}
