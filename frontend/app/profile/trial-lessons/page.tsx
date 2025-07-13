@@ -6,6 +6,7 @@ import { FaVideo, FaUser, FaBookOpen, FaClock, FaCheckCircle } from "react-icons
 import ProfileLayout from "../ProfileLayout";
 import ApplyTrialLessonModal from "./ApplyTrialLessonModal";
 import { toast } from "react-toastify";
+import dayjs from "dayjs";
 
 interface TrialLesson {
   id: number;
@@ -36,6 +37,7 @@ export default function TrialLessonsPage() {
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
+  const [enterLoadingId, setEnterLoadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchList();
@@ -177,7 +179,29 @@ export default function TrialLessonsPage() {
                       </>
                     )}
                     {item.status === "20" && (
-                      <span className="text-xs text-green-600 mt-1">Confirmed</span>
+                      <>
+                        {/* 进入课程按钮逻辑 */}
+                        {(() => {
+                          const now = dayjs();
+                          const apply = dayjs(item.apply_time || item.add_time);
+                          const canEnter = now.isAfter(apply.subtract(10, 'minute')) && now.isBefore(apply.add(2, 'hour'));
+                          return (
+                            <button
+                              className={`mt-2 px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold text-sm shadow hover:scale-105 transition flex items-center justify-center ${canEnter ? '' : 'opacity-50 cursor-not-allowed'}`}
+                              onClick={() => {
+                                if (!canEnter) return;
+                                setEnterLoadingId(item.id);
+                                window.open(`/course/meeting/${item.id}`, '_blank', 'noopener,noreferrer');
+                                setTimeout(() => setEnterLoadingId(null), 1000);
+                              }}
+                              disabled={!canEnter || enterLoadingId === item.id}
+                            >
+                              {enterLoadingId === item.id && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>}
+                              {canEnter ? (enterLoadingId === item.id ? "Entering..." : "Enter Lesson") : "Not Available"}
+                            </button>
+                          );
+                        })()}
+                      </>
                     )}
                     {item.status === "30" && (
                       <span className="text-xs text-blue-600 mt-1">Finished</span>
