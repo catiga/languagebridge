@@ -221,25 +221,12 @@ export default function StudyPlannerPage() {
     );
   }
 
-  // 没有任何阶段目标
-  if (stageGoals.length === 0) {
-    return (
-      <ProfileLayout>
-        <div className="max-w-xl mx-auto mt-24 bg-white/90 rounded-3xl shadow-xl p-8 flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-4 text-blue-700">No Study Plan Found</h2>
-          <div className="text-gray-600 mb-6 text-center">You have not created any study plan yet.<br/>Click the button below to create your first stage goal and start your learning journey!</div>
-          <button className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold text-lg shadow hover:bg-blue-700 transition" onClick={() => setShowAddStage(true)}>+ Create Stage Goal</button>
-          {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
-        </div>
-      </ProfileLayout>
-    );
-  }
-
+  // 页面主渲染区域，Executor选择卡片始终在顶部
   return (
     <ProfileLayout>
-      <div className="max-w-5xl mx-auto mt-6 bg-white/80 rounded-3xl shadow-xl p-6 min-h-[70vh]">
-        {/* 顶部：执行人选择区域 */}
-        <div className="mb-2">
+      <div className="max-w-5xl mx-auto mt-6 min-h-[70vh]">
+        {/* Executor选择区域：独立卡片，始终顶部固定 */}
+        <div className="bg-white/90 rounded-2xl shadow p-5 mb-6 flex flex-col gap-2 sticky top-0 z-20">
           <div className="flex items-center gap-3 mb-2">
             <span className="font-bold text-lg text-blue-700 flex items-center"><FaUser className="mr-1" /> Executor:</span>
           </div>
@@ -260,132 +247,145 @@ export default function StudyPlannerPage() {
             ))}
           </div>
         </div>
-        {/* 阶段目标切换与展示区域 */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg text-blue-700">Stage Goal:</span>
-            <select className="border rounded px-3 py-2" value={currentStageGoalId ?? ''} onChange={e => setCurrentStageGoalId(Number(e.target.value))}>
-              {stageGoals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
-            </select>
-            <button className="ml-2 px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200" onClick={() => setShowAddStage(true)}>+ New</button>
+        {/* 阶段目标区域或无计划提示 */}
+        {stageGoals.length === 0 ? (
+          <div className="max-w-xl mx-auto mt-24 bg-white/90 rounded-3xl shadow-xl p-8 flex flex-col items-center">
+            <h2 className="text-2xl font-bold mb-4 text-blue-700">No Study Plan Found</h2>
+            <div className="text-gray-600 mb-6 text-center">You have not created any study plan yet.<br/>Click the button below to create your first stage goal and start your learning journey!</div>
+            <button className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold text-lg shadow hover:bg-blue-700 transition" onClick={() => setShowAddStage(true)}>+ Create Stage Goal</button>
+            {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
           </div>
-          {currentStageGoal && (
-            <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-700 max-w-xl flex items-center gap-4">
-              <div>
-                <div><b>Theme:</b> {currentStageGoal.title}</div>
-                <div><b>Description:</b> {currentStageGoal.description}</div>
-                <div><b>Goal:</b> {currentStageGoal.goal}</div>
-                <div><b>Period:</b> {currentStageGoal.startDate} ~ {currentStageGoal.endDate}</div>
-                {/* Executor信息展示保持原样 */}
-                <div className="flex items-center gap-2 mt-2">
-                  <b>Executor:</b>
-                  {currentStageGoal.student_id && members.length > 0 ? (
-                    (() => {
-                      const stu = members.find(m => String(m.id) === String(currentStageGoal.student_id));
-                      if (stu) {
-                        return (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 font-bold text-base shadow-sm gap-2">
-                            <FaUser className="w-4 h-4 text-green-500" />
-                            {stu.name}
-                            <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs font-bold">Bound</span>
-                          </span>
-                        );
-                      }
-                      return <span className="text-red-500 font-bold">Unknown</span>;
-                    })()
-                  ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-400 font-bold text-base shadow-sm gap-2">
-                      <FaUser className="w-4 h-4" />
-                      Not bound
-                    </span>
-                  )}
-                </div>
+        ) : (
+          // ...原有有计划时的内容...
+          <>
+            {/* 阶段目标切换与展示区域：独立卡片 */}
+            <div className="bg-white/80 rounded-2xl shadow-xl p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg text-blue-700">Stage Goal:</span>
+                <select className="border rounded px-3 py-2" value={currentStageGoalId ?? ''} onChange={e => setCurrentStageGoalId(Number(e.target.value))}>
+                  {stageGoals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+                </select>
+                <button className="ml-2 px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200" onClick={() => setShowAddStage(true)}>+ New</button>
               </div>
-              <button
-                className="ml-4 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
-                onClick={() => {
-                  setBindPlanId(currentStageGoal.id);
-                  setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
-                  setBindModalOpen(true);
-                }}
-              >
-                <FaLink className="mr-1 w-4 h-4" /> Bind Student
-              </button>
+              {currentStageGoal && (
+                <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-700 max-w-xl flex items-center gap-4">
+                  <div>
+                    <div><b>Theme:</b> {currentStageGoal.title}</div>
+                    <div><b>Description:</b> {currentStageGoal.description}</div>
+                    <div><b>Goal:</b> {currentStageGoal.goal}</div>
+                    <div><b>Period:</b> {currentStageGoal.startDate} ~ {currentStageGoal.endDate}</div>
+                    {/* Executor信息展示保持原样 */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <b>Executor:</b>
+                      {currentStageGoal.student_id && members.length > 0 ? (
+                        (() => {
+                          const stu = members.find(m => String(m.id) === String(currentStageGoal.student_id));
+                          if (stu) {
+                            return (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 font-bold text-base shadow-sm gap-2">
+                                <FaUser className="w-4 h-4 text-green-500" />
+                                {stu.name}
+                                <span className="ml-2 px-2 py-0.5 rounded bg-green-500 text-white text-xs font-bold">Bound</span>
+                              </span>
+                            );
+                          }
+                          return <span className="text-red-500 font-bold">Unknown</span>;
+                        })()
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-400 font-bold text-base shadow-sm gap-2">
+                          <FaUser className="w-4 h-4" />
+                          Not bound
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="ml-4 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
+                    onClick={() => {
+                      setBindPlanId(currentStageGoal.id);
+                      setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
+                      setBindModalOpen(true);
+                    }}
+                  >
+                    <FaLink className="mr-1 w-4 h-4" /> Bind Student
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        {/* 视图切换与主内容 */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
-            <span className="text-2xl">📅</span> Study Planner
-          </h1>
-          <div className="flex gap-2">
-            {viewTabs.map(tab => (
-              <button
-                key={tab.key}
-                className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 ${view === tab.key ? "bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow" : "bg-gray-100 text-gray-700 hover:bg-blue-100"}`}
-                onClick={() => setView(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition" onClick={() => setShowAdd(true)}>+ Add Task</button>
-        </div>
-        {/* View Content */}
-        <div className="mt-4">
-          {view === "month" && currentStageGoal && (
-            <MonthView
-              tasks={filteredTasks}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              onAddTask={(date: string) => setAddTaskDate(date)}
-              periodStart={currentStageGoal.startDate}
-              periodEnd={currentStageGoal.endDate}
-            />
-          )}
-          {view === "week" && <WeekView tasks={filteredTasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
-          {view === "day" && (
-            <DayView
-              tasks={filteredTasks}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              periodStart={currentStageGoal?.startDate}
-              periodEnd={currentStageGoal?.endDate}
-              onUpdateTask={(updatedTask: any) => setTasks(ts => ts.map(t => t.id === updatedTask.id ? updatedTask : t))}
-              onDeleteTask={(id: number) => setTasks(ts => ts.filter(t => t.id !== id))}
-            />
-          )}
-        </div>
-        {/* Statistics */}
-        <div className="mt-8">
-          <StatsPanel stats={stats} loading={statsLoading} />
-        </div>
-        {(showAdd || addTaskDate) && (
-          <AddTaskModal
-            onClose={() => { setShowAdd(false); setAddTaskDate(null); }}
-            onSubmit={async (task: any) => {
-              // priority: High=1, Medium=2, Low=3
-              const priorityMap: any = { High: 1, Medium: 2, Low: 3 };
-              const payload = {
-                overview_id: currentStageGoalId,
-                exe_date: addTaskDate || task.date,
-                start_time: task.start_time,
-                end_time: task.end_time,
-                duration: 0,
-                priority: priorityMap[task.priority] || 2,
-                content: task.title,
-                note: task.note || "",
-                repeat: task.repeat === 'whole_period',
-              };
-              await apiClient.post('/spwapi/auth/planner/task/add', payload);
-              handleAddTask({ ...task, date: addTaskDate || task.date });
-              setShowAdd(false); setAddTaskDate(null);
-            }}
-            date={addTaskDate || undefined}
-          />
+            {/* 视图切换与主内容 */}
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
+                <span className="text-2xl">📅</span> Study Planner
+              </h1>
+              <div className="flex gap-2">
+                {viewTabs.map(tab => (
+                  <button
+                    key={tab.key}
+                    className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 ${view === tab.key ? "bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow" : "bg-gray-100 text-gray-700 hover:bg-blue-100"}`}
+                    onClick={() => setView(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition" onClick={() => setShowAdd(true)}>+ Add Task</button>
+            </div>
+            {/* View Content */}
+            <div className="mt-4">
+              {view === "month" && currentStageGoal && (
+                <MonthView
+                  tasks={filteredTasks}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  onAddTask={(date: string) => setAddTaskDate(date)}
+                  periodStart={currentStageGoal.startDate}
+                  periodEnd={currentStageGoal.endDate}
+                />
+              )}
+              {view === "week" && <WeekView tasks={filteredTasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
+              {view === "day" && (
+                <DayView
+                  tasks={filteredTasks}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  periodStart={currentStageGoal?.startDate}
+                  periodEnd={currentStageGoal?.endDate}
+                  onUpdateTask={(updatedTask: any) => setTasks(ts => ts.map(t => t.id === updatedTask.id ? updatedTask : t))}
+                  onDeleteTask={(id: number) => setTasks(ts => ts.filter(t => t.id !== id))}
+                />
+              )}
+            </div>
+            {/* Statistics */}
+            <div className="mt-8">
+              <StatsPanel stats={stats} loading={statsLoading} />
+            </div>
+            {(showAdd || addTaskDate) && (
+              <AddTaskModal
+                onClose={() => { setShowAdd(false); setAddTaskDate(null); }}
+                onSubmit={async (task: any) => {
+                  // priority: High=1, Medium=2, Low=3
+                  const priorityMap: any = { High: 1, Medium: 2, Low: 3 };
+                  const payload = {
+                    overview_id: currentStageGoalId,
+                    exe_date: addTaskDate || task.date,
+                    start_time: task.start_time,
+                    end_time: task.end_time,
+                    duration: 0,
+                    priority: priorityMap[task.priority] || 2,
+                    content: task.title,
+                    note: task.note || "",
+                    repeat: task.repeat === 'whole_period',
+                  };
+                  await apiClient.post('/spwapi/auth/planner/task/add', payload);
+                  handleAddTask({ ...task, date: addTaskDate || task.date });
+                  setShowAdd(false); setAddTaskDate(null);
+                }}
+                date={addTaskDate || undefined}
+              />
+            )}
+            {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
+          </>
         )}
-        {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
       </div>
       {bindModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
