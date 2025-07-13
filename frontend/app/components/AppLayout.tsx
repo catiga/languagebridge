@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const mainContentPadding = 'pt-16';
 
   // 不在meet页面和tpa/classroom页面渲染Navbar
-  const hideNavbar = pathname.startsWith('/course/meet/') || pathname.startsWith('/tpa/classroom');
+  const hideNavbar = pathname.startsWith('/course/meet/') || pathname.startsWith('/tpa/classroom') || pathname.startsWith('/course/trial');
 
   return (
     <div className={pageBackgroundColor}>

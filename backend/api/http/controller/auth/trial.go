@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -177,6 +178,104 @@ func TrialLessonConfirm(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TrialLessonMeeting(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	tlIdStr, exist := c.GetQuery("trial_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	trialId, err := strconv.ParseInt(tlIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var trialLesson model.TrialLesson
+
+	db.Model(&model.TrialLesson{}).Where("id = ? and user_id = ?", trialId, userID).Order("apply_time DESC").Find(&trialLesson)
+	if trialLesson.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if trialLesson.Status != common.TrialLessonConfirmed {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Status invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	now := time.Now()
+	start := trialLesson.ApplyTime.Add(-30 * time.Minute)
+	end := trialLesson.ApplyTime.Add(2 * time.Hour)
+
+	if !(now.After(start) && now.Before(end)) {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Time expired"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var teacherInfo model.Teacher
+	var userInfo model.UserInfo
+	db.Model(&model.Teacher{}).Where("id = ?", trialLesson.TeacherID).First(&teacherInfo)
+	db.Model(&model.UserInfo{}).Where("id = ?", trialLesson.UserID).First(&userInfo)
+
+	bridgeMeeting := fmt.Sprintf("%s%d_%d_%d", "langbridge", trialLesson.ID, teacherInfo.ID, userInfo.ID)
+	roomURI := GenerateRoomName(bridgeMeeting)
+	type TrialMeeting struct {
+		TrialID     uint64    `json:"trial_id"`
+		MeetingURI  string    `json:"meeting_uri"`
+		CourseName  string    `json:"course_name"`
+		TeacherName string    `json:"teacher_name"`
+		StudentName string    `json:"student_name"`
+		ApplyTime   time.Time `json:"apply_time"`
+		CurrentRole string    `json:"c_r"`
+	}
+
+	retObj := TrialMeeting{
+		TrialID:     trialLesson.ID,
+		MeetingURI:  roomURI,
+		CourseName:  "Trial Lesson",
+		TeacherName: teacherInfo.Name,
+		StudentName: userInfo.Name,
+		ApplyTime:   *trialLesson.ApplyTime,
+		CurrentRole: "0",
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = retObj
 
 	c.JSON(http.StatusOK, res)
 }

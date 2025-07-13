@@ -75,6 +75,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/trial/lesson/apply", auth.TrialLessonApply)
 	authGroup.GET("/trial/lesson/confirm", auth.TrialLessonConfirm)
 
+	authGroup.GET("/trial/lesson/meeting", auth.TrialLessonMeeting)
+
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
 	teacherAuthGroup.GET("/overview", auth.TeacherOverview)
 	teacherAuthGroup.GET("/profile/retrieve", auth.RetrieveTeacherProfile)
@@ -103,6 +105,7 @@ func Routers(e *gin.RouterGroup) {
 
 	teacherAuthGroup.GET("/trial/lesson/fetch", auth.TeacherTrialLessonFetch)
 	teacherAuthGroup.POST("/trial/lesson/assign", auth.TeacherTrialLessonAssign)
+	teacherAuthGroup.GET("/trial/lesson/meeting", auth.TeacherTrialLessonMeeting)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

@@ -143,7 +143,7 @@ export default function TrialLessonsPanel() {
                           onClick={() => {
                             if (!canEnter) return;
                             setEnterLoadingId(item.id);
-                            window.open(`/tpa/classroom/${item.id}`, '_blank', 'noopener,noreferrer');
+                            window.open(`/course/trial/tos/${item.id}`, '_blank', 'noopener,noreferrer');
                             setTimeout(() => setEnterLoadingId(null), 1000);
                           }}
                           disabled={!canEnter || enterLoadingId === item.id}
