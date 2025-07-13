@@ -7,6 +7,7 @@ import { apiClient } from '../../../utils/api';
 import { toast } from 'react-toastify';
 import { FaBook, FaChalkboardTeacher, FaUserGraduate, FaClock, FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaHandPaper, FaComments, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 // Updated interface to match your new API response
 interface LessonDetails {
@@ -44,6 +45,7 @@ export default function MeetPage() {
   // ESC锁，防止多次弹出密码框
   const escLock = useRef(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (!id) {
@@ -119,9 +121,16 @@ export default function MeetPage() {
     updateLog((items: any[]) => [...items, 'Jitsi API ready']);
   };
 
-  const handleReadyToClose = () => {
+  const handleReadyToClose = async () => {
+    try {
+      // 通知后端用户已结束会议
+      await apiClient.get('/spwapi/auth/course/meeting/end', { btid: id });
+    } catch (e) {
+      toast.error('Notify ending failed');
+    }
     toast.info('Meeting ended');
-    // 可以在这里添加离开会议的逻辑
+    // 可以在这里添加离开会议的逻辑，比如跳转页面
+    router.push('/profile/overview');
   };
 
   const handleIFrameRef = (iframeRef: any) => {

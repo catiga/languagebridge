@@ -49,6 +49,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/course/time/list", auth.CourseTimeList)
 	authGroup.GET("/course/time/range", auth.CourseTimeRange)
 	authGroup.GET("/course/meeting/fetch", auth.CourseGetMeetingInfo)
+	authGroup.GET("/course/meeting/end", auth.CourseGetMeetingEnd)
 	authGroup.GET("/course/review/fetch", auth.CourseGetReview)
 	authGroup.POST("/course/review/add", auth.CourseAddReview)
 	authGroup.GET("/course/histories", auth.CourseGetHistories)
@@ -74,7 +75,6 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/trial/lesson/fetch", auth.TrialLessonFetch)
 	authGroup.POST("/trial/lesson/apply", auth.TrialLessonApply)
 	authGroup.GET("/trial/lesson/confirm", auth.TrialLessonConfirm)
-
 	authGroup.GET("/trial/lesson/meeting", auth.TrialLessonMeeting)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
@@ -89,6 +89,7 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.POST("/course/add", auth.AddCourse)
 	teacherAuthGroup.GET("/course/unbind", auth.TeacherUnBindCourse)
 	teacherAuthGroup.GET("/course/meeting/fetch", auth.TeacherGetMeetingInfo)
+	teacherAuthGroup.GET("/course/meeting/end", auth.TeacherGetMeetingEnd)
 
 	teacherAuthGroup.POST("/course/meeting/note/add", auth.TeacherCourseMeetingNodeAdd)
 	teacherAuthGroup.GET("/course/meeting/note/fetch", auth.TeacherCourseMeetingNodeFetch)

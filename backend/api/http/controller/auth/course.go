@@ -797,6 +797,69 @@ func CourseGetMeetingInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func CourseGetMeetingEnd(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course meeting invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var bookTran model.CourseBookTrans
+	err = db.Model(&model.CourseBookTrans{}).Where("id = ? and user_id = ?", btid, userID).First(&bookTran).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "course not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var courseLog model.CourseLogRecord
+	db.Model(&model.CourseLogRecord{}).Where("book_id = ?", bookTran.ID).First(&courseLog)
+
+	if courseLog.ID > 0 && courseLog.EndTime == nil {
+		now := time.Now()
+		courseLog.EndTime = &now
+		courseLog.EndFrom = "U"
+		err = db.Model(&model.CourseLogRecord{}).Where("id = ?", courseLog.ID).Updates(&courseLog).Error
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	db.Model(&model.CourseBookTrans{}).Where("id = ?", bookTran.ID).Update("ongoing", 2)
+
+	c.JSON(http.StatusOK, res)
+}
+
 func CourseGetReview(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()

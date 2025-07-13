@@ -174,7 +174,13 @@ export default function ClassroomPage() {
     updateLog((items: any[]) => [...items, 'Meeting is ready']);
   };
 
-  const handleReadyToClose = () => {
+  const handleReadyToClose = async () => {
+    try {
+      // 通知后端老师已结束会议
+      await apiClient.get('/spwapi/tpa/auth/course/meeting/end', { btid: btid });
+    } catch (e) {
+      toast.error('Notify ending failed');
+    }
     toast.info('Meeting ended');
     router.push('/tpa/dashboard');
   };

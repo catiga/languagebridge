@@ -39,14 +39,24 @@ export default function Navbar() {
   // 检查token
   useEffect(() => {
     const checkLogin = () => {
-      const token = (typeof window !== 'undefined') ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
-      setIsLoggedIn(!!token);
+      let token = null;
       let info = null;
-      try {
-        const raw = (typeof window !== 'undefined') ? (localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')) : null;
-        if (raw) info = JSON.parse(raw);
-      } catch {}
-      setUserInfo(info);
+      if (typeof window !== 'undefined') {
+        // 1. 先查 localStorage/sessionStorage
+        token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        let raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+        // 2. 如果没有，再查 cookie
+        if (!token) token = Cookies.get('token') || null;
+        if (!raw) raw = Cookies.get('userInfo') || null;
+        setIsLoggedIn(!!token);
+        try {
+          if (raw) info = JSON.parse(raw);
+        } catch {}
+        setUserInfo(info);
+      } else {
+        setIsLoggedIn(false);
+        setUserInfo(null);
+      }
     };
     checkLogin();
     window.addEventListener('userChanged', checkLogin);

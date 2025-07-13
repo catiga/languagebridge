@@ -110,10 +110,13 @@ func (TeacherTimeSlotTemplate) TableName() string {
 }
 
 type CourseLogRecord struct {
-	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	BookID     uint64    `gorm:"column:book_id" json:"book_id"`
-	MeetingURI string    `gorm:"column:meeting_uri" json:"meeting_uri"`
-	AddTime    time.Time `gorm:"column:add_time" json:"add_time"`
+	ID         uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	BookID     uint64     `gorm:"column:book_id" json:"book_id"`
+	MeetingURI string     `gorm:"column:meeting_uri" json:"meeting_uri"`
+	AddTime    time.Time  `gorm:"column:add_time" json:"add_time"`
+	EndTime    *time.Time `gorm:"column:end_time" json:"end_time"`
+	StartFrom  string     `gorm:"start_from" json:"start_from"`
+	EndFrom    string     `gorm:"end_from" json:"end_from"`
 }
 
 func (CourseLogRecord) TableName() string {
