@@ -115,3 +115,68 @@ func TrialLessonApply(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+func TrialLessonConfirm(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	tlIdStr, exist := c.GetQuery("trial_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	trialId, err := strconv.ParseInt(tlIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var trialLesson model.TrialLesson
+
+	db.Model(&model.TrialLesson{}).Where("id = ? and user_id = ?", trialId, userID).Order("apply_time DESC").Find(&trialLesson)
+	if trialLesson.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Please select trial lesson to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if trialLesson.Status != common.TrialLessonWaitingConfirm {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Status invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	err = db.Model(&model.TrialLesson{}).Where("id = ?", trialLesson.ID).Update("status", common.TrialLessonConfirmed).Error
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}

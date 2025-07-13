@@ -25,6 +25,7 @@ import TeacherScheduleWeekView from './components/TeacherScheduleWeekView';
 import SettingPanel from './components/SettingPanel';
 import { apiClient } from '@/app/utils/api';
 import TeacherCourseHistoryPanel from './components/TeacherCourseHistoryPanel';
+import TrialLessonsPanel from './components/TrialLessonsPanel';
 
 interface DashboardStats {
   totalStudents: number;
@@ -200,15 +201,6 @@ function AIToolsPanel() {
           {result}
         </div>
       )}
-    </div>
-  );
-}
-
-function TrialLessonsPanel() {
-  return (
-    <div className="bg-white rounded-2xl shadow p-8 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FaVideo className="text-blue-500" /> Trial Lessons</h2>
-      <div className="text-gray-500 text-lg text-center py-12">No trial lesson requests yet.<br/>When a student applies for a trial lesson, you will see it here.</div>
     </div>
   );
 }

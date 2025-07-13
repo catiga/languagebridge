@@ -5,6 +5,7 @@ import { ApiResponse, Teacher, CourseDetail } from "@/app/utils/interfaces";
 import { FaVideo, FaUser, FaBookOpen, FaClock, FaCheckCircle } from "react-icons/fa";
 import ProfileLayout from "../ProfileLayout";
 import ApplyTrialLessonModal from "./ApplyTrialLessonModal";
+import { toast } from "react-toastify";
 
 interface TrialLesson {
   id: number;
@@ -32,6 +33,9 @@ export default function TrialLessonsPage() {
   const [showModal, setShowModal] = useState(false);
   const [courseMap, setCourseMap] = useState<Record<number, CourseDetail>>({});
   const [teacherMap, setTeacherMap] = useState<Record<number, Teacher>>({});
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
 
   useEffect(() => {
     fetchList();
@@ -78,6 +82,27 @@ export default function TrialLessonsPage() {
     } catch {}
   };
 
+  // 用户确认试听课
+  const handleConfirm = async (id: number) => {
+    setConfirmingId(id);
+    setConfirmLoading(true);
+    try {
+      const res: any = await apiClient.get("/spwapi/auth/trial/lesson/confirm", { trial_id: id });
+      if (res.code === 0) {
+        toast.success("Confirmed successfully!");
+        fetchList();
+      } else {
+        toast.error(res.msg || "Failed to confirm");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Network error");
+    } finally {
+      setConfirmingId(null);
+      setConfirmLoading(false);
+      setConfirmModal({ open: false, id: null });
+    }
+  };
+
   return (
     <ProfileLayout>
       <div className="max-w-4xl mx-auto py-10">
@@ -121,8 +146,38 @@ export default function TrialLessonsPage() {
                     <span className={`px-3 py-1 rounded-full font-bold text-sm mb-2 flex items-center gap-1 ${statusMap[item.status]?.color || "bg-gray-100 text-gray-500"}`}>
                       {statusMap[item.status]?.icon} {statusMap[item.status]?.label || item.status}
                     </span>
+                    {item.status === "10" && (
+                      <>
+                        <button
+                          className="mt-2 px-4 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold text-sm shadow hover:scale-105 transition flex items-center justify-center"
+                          onClick={() => setConfirmModal({ open: true, id: item.id })}
+                          disabled={confirmLoading && confirmingId === item.id}
+                        >
+                          {confirmLoading && confirmingId === item.id && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>}
+                          {confirmLoading && confirmingId === item.id ? "Confirming..." : "Confirm"}
+                        </button>
+                        {/* 确认弹窗 */}
+                        {confirmModal.open && confirmModal.id === item.id && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative animate-fade-in">
+                              <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" onClick={() => setConfirmModal({ open: false, id: null })}>&times;</button>
+                              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">Confirm Trial Lesson</h3>
+                              <div className="mb-6 text-gray-700">Are you sure you want to confirm this trial lesson?</div>
+                              <button
+                                className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow hover:bg-blue-700 transition disabled:bg-blue-300 flex items-center justify-center"
+                                onClick={() => handleConfirm(item.id)}
+                                disabled={confirmLoading}
+                              >
+                                {confirmLoading && <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>}
+                                {confirmLoading ? "Confirming..." : "Confirm"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                     {item.status === "20" && (
-                      <span className="text-xs text-green-600 mt-1">Confirmed! Please check your email for meeting info.</span>
+                      <span className="text-xs text-green-600 mt-1">Confirmed</span>
                     )}
                     {item.status === "30" && (
                       <span className="text-xs text-blue-600 mt-1">Finished</span>
