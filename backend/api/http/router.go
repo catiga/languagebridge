@@ -101,7 +101,7 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.POST("/email/send", auth.TeacherEmailSend)
 
 	teacherAuthGroup.GET("/trial/lesson/fetch", auth.TeacherTrialLessonFetch)
-	teacherAuthGroup.POST("/trial/lesson/apply", auth.TrialLessonAssign)
+	teacherAuthGroup.POST("/trial/lesson/assign", auth.TeacherTrialLessonAssign)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)
