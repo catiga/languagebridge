@@ -265,7 +265,7 @@ export default function ClassroomPage() {
       {/* 左侧信息面板 */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-800 mb-4">Classroom</h1>
+          <h1 className="text-xl font-bold text-gray-800 mb-4">Teacher Classroom</h1>
           
           {classInfo && (
             <div className="space-y-4">

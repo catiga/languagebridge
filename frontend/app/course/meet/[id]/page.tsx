@@ -461,7 +461,7 @@ export default function MeetPage() {
         {sidebarOpen && (
           <>
             <div className="p-6 border-b border-gray-200">
-              <h1 className="text-xl font-bold text-gray-800 mb-4">Classroom</h1>
+              <h1 className="text-xl font-bold text-gray-800 mb-4">Student Classroom</h1>
               <div className="space-y-4">
                 <div className="p-3 bg-slate-100 rounded-lg">
                   <div className="flex items-center text-gray-700 mb-2">
