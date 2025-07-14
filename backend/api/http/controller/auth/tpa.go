@@ -931,6 +931,12 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
 	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
 	db.Model(&model.CourseBookTrans{}).Where("id = ?", bookTran.ID).Update("ongoing", 1)
+	var studentInfo model.UserMember
+	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
+	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
+	err = db.Table("user_member as um").
+		Joins("JOIN user_course as uc ON um.id = uc.student_id").
+		Where("uc.id = ?", bookTran.UcID).Scan(&studentInfo).Error
 
 	token, err := utils.GenerateJWT(bookTran.LessonDate, 24*time.Hour)
 	if err != nil {
@@ -952,6 +958,8 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 		StartTime     string `json:"start_time"`
 		EndTime       string `json:"end_time"`
 		Token         string `json:"token"`
+		StudentID     uint64 `json:"student_id"`
+		StudentName   string `json:"student_name"`
 	}{
 		MeetingURI:    roomURI,
 		BookID:        bookTran.ID,
@@ -965,6 +973,8 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 		StartTime:     bookTran.StartTime,
 		EndTime:       bookTran.EndTime,
 		Token:         token,
+		StudentID:     studentInfo.ID,
+		StudentName:   studentInfo.Name,
 	}
 	c.JSON(http.StatusOK, res)
 }
