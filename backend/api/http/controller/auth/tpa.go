@@ -932,8 +932,6 @@ func TeacherGetMeetingInfo(c *gin.Context) {
 	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
 	db.Model(&model.CourseBookTrans{}).Where("id = ?", bookTran.ID).Update("ongoing", 1)
 	var studentInfo model.UserMember
-	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
-	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
 	err = db.Table("user_member as um").
 		Joins("JOIN user_course as uc ON um.id = uc.student_id").
 		Where("uc.id = ?", bookTran.UcID).Scan(&studentInfo).Error
@@ -1529,11 +1527,16 @@ func TeacherCourseMeetingNodeAdd(c *gin.Context) {
 		return
 	}
 
+	var studentInfo model.UserMember
+	err = db.Table("user_member as um").
+		Joins("JOIN user_course as uc ON um.id = uc.student_id").
+		Where("uc.id = ?", bookTran.UcID).Scan(&studentInfo).Error
+
 	var note = model.CourseMeetingNote{
 		BtID:      bookTran.ID,
 		UserID:    bookTran.UserID,
 		TeacherID: bookTran.TeacherID,
-		StudentID: 0,
+		StudentID: studentInfo.ID,
 		Note:      req.Note,
 		AddTime:   time.Now(),
 		Source:    "1",

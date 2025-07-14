@@ -1217,12 +1217,16 @@ func CourseMeetingNodeAdd(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
+	var studentInfo model.UserMember
+	err = db.Table("user_member as um").
+		Joins("JOIN user_course as uc ON um.id = uc.student_id").
+		Where("uc.id = ?", bookTran.UcID).Scan(&studentInfo).Error
 
 	var note = model.CourseMeetingNote{
 		BtID:      bookTran.ID,
 		UserID:    bookTran.UserID,
 		TeacherID: bookTran.TeacherID,
-		StudentID: 0,
+		StudentID: studentInfo.ID,
 		Note:      req.Note,
 		AddTime:   time.Now(),
 		Source:    "0",
