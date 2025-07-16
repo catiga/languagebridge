@@ -134,18 +134,18 @@ export default function LoginPage() {
         toast.success('Login successfully！');
         // 学生token存储，变量名严格为studentToken/studentInfo
         if (studentRemember) {
-          localStorage.setItem('studentToken', res.data.Token);
+          localStorage.setItem('studentToken', res.data.token);
           localStorage.setItem('studentInfo', JSON.stringify(res.data));
         } else {
-          sessionStorage.setItem('studentToken', res.data.Token);
+          sessionStorage.setItem('studentToken', res.data.token);
           sessionStorage.setItem('studentInfo', JSON.stringify(res.data));
         }
-        Cookies.set('studentToken', res.data.Token, { expires: studentRemember ? 7 : undefined, path: '/' });
+        Cookies.set('studentToken', res.data.token, { expires: studentRemember ? 7 : undefined, path: '/' });
         Cookies.set('studentInfo', JSON.stringify(res.data), { expires: studentRemember ? 7 : undefined, path: '/' });
         Cookies.set('userType', 'student', { expires: studentRemember ? 7 : undefined, path: '/' });
         window.dispatchEvent(new Event('userChanged'));
         setTimeout(() => {
-          router.push('/profile');
+          router.push('/student');
         }, 1500);
       } else {
         toast.error(res?.msg || 'Login failed');

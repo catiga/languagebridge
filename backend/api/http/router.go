@@ -29,7 +29,6 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.POST("/contact", home.SendSystemMessage)
 	homeGroup.POST("/preauth/get_msg", preauth.GetAuthMsg)
 	homeGroup.POST("/preauth/verify_msg", preauth.VerifyMessage)
-
 	homeGroup.POST("/student/login", home.StudentLogin)
 
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
@@ -111,6 +110,9 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.GET("/trial/lesson/fetch", auth.TeacherTrialLessonFetch)
 	teacherAuthGroup.POST("/trial/lesson/assign", auth.TeacherTrialLessonAssign)
 	teacherAuthGroup.GET("/trial/lesson/meeting", auth.TeacherTrialLessonMeeting)
+
+	studentGroup := e.Group("/student/auth", interceptor.StudentTokenInterceptor())
+	studentGroup.GET("/overview", auth.StudentOverview)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

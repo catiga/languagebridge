@@ -40,7 +40,7 @@ class ApiClient {
     }
     let studentToken = '';
     if (typeof window !== 'undefined') {
-      teacherToken = localStorage.getItem('studentToken') ||
+      studentToken = localStorage.getItem('studentToken') ||
               sessionStorage.getItem('studentToken') ||
               Cookies.get('studentToken') ||
               '';

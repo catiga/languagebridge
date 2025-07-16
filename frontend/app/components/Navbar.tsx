@@ -131,7 +131,7 @@ export default function Navbar() {
   };
 
   // /tpa路径下隐藏Login和Register按钮
-  const isTpaPage = pathname && pathname.startsWith('/tpa');
+  const isTpaPage = pathname && (pathname.startsWith('/tpa') || pathname.startsWith('/student'));
 
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ease-in-out ${navClass}`}>
