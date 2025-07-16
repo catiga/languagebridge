@@ -30,6 +30,8 @@ func Routers(e *gin.RouterGroup) {
 	homeGroup.POST("/preauth/get_msg", preauth.GetAuthMsg)
 	homeGroup.POST("/preauth/verify_msg", preauth.VerifyMessage)
 
+	homeGroup.POST("/student/login", home.StudentLogin)
+
 	authGroup := e.Group("/auth", interceptor.TokenInterceptor())
 	authGroup.GET("/overview", auth.Overview)
 	authGroup.POST("/email/check", auth.EmailCheck)

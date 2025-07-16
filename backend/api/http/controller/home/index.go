@@ -41,6 +41,23 @@ type LoginRequest struct {
 	Password  string `json:"password"`
 }
 
+type StudentLoginRequest struct {
+	LoginRequest
+	ParentNo string `json:"parent_no"`
+}
+
+type StudentProfileResponse struct {
+	ID          uint64 `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	RelType     string `json:"rel_type"`
+	RelDesc     string `json:"rel_desc"`
+	Gender      string `json:"gender"`
+	Personality string `json:"personality"`
+	Character   string `json:"character"`
+	LoginID     string `json:"login_id"`
+}
+
 type TeacherRegisterRequest struct {
 	Email           string `json:"email" binding:"required,min=5"`
 	Password        string `json:"password" binding:"required,min=8"`
@@ -869,5 +886,90 @@ func SendSystemMessage(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 
+	c.JSON(http.StatusOK, res)
+}
+
+func StudentLogin(c *gin.Context) {
+	var req StudentLoginRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var userInfo []model.UserInfo
+	db.Model(&model.UserInfo{}).Where("user_no = ?", req.ParentNo).Find(&userInfo)
+	if len(userInfo) == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Please input correct parent number."
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if len(userInfo) > 1 {
+		res.Code = codes.CODE_ERR_REPEAT
+		res.Msg = "Please input correct parent number, it it invalid."
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var studentInfo model.UserMember
+	err := db.Model(&model.UserMember{}).
+		Where("user_id = ? and login_id = ?", userInfo[0].ID, req.LoginName).
+		First(&studentInfo).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if studentInfo.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "student information is not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if req.Password != studentInfo.Password {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "student password is incorrect"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	originalStr := fmt.Sprintf("%d,%s,%d", studentInfo.ID, studentInfo.UserID, time.Now().Unix())
+	token, err := security.Encrypt([]byte(originalStr))
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "build login token failed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = struct {
+		UserID    uint64 `json:"user_id"`
+		UserNo    string `json:"user_no"`
+		StudentID uint64 `json:"student_id"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		Token     string `json:"token"`
+	}{
+		UserID:    userInfo[0].ID,
+		UserNo:    userInfo[0].UserNo,
+		StudentID: studentInfo.ID,
+		Email:     studentInfo.Email,
+		Name:      studentInfo.Name,
+		Token:     token,
+	}
 	c.JSON(http.StatusOK, res)
 }

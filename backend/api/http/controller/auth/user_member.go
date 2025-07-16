@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -105,7 +107,8 @@ func FetchMemberAdd(c *gin.Context) {
 		member.LoginID = req.LoginID
 	}
 	if len(req.Password) > 0 {
-		member.Password = req.Password
+		passwordHash := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
+		member.Password = passwordHash
 	}
 
 	if member.ID > 0 {
