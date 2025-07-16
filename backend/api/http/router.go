@@ -113,6 +113,10 @@ func Routers(e *gin.RouterGroup) {
 
 	studentGroup := e.Group("/student/auth", interceptor.StudentTokenInterceptor())
 	studentGroup.GET("/overview", auth.StudentOverview)
+	studentGroup.GET("/course/meeting/fetch", auth.StudentCourseGetMeetingInfo)
+	studentGroup.GET("/course/meeting/end", auth.StudentCourseGetMeetingEnd)
+	studentGroup.POST("/course/meeting/note/add", auth.StudentCourseMeetingNodeAdd)
+	studentGroup.GET("/course/meeting/note/fetch", auth.StudentCourseMeetingNodeFetch)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

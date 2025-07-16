@@ -173,7 +173,7 @@ export default function StudentPortalPage() {
                   {canEnter && (
                     <button
                       className="ml-3 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-400 text-white font-semibold rounded-lg shadow hover:scale-105 transition-all duration-200 flex items-center gap-1 text-xs whitespace-nowrap"
-                      onClick={() => router.push(`/student/lesson/${lesson.book_id || lesson.id}`)}
+                      onClick={() => window.open(`/student/classroom/${lesson.book_id || lesson.id}`, '_blank', 'noopener,noreferrer')}
                     >
                       <FaRocket className="mr-1 w-3 h-3" /> Enter
                     </button>
