@@ -161,7 +161,7 @@ func PullStageGoal(c *gin.Context) {
 		overIds = append(overIds, v.ID)
 	}
 	if len(overIds) > 0 {
-		err = db.Model(&model.UserPlanSchedule{}).Where("overview_id IN ? and flag != ?", overIds, -1).Order(("start_date DESC")).Find(&taskList).Error
+		err = db.Model(&model.UserPlanSchedule{}).Where("overview_id IN ? and flag != ?", overIds, -1).Order(("start_time DESC")).Find(&taskList).Error
 		if err != nil {
 			log.Error(err)
 		}

@@ -117,6 +117,12 @@ func Routers(e *gin.RouterGroup) {
 	studentGroup.GET("/course/meeting/end", auth.StudentCourseGetMeetingEnd)
 	studentGroup.POST("/course/meeting/note/add", auth.StudentCourseMeetingNodeAdd)
 	studentGroup.GET("/course/meeting/note/fetch", auth.StudentCourseMeetingNodeFetch)
+	studentGroup.POST("/planner/add", auth.StudentCreateStageGoal)
+	studentGroup.GET("/planner/pull", auth.StudentPullStageGoal)
+	studentGroup.GET("/planner/stat", auth.StudentStatStageGoal)
+	studentGroup.POST("/planner/task/add", auth.StudentAddStageTask)
+	studentGroup.POST("/planner/task/update", auth.StudentUpdateStageTask)
+	studentGroup.GET("/planner/task/delete", auth.StudentDeleteStageTask)
 
 	// homeGroup.GET("/search/:key", home.Search)
 	// homeGroup.POST("/trans/quote", auth.Quote)

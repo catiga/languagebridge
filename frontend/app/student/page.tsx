@@ -7,6 +7,7 @@ import Image from "next/image";
 import Cookies from "js-cookie";
 import { motion } from "framer-motion";
 import { apiClient } from "../utils/api";
+import StudentStudyPlannerInline from "./study-planner/StudentStudyPlannerInline";
 
 const funColors = [
   "from-pink-400 via-pink-300 to-pink-200",
@@ -27,6 +28,24 @@ export default function StudentPortalPage() {
   });
   const router = useRouter();
 
+  // Logout handler
+  function handleLogout() {
+    // Remove from localStorage
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentInfo");
+    // Do NOT remove parentNo
+    // Remove from sessionStorage
+    sessionStorage.removeItem("studentToken");
+    sessionStorage.removeItem("studentInfo");
+    // Do NOT remove parentNo
+    // Remove from cookies
+    Cookies.remove("studentToken");
+    Cookies.remove("studentInfo");
+    // Do NOT remove parentNo
+    // Redirect to login page
+    router.replace("/login");
+  }
+
   useEffect(() => {
     let info: any = null;
     if (typeof window !== "undefined") {
@@ -37,7 +56,7 @@ export default function StudentPortalPage() {
       setStudentInfo(info);
       setParentNo(localStorage.getItem("parentNo") || Cookies.get("parentNo") || "");
     }
-    // 拉取学生portal首页数据
+    // Fetch student portal overview data
     async function fetchOverview() {
       try {
         const res: any = await apiClient.get("/spwapi/student/auth/overview");
@@ -49,7 +68,12 @@ export default function StudentPortalPage() {
             total_student_count: res.data.total_student_count,
           });
           setWeekLessons(res.data.current_week_courses || []);
-          setStudentInfo(res.data.updated_student || info);
+          // Use updated_student for personal info if available
+          if (res.data.updated_student) {
+            setStudentInfo(res.data.updated_student);
+          } else {
+            setStudentInfo(info);
+          }
         }
       } catch {}
     }
@@ -94,16 +118,26 @@ export default function StudentPortalPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-10">
-      {/* 移除顶部AI助手气泡和AI头像，只保留如下： */}
+      {/* Student Info Section */}
       <div className="flex flex-col items-center mt-10 mb-4">
         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-2 bg-white">
           <Image src={studentInfo?.avatar || "/default-avatar.svg"} alt="avatar" width={96} height={96} />
         </div>
-        <div className="text-lg font-bold text-gray-800 mb-1 tracking-wide flex items-center gap-2">
-          {studentInfo?.Name || studentInfo?.Email || "Student"}
+        {/* Centered name and logout button */}
+        <div className="flex items-center gap-4 mb-1">
+          <div className="text-lg font-bold text-gray-800 tracking-wide flex items-center gap-2">
+            {studentInfo?.name || studentInfo?.Name || studentInfo?.email || "Student"}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-full bg-red-500 text-white font-bold shadow hover:bg-red-600 transition"
+          >
+            Logout
+          </button>
         </div>
-        <div className="text-xs text-gray-500 mb-1 flex flex-wrap items-center justify-center gap-2">
-          <span>Student No: {studentInfo?.StudentID || "-"}</span>
+        {/* Centered email and parent no, no ID */}
+        <div className="text-xs text-gray-500 flex flex-wrap items-center justify-center gap-2">
+          <span>Email: {studentInfo?.email || "-"}</span>
           <span className="mx-2">|</span>
           <span>Parent No: {parentNo || "-"}</span>
         </div>
@@ -183,6 +217,10 @@ export default function StudentPortalPage() {
             })
           )}
         </div>
+      </div>
+      {/* 学习计划视图区 */}
+      <div className="max-w-4xl mx-auto mt-8">
+        <StudentStudyPlannerInline />
       </div>
     </div>
   );
