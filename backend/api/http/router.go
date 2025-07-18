@@ -49,6 +49,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/course/cancel", auth.CourseCancel)
 	authGroup.GET("/course/time/list", auth.CourseTimeList)
 	authGroup.GET("/course/time/range", auth.CourseTimeRange)
+	authGroup.POST("/course/time/requestLeave", auth.CourseTimeRequestLeave)
 	authGroup.GET("/course/meeting/fetch", auth.CourseGetMeetingInfo)
 	authGroup.GET("/course/meeting/end", auth.CourseGetMeetingEnd)
 	authGroup.GET("/course/review/fetch", auth.CourseGetReview)
@@ -71,6 +72,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/planner/pull", auth.PullStageGoal)
 	authGroup.GET("/planner/stat", auth.StatStageGoal)
 	authGroup.GET("/planner/bind", auth.BindStageGoal)
+	authGroup.GET("/planner/delete", auth.DeleteStageGoal)
 	authGroup.POST("/planner/task/add", auth.AddStageTask)
 	authGroup.POST("/planner/task/update", auth.UpdateStageTask)
 	authGroup.GET("/planner/task/delete", auth.DeleteStageTask)
@@ -79,6 +81,8 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.POST("/trial/lesson/apply", auth.TrialLessonApply)
 	authGroup.GET("/trial/lesson/confirm", auth.TrialLessonConfirm)
 	authGroup.GET("/trial/lesson/meeting", auth.TrialLessonMeeting)
+
+	authGroup.GET("/teacher/available/fetch", auth.FetchTeacherAvailableDate)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
 	teacherAuthGroup.GET("/overview", auth.TeacherOverview)

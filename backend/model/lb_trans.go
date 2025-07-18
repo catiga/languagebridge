@@ -26,6 +26,7 @@ type CourseBookWithJoin struct {
 	CourseBookTrans
 	TeacherName string `json:"teacher_name"`
 	CourseName  string `json:"course_name"`
+	StudentName string `json:"student_name"`
 }
 
 type CourseMeetingNote struct {

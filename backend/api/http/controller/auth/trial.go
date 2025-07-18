@@ -12,6 +12,7 @@ import (
 	"github.com/langbridge/backend/codes"
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
+	"github.com/langbridge/backend/service"
 	"github.com/langbridge/backend/system"
 )
 
@@ -276,6 +277,87 @@ func TrialLessonMeeting(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = retObj
+
+	c.JSON(http.StatusOK, res)
+}
+
+func FetchTeacherAvailableDate(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	_, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	teacherIdStr, exist := c.GetQuery("teacher_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select course teacher to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	teacherId, err := strconv.ParseInt(teacherIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select course teacher to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	selectDateStr, exist := c.GetQuery("select_date")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select target course date"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	courseIdStr, exist := c.GetQuery("course_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select target course date"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	courseId, err := strconv.ParseInt(courseIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select course teacher to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var courseInfo model.CourseInfo
+	db.Model(&model.CourseInfo{}).Where("id = ?", courseId).First(&courseInfo)
+
+	layout := "2006-01-02"
+	_, err = time.Parse(layout, selectDateStr)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select target course date"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	availableSlots := service.TeacherAvailableSlots(uint64(teacherId), selectDateStr, courseInfo.Duration)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = availableSlots
 
 	c.JSON(http.StatusOK, res)
 }

@@ -393,6 +393,55 @@ func BindStageGoal(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func DeleteStageGoal(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overviewIdStr, exist := c.GetQuery("overview_id")
+	overview_id := int64(0)
+	if !exist {
+		res.Code = codes.CODE_ERR_PARA_EMPTY
+		res.Msg = "Please select overview"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	overview_id, _ = strconv.ParseInt(overviewIdStr, 10, 64)
+
+	db := system.GetDb()
+
+	var userOverView model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview_id).First(&userOverView)
+	if userOverView.ID == 0 || userOverView.UserID != uint64(userID) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Study planner not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview_id).Update("flag", -1)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
+	c.JSON(http.StatusOK, res)
+}
+
 func StatStageGoal(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()

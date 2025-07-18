@@ -72,6 +72,9 @@ export default function StudyPlannerPage() {
   const [bindLoading, setBindLoading] = useState(false);
   const [bindSelected, setBindSelected] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // 在StudyPlannerPage组件内，state增加删除相关
+  const [deleteStageId, setDeleteStageId] = useState<number | null>(null);
+  const [deleteStageLoading, setDeleteStageLoading] = useState(false);
 
   // 拉取成员列表
   useEffect(() => {
@@ -299,16 +302,24 @@ export default function StudyPlannerPage() {
                       )}
                     </div>
                   </div>
-                  <button
-                    className="ml-4 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
-                    onClick={() => {
-                      setBindPlanId(currentStageGoal.id);
-                      setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
-                      setBindModalOpen(true);
-                    }}
-                  >
-                    <FaLink className="mr-1 w-4 h-4" /> Bind Student
-                  </button>
+                  <div className="flex flex-col gap-2 ml-auto">
+                    <button
+                      className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
+                      onClick={() => {
+                        setBindPlanId(currentStageGoal.id);
+                        setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
+                        setBindModalOpen(true);
+                      }}
+                    >
+                      <FaLink className="mr-1 w-4 h-4" /> Bind Student
+                    </button>
+                    <button
+                      className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
+                      onClick={() => setDeleteStageId(currentStageGoal.id)}
+                    >
+                      Delete Stage
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -453,6 +464,41 @@ export default function StudyPlannerPage() {
             toast.error(e?.message || 'Failed to bind student');
           } finally {
             setBindLoading(false);
+          }
+        }}
+      />
+      {/* 阶段删除确认弹窗 */}
+      <ConfirmModal
+        isOpen={!!deleteStageId}
+        title="Delete Stage Goal"
+        content="Are you sure you want to delete this stage goal? All related tasks will also be deleted. This action cannot be undone."
+        confirmText={deleteStageLoading ? 'Deleting...' : 'Delete'}
+        cancelText="Cancel"
+        loading={deleteStageLoading}
+        onCancel={() => setDeleteStageId(null)}
+        onConfirm={async () => {
+          if (!deleteStageId) return;
+          setDeleteStageLoading(true);
+          try {
+            const res = await apiClient.get(`/spwapi/auth/planner/delete?overview_id=${deleteStageId}`) as any;
+            if (res && res.code === 0) {
+              toast.success('Stage goal deleted successfully');
+              // 删除后刷新列表
+              let url = '/spwapi/auth/planner/pull';
+              if (executorId !== '0') url += `?student_id=${executorId}`;
+              const newRes = await apiClient.get(url) as { code?: number; data?: any[] };
+              if (newRes && newRes.code === 0 && Array.isArray(newRes.data)) {
+                setStageGoals(newRes.data.map((g: any) => ({ ...g, startDate: g.start_date, endDate: g.end_date })));
+                setCurrentStageGoalId(newRes.data.length > 0 ? newRes.data[0].id : null);
+              }
+              setDeleteStageId(null);
+            } else {
+              toast.error(res?.msg || 'Failed to delete stage goal');
+            }
+          } catch (e: any) {
+            toast.error(e?.message || 'Failed to delete stage goal');
+          } finally {
+            setDeleteStageLoading(false);
           }
         }}
       />

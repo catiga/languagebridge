@@ -12,6 +12,7 @@ import (
 	"github.com/langbridge/backend/codes"
 	"github.com/langbridge/backend/log"
 	"github.com/langbridge/backend/model"
+	"github.com/langbridge/backend/service"
 	"github.com/langbridge/backend/system"
 	"github.com/langbridge/backend/utils"
 	"gorm.io/gorm"
@@ -29,12 +30,6 @@ type CourseConfirmRequest struct {
 	StartDate string                 `json:"start_date"`
 	EndDate   string                 `json:"end_date"`
 	TimeSlots []CourseSelectTimeSlot `json:"time_slots"`
-}
-
-type internalComputeBookDatetime struct {
-	LessonDate string
-	StartTime  string
-	EndTime    string
 }
 
 type CourseBookedTran struct {
@@ -75,6 +70,14 @@ type CourseMeetingNoteAddRequest struct {
 type CourseBindStudentRequest struct {
 	StudentID    uint64 `json:"student_id"`
 	UserCourseID uint64 `json:"user_course_id"`
+}
+
+type CourseLeaveRequest struct {
+	Note         string `json:"note"`
+	NewDate      string `json:"new_date"`
+	NewStartTime string `json:"new_start_time"`
+	NewEndTime   string `json:"new_end_time"`
+	BookID       uint64 `json:"book_id"`
 }
 
 func CourseJoin(c *gin.Context) {
@@ -364,7 +367,7 @@ func CourseConfirm(c *gin.Context) {
 	layout := "2006-01-02"
 	start, _ := time.Parse(layout, req.StartDate)
 	end, _ := time.Parse(layout, req.EndDate)
-	var internalResult []internalComputeBookDatetime
+	var internalResult []service.InternalComputeBookDatetime
 	var allDate []string
 
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
@@ -375,7 +378,7 @@ func CourseConfirm(c *gin.Context) {
 		allDate = append(allDate, d.Format("2006-01-02"))
 		for _, slot := range req.TimeSlots {
 			if slot.WeekDay == weekday {
-				internalResult = append(internalResult, internalComputeBookDatetime{
+				internalResult = append(internalResult, service.InternalComputeBookDatetime{
 					LessonDate: d.Format(layout),
 					StartTime:  slot.StartTime,
 					EndTime:    slot.EndTime,
@@ -394,7 +397,7 @@ func CourseConfirm(c *gin.Context) {
 	var existResult []model.CourseBookTrans
 	// query can book?
 	err = db.Model(&model.CourseBookTrans{}).
-		Where("teacher_id = ? and course_id = ? and lesson_date IN ?", req.TeacherID, req.CourseID, allDate).
+		Where("teacher_id = ? = ? and lesson_date IN ?", req.TeacherID, allDate).
 		Find(&existResult).
 		Error
 	if err != nil {
@@ -574,8 +577,10 @@ func CourseTimeList(c *gin.Context) {
 	err = db.Table("course_book_trans").
 		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
 		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
+		Joins("LEFT JOIN user_course uc on course_book_trans.uc_id = uc.id").
+		Joins("LEFT JOIN user_member um on uc.student_id = um.id").
 		Where("course_book_trans.user_id = ?", userID).
-		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name").
+		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name, um.name AS student_name").
 		Order("lesson_date, start_time ASC").
 		Offset(int((pageNo - 1)) * int(pageSize)).
 		Limit(int(pageSize)).
@@ -667,6 +672,88 @@ func CourseTimeRange(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = result
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseTimeRequestLeave(c *gin.Context) {
+	var req CourseLeaveRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	layout := "2006-01-02"
+	layoutTime := "15:04:00"
+
+	newDate, err1 := time.Parse(layout, req.NewDate)
+	newStartTime, err2 := time.Parse(layoutTime, req.NewStartTime)
+	newEndTime, err2 := time.Parse(layoutTime, req.NewEndTime)
+
+	if err1 != nil || newDate.Format(layout) != req.NewDate {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "New date must be in yyyy-MM-dd format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if err2 != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "New time must be in HH:mm format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var bookTran model.CourseBookTrans
+	db.Model(&model.CourseBookTrans{}).
+		Where("user_id = ? and id = ?", userID, req.BookID).
+		First(&bookTran)
+
+	if bookTran.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Booking not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if bookTran.Ongoing != 0 {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "This course had been taken, should not been requested"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	bookTran.LessonDate = newDate
+	bookTran.StartTime = newStartTime.Format(layoutTime)
+	bookTran.EndTime = newEndTime.Format(layoutTime)
+
+	db.Updates(bookTran)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
 	c.JSON(http.StatusOK, res)
 }
 
