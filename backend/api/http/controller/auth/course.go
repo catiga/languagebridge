@@ -57,6 +57,7 @@ type CourseWithJoinStatus struct {
 type CourseReviewAddRequest struct {
 	Comment string `json:"comment"`
 	Rate    int8   `json:"rate"`
+	BTID    uint64 `json:"btid"`
 }
 
 type SecurityCheckRequest struct {
@@ -1060,7 +1061,13 @@ func CourseAddReview(c *gin.Context) {
 	}
 
 	btidStr := c.Query("btid")
-	btid, err := strconv.ParseInt(btidStr, 10, 64)
+	btid, err := strconv.ParseUint(btidStr, 10, 64)
+	if err != nil {
+		btid = req.BTID
+		if btid > 0 {
+			err = nil
+		}
+	}
 
 	if err != nil {
 		res.Code = codes.CODE_ERR_BAD_PARAMS
