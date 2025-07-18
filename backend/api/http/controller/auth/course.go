@@ -33,6 +33,7 @@ type CourseConfirmRequest struct {
 }
 
 type CourseBookedTran struct {
+	ID         uint64    `json:"id"`
 	BookingNo  string    `gorm:"column:booking_no" json:"booking_no"`
 	TeacherID  uint64    `gorm:"column:teacher_id" json:"teacher_id"`
 	CourseID   uint64    `gorm:"column:course_id" json:"course_id"`
@@ -298,6 +299,7 @@ func CourseFetchDetail(c *gin.Context) {
 	var courseBooked []CourseBookedTran
 	for _, r := range bookTrans {
 		courseBooked = append(courseBooked, CourseBookedTran{
+			ID:         r.ID,
 			BookingNo:  r.BookingNo,
 			TeacherID:  r.TeacherID,
 			CourseID:   r.CourseID,
@@ -1373,6 +1375,65 @@ func CourseMeetingNodeFetch(c *gin.Context) {
 			ID:      r.ID,
 			Note:    r.Note,
 			AddTime: r.AddTime,
+		})
+	}
+	res.Data = retData
+
+	c.JSON(http.StatusOK, res)
+}
+
+func CourseMeetingNodeFetchAll(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	btidStr := c.Query("btid")
+	btid, err := strconv.ParseInt(btidStr, 10, 64)
+
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "course meeting invalid"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var notes []model.CourseMeetingNote
+	err = db.Model(&model.CourseMeetingNote{}).Where("bt_id = ? and user_id = ?", btid, userID).Order("add_time DESC").Find(&notes).Error
+
+	if err != nil {
+		log.Error("fetch course meeting error", err)
+	}
+
+	type NoteResponse struct {
+		ID      uint64    `json:"id"`
+		Note    string    `json:"note"`
+		AddTime time.Time `json:"add_time"`
+		Source  string    `json:"source"`
+	}
+	var retData []NoteResponse
+	for _, r := range notes {
+		retData = append(retData, NoteResponse{
+			ID:      r.ID,
+			Note:    r.Note,
+			AddTime: r.AddTime,
+			Source:  r.Source,
 		})
 	}
 	res.Data = retData

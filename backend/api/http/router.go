@@ -57,6 +57,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/course/histories", auth.CourseGetHistories)
 	authGroup.POST("/course/meeting/note/add", auth.CourseMeetingNodeAdd)
 	authGroup.GET("/course/meeting/note/fetch", auth.CourseMeetingNodeFetch)
+	authGroup.GET("/course/meeting/note/fetchAll", auth.CourseMeetingNodeFetchAll)
 
 	authGroup.POST("/course/bind_student", auth.CourseBindStudent)
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../utils/api';
 import { toast } from 'react-toastify';
 import ConfirmModal from '../../components/ConfirmModal';
+import { useRouter } from 'next/navigation';
 
 interface CourseTimeItem {
   id: number;
@@ -16,6 +17,7 @@ interface CourseTimeItem {
   student_name: string; // 假设后台也返回了学生姓名
   teacher_id: number; // 新增
   course_id: number; // 新增
+  uc_id: number; // 新增
 }
 
 interface LeaveModalState {
@@ -47,6 +49,7 @@ export default function TimetableListView() {
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
+  const router = useRouter();
 
   // 状态码映射
   const statusMap: Record<string, string> = {
@@ -324,8 +327,18 @@ export default function TimetableListView() {
                       <td className="py-2 px-4">{statusMap[item.status] || item.status}</td>
                       <td className="py-2 px-4">
                         <div className="flex flex-row gap-1 items-center">
-                          <button className="px-2 py-0.5 border border-green-400 text-green-500 rounded-md text-xs font-normal hover:bg-green-50 transition-colors whitespace-nowrap">Class Notes</button>
-                          <button className="px-2 py-0.5 border border-blue-400 text-blue-500 rounded-md text-xs font-normal hover:bg-blue-50 transition-colors whitespace-nowrap">Feedback</button>
+                          <button
+                            className="px-2 py-0.5 border border-green-400 text-green-500 rounded-md text-xs font-normal hover:bg-green-50 transition-colors whitespace-nowrap"
+                            onClick={() => window.open(`/timetable/meeting-note/${item.uc_id}?btid=${item.id}`, '_blank')}
+                          >
+                            Class Notes
+                          </button>
+                          <button
+                            className="px-2 py-0.5 border border-blue-400 text-blue-500 rounded-md text-xs font-normal hover:bg-blue-50 transition-colors whitespace-nowrap"
+                            onClick={() => window.open(`/timetable/feedback/${item.uc_id}?btid=${item.id}`, '_blank')}
+                          >
+                            Feedback
+                          </button>
                           {isTodayOrFuture && (
                             <button
                               className="px-2 py-0.5 border border-yellow-400 text-yellow-500 rounded-md text-xs font-normal hover:bg-yellow-50 transition-colors whitespace-nowrap"
