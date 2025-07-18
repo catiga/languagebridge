@@ -32,6 +32,7 @@ export class FallbackApiClient {
   private urls: string[];
   private currentIndex = 0;
   private failedUrls = new Set<string>();
+  private lockedUrl: string | null = null;
 
   constructor() {
     const config = getEnvConfig();
@@ -61,32 +62,25 @@ export class FallbackApiClient {
   }
 
   async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    const maxRetries = this.urls.length;
+    let currentUrl = this.lockedUrl || this.urls[this.currentIndex];
     let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const currentUrl = this.urls[this.currentIndex];
+    for (let attempt = 0; attempt < this.urls.length; attempt++) {
       const fullUrl = `${currentUrl}${endpoint}`;
-
       try {
         const response = await this.request(fullUrl, options);
-        // 成功请求，重置失败标记
         this.failedUrls.delete(currentUrl);
+        if (!this.lockedUrl) this.lockedUrl = currentUrl; // 锁定本页面API域名
         return response;
       } catch (error) {
         lastError = error as Error;
-        console.warn(`Attempt ${attempt + 1} failed for ${fullUrl}`);
-        
-        // 切换到下一个URL
-        this.currentIndex = (this.currentIndex + 1) % this.urls.length;
-        
-        // 如果所有URL都尝试过了，等待一下再重试
-        if (attempt === maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!this.lockedUrl) {
+          this.currentIndex = (this.currentIndex + 1) % this.urls.length;
+          currentUrl = this.urls[this.currentIndex];
+        } else {
+          break; // 已锁定就不再切换
         }
       }
     }
-
     throw lastError || new Error('All API endpoints failed');
   }
 
@@ -104,6 +98,7 @@ export class FallbackApiClient {
   reset(): void {
     this.failedUrls.clear();
     this.currentIndex = 0;
+    this.lockedUrl = null;
   }
 }
 
