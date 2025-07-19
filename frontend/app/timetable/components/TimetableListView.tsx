@@ -49,6 +49,7 @@ export default function TimetableListView() {
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | '000' | '100'>('all');
   const router = useRouter();
 
   // 状态码映射
@@ -63,7 +64,9 @@ export default function TimetableListView() {
     const fetchData = async (page: number) => {
       setLoading(true);
       try {
-        const res = await apiClient.get('/spwapi/auth/course/time/list', { pn: page, ps: PAGE_SIZE });
+        const params: any = { pn: page, ps: PAGE_SIZE };
+        if (statusFilter !== 'all') params.status = statusFilter;
+        const res = await apiClient.get('/spwapi/auth/course/time/list', params);
         
         if (res && res.code === 0 && res.data) {
           setData(res.data.list || []);
@@ -74,18 +77,18 @@ export default function TimetableListView() {
           });
         } else {
           setData([]);
-          toast.error(res?.msg || '获取课程时间表失败');
+          toast.error(res?.msg || 'Failed to fetch timetable');
         }
       } catch (e: any) {
         setData([]);
-        toast.error(e?.message || '获取课程时间表失败');
+        toast.error(e?.message || 'Failed to fetch timetable');
       } finally {
         setLoading(false);
       }
     };
     fetchData(pagination.currentPage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.currentPage]);
+  }, [pagination.currentPage, statusFilter]);
 
   // 拉取可用时间段
   const fetchAvailableSlots = async (teacherId: number, date: string, courseId?: number) => {
@@ -187,6 +190,13 @@ export default function TimetableListView() {
     }
   };
 
+  // 状态筛选按钮
+  const statusTabs = [
+    { key: 'all', label: 'All' },
+    { key: '000', label: 'Normal' },
+    { key: '100', label: 'Requesting Leave' },
+  ];
+
   return (
     <div className="bg-white rounded-xl shadow-md p-8 mb-6">
       <h3 className="text-xl font-bold mb-4">Timetable (List View)</h3>
@@ -194,6 +204,18 @@ export default function TimetableListView() {
         <div className="text-center py-10">Loading...</div>
       ) : (
         <>
+          {/* 状态筛选Tab */}
+          <div className="flex gap-4 mb-4">
+            {statusTabs.map(tab => (
+              <button
+                key={tab.key}
+                className={`px-3 py-1 rounded ${statusFilter === tab.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setStatusFilter(tab.key as 'all' | '000' | '100')}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
           {/* 请假弹窗 */}
           {leaveModal.visible && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
@@ -316,8 +338,9 @@ export default function TimetableListView() {
                     lessonDate.setHours(0,0,0,0);
                     return lessonDate >= today;
                   })();
+                  const isRequesting = item.status === '100';
                   return (
-                    <tr key={item.id}>
+                    <tr key={item.id} className={isRequesting ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}>
                       {/* <td className="py-2 px-4">{item.booking_no}</td> */}
                       <td className="py-2 px-4">{item.course_name}</td>
                       <td className="py-2 px-4">{item.student_name}</td>
@@ -339,7 +362,7 @@ export default function TimetableListView() {
                           >
                             Feedback
                           </button>
-                          {isTodayOrFuture && (
+                          {isTodayOrFuture && !isRequesting && (
                             <button
                               className="px-2 py-0.5 border border-yellow-400 text-yellow-500 rounded-md text-xs font-normal hover:bg-yellow-50 transition-colors whitespace-nowrap"
                               onClick={() => openLeaveModal(item)}

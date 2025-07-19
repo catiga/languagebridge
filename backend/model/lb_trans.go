@@ -22,6 +22,21 @@ func (CourseBookTrans) TableName() string {
 	return "course_book_trans"
 }
 
+type CourseBookLeave struct {
+	ID               uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	BookID           uint64    `gorm:"column:book_id" json:"book_id"`
+	PendingDate      time.Time `gorm:"column:pending_date" json:"pending_date"`
+	PendingStartTime string    `gorm:"column:pending_start_time" json:"pending_start_time"`
+	PendingEndTime   string    `gorm:"column:pending_end_time" json:"pending_end_time"`
+	Source           int       `gorm:"column:source" json:"source"`
+	AddTime          time.Time `gorm:"column:add_time" json:"add_time"`
+	Status           string    `gorm:"column:status" json:"status"`
+}
+
+func (CourseBookLeave) TableName() string {
+	return "course_book_leave"
+}
+
 type CourseBookWithJoin struct {
 	CourseBookTrans
 	TeacherName string `json:"teacher_name"`

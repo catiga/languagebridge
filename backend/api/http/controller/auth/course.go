@@ -568,7 +568,20 @@ func CourseTimeList(c *gin.Context) {
 		pageSize = 10
 	}
 
+	chooseStatus, exist := c.GetQuery("status")
+
+	if chooseStatus != common.BookTransStatusNormal && chooseStatus != common.BookTransStatusRequestLeave {
+		chooseStatus = ""
+	}
+
 	db := system.GetDb()
+
+	var querySql = "course_book_trans.user_id = ?"
+	var querySqlParam = []interface{}{userID}
+	if chooseStatus != "" {
+		querySql = querySql + " and course_book_trans.status = ?"
+		querySqlParam = append(querySqlParam, chooseStatus)
+	}
 
 	var total int64
 	db.Model(&model.CourseBookTrans{}).
@@ -582,7 +595,7 @@ func CourseTimeList(c *gin.Context) {
 		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
 		Joins("LEFT JOIN user_course uc on course_book_trans.uc_id = uc.id").
 		Joins("LEFT JOIN user_member um on uc.student_id = um.id").
-		Where("course_book_trans.user_id = ?", userID).
+		Where(querySql, querySqlParam...).
 		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name, um.name AS student_name").
 		Order("lesson_date, start_time ASC").
 		Offset(int((pageNo - 1)) * int(pageSize)).
@@ -748,11 +761,42 @@ func CourseTimeRequestLeave(c *gin.Context) {
 		return
 	}
 
-	bookTran.LessonDate = newDate
-	bookTran.StartTime = newStartTime.Format(layoutTime)
-	bookTran.EndTime = newEndTime.Format(layoutTime)
+	/*
+		bookTran.LessonDate = newDate
+		bookTran.StartTime = newStartTime.Format(layoutTime)
+		bookTran.EndTime = newEndTime.Format(layoutTime)
 
-	db.Updates(bookTran)
+		db.Updates(bookTran)
+	*/
+	var bookLeave model.CourseBookLeave
+	err = db.Model(&model.CourseBookLeave{}).Where("book_id = ? and status = ?", bookTran.ID, common.BookLeaveStatusApply).First(&bookLeave).Error
+	if err != nil {
+		log.Error(err)
+	}
+	if bookLeave.ID > 0 {
+		res.Code = codes.CODE_ERR_REPEAT
+		res.Msg = "Requesting leave for this book is found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	bookLeave.AddTime = time.Now()
+	bookLeave.BookID = bookTran.ID
+	bookLeave.PendingDate = newDate
+	bookLeave.PendingStartTime = newStartTime.Format(layoutTime)
+	bookLeave.PendingEndTime = newEndTime.Format(layoutTime)
+	bookLeave.Status = common.BookLeaveStatusApply
+	bookLeave.Source = common.BookLeaveSourceUser
+	err = db.Save(&bookLeave).Error
+	if err != nil {
+		res.Code = codes.CODE_ERR_UNKNOWN
+		res.Msg = "Err happened for requesting leave"
+		log.Error("request leave error", err)
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	bookTran.Status = common.BookTransStatusRequestLeave
+	db.Updates(&bookTran)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
