@@ -54,8 +54,8 @@ export default function TimetableListView() {
 
   // 状态码映射
   const statusMap: Record<string, string> = {
-    '000': 'Upcoming',
-    '001': 'Completed',
+    '000': 'Normal',
+    '100': 'Pending Leave',
     // 可根据实际补充
   };
 
