@@ -117,6 +117,8 @@ func Routers(e *gin.RouterGroup) {
 	teacherAuthGroup.POST("/trial/lesson/assign", auth.TeacherTrialLessonAssign)
 	teacherAuthGroup.GET("/trial/lesson/meeting", auth.TeacherTrialLessonMeeting)
 
+	teacherAuthGroup.GET("/course/time/leaveList", auth.TeacherLeaveList)
+
 	studentGroup := e.Group("/student/auth", interceptor.StudentTokenInterceptor())
 	studentGroup.GET("/overview", auth.StudentOverview)
 	studentGroup.GET("/course/meeting/fetch", auth.StudentCourseGetMeetingInfo)

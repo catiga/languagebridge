@@ -1790,3 +1790,82 @@ func TeacherTrialLessonMeeting(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+func TeacherLeaveList(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	pageNo, _ := strconv.ParseInt(c.Query("pn"), 10, 64)
+	pageSize, _ := strconv.ParseInt(c.Query("ps"), 10, 64)
+
+	if pageNo <= 0 {
+		pageNo = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	db := system.GetDb()
+
+	var total int64
+	db.Table("course_book_leave cl").
+		Joins("JOIN course_book_trans ct ON cl.book_id = ct.id").
+		Where("ct.teacher_id = ?", teacherId).
+		Count(&total)
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	type CourseLeaveRich struct {
+		model.CourseBookLeave
+		UserID     uint64 `gorm:"column:user_id" json:"user_id"`
+		UserName   string `gorm:"column:user_name" json:"user_name"`
+		LessonDate string `gorm:"column:lesson_date" json:"lesson_date"`
+		StartTime  string `gorm:"column:start_time" json:"start_time"`
+		EndTime    string `gorm:"column:end_time" json:"end_time"`
+		CourseID   uint64 `gorm:"column:course_id" json:"course_id"`
+		CourseName string `gorm:"column:course_name" json:"course_name"`
+	}
+	var leaveList []CourseLeaveRich
+
+	db.Table("course_book_leave cl").
+		Joins("JOIN course_book_trans ct ON cl.book_id = ct.id").
+		Joins("JOIN course_info c ON ct.course_id = c.id").
+		Joins("JOIN user_info user ON ct.user_id = user.id").
+		Where("ct.teacher_id = ?", teacherId).
+		Select("cl.*, user.id AS user_id, user.name AS user_name, ct.lesson_date AS lesson_date, ct.start_time AS start_time, ct.end_time AS end_time, c.id AS course_id, c.name AS course_name").
+		Offset(int((pageNo - 1)) * int(pageSize)).
+		Limit(int(pageSize)).
+		Scan(&leaveList)
+
+	if err != nil {
+		log.Error(err)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = gin.H{
+		"list":        leaveList,
+		"pn":          pageNo,
+		"ps":          pageSize,
+		"total":       total,
+		"total_pages": totalPages,
+	}
+
+	c.JSON(http.StatusOK, res)
+}

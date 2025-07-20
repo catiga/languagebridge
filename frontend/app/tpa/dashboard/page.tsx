@@ -13,7 +13,8 @@ import {
   FaCalendarAlt as FaCalendarAltIcon,
   FaStar as FaStarIcon,
   FaRobot,
-  FaVideo
+  FaVideo,
+  FaClock
 } from 'react-icons/fa';
 import Cookies from 'js-cookie';
 import DashboardLayout from './components/DashboardLayout';
@@ -26,6 +27,7 @@ import SettingPanel from './components/SettingPanel';
 import { apiClient } from '@/app/utils/api';
 import TeacherCourseHistoryPanel from './components/TeacherCourseHistoryPanel';
 import TrialLessonsPanel from './components/TrialLessonsPanel';
+import LeaveManagementPage from './leave-management/page';
 
 interface DashboardStats {
   totalStudents: number;
@@ -47,7 +49,7 @@ interface RecentActivity {
   color: string;
 }
 
-type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai' | 'courseHistory' | 'trialLessons';
+type Tab = 'overview' | 'profile' | 'certificates' | 'courses' | 'students' | 'schedule' | 'analytics' | 'settings' | 'schedule2' | 'ai' | 'courseHistory' | 'trialLessons' | 'leaveManagement';
 
 function WeekRangeTitle() {
   // 取本地时间的本周一
@@ -146,6 +148,9 @@ function QuickActions({ onAction }: { onAction: (tab: Tab) => void }) {
       </button>
       <button onClick={() => onAction('schedule')} className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
         <FaCalendarAltIcon className="w-6 h-6" /> Set Time Slots
+      </button>
+      <button onClick={() => onAction('leaveManagement')} className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
+        <FaClock className="w-6 h-6" /> Leave Management
       </button>
       <button onClick={() => onAction('certificates')} className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-lg font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1">
         <FaCertificate className="w-6 h-6" /> Manage Certificates
@@ -355,6 +360,8 @@ export default function TeacherDashboard() {
         return <TeacherCourseHistoryPanel />;
       case 'trialLessons':
         return <TrialLessonsPanel />;
+      case 'leaveManagement':
+        return <LeaveManagementPage />;
       default:
         return (
           <div className="space-y-8">
