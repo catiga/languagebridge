@@ -38,6 +38,18 @@ interface AvailableSlot {
   Enable: boolean;
 }
 
+// 新增：请假详情接口
+interface LeaveDetail {
+  id: number;
+  book_id: number;
+  pending_date: string;
+  pending_start_time: string;
+  pending_end_time: string;
+  source: number;
+  add_time: string;
+  status: string;
+}
+
 const PAGE_SIZE = 10;
 
 export default function TimetableListView() {
@@ -50,6 +62,18 @@ export default function TimetableListView() {
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | '000' | '100'>('all');
+  
+  // 新增：右侧详情面板状态
+  const [detailPanel, setDetailPanel] = useState<{
+    visible: boolean;
+    loading: boolean;
+    data: LeaveDetail | null;
+  }>({
+    visible: false,
+    loading: false,
+    data: null,
+  });
+  
   const router = useRouter();
 
   // 状态码映射
@@ -89,6 +113,73 @@ export default function TimetableListView() {
     fetchData(pagination.currentPage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.currentPage, statusFilter]);
+
+  // 新增：获取请假详情
+  const fetchLeaveDetail = async (bookId: number) => {
+    setDetailPanel(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await apiClient.get('/spwapi/auth/course/time/leaveDetail', { book_id: bookId }) as any;
+      if (res && res.code === 0 && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setDetailPanel({
+          visible: true,
+          loading: false,
+          data: res.data[0], // 取第一个元素
+        });
+      } else {
+        toast.error(res?.msg || 'No leave details found');
+        setDetailPanel(prev => ({ ...prev, loading: false }));
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to fetch leave details');
+      setDetailPanel(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // 新增：点击Pending Leave行
+  const handlePendingLeaveClick = (item: CourseTimeItem) => {
+    if (item.status === '100') {
+      fetchLeaveDetail(item.id);
+    }
+  };
+
+  // 新增：关闭详情面板
+  const closeDetailPanel = () => {
+    setDetailPanel({
+      visible: false,
+      loading: false,
+      data: null,
+    });
+  };
+
+  // 格式化日期时间
+  const formatDateTime = (dateTimeString: string) => {
+    try {
+      const date = new Date(dateTimeString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch {
+      return dateTimeString;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   // 拉取可用时间段
   const fetchAvailableSlots = async (teacherId: number, date: string, courseId?: number) => {
@@ -216,6 +307,17 @@ export default function TimetableListView() {
               </button>
             ))}
           </div>
+          {/* 提示信息 */}
+          {statusFilter === 'all' && data.some(item => item.status === '100') && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center text-blue-800 text-sm">
+                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span>Click on any "Pending Leave" row to view detailed information</span>
+              </div>
+            </div>
+          )}
           {/* 请假弹窗 */}
           {leaveModal.visible && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
@@ -310,6 +412,129 @@ export default function TimetableListView() {
               </div>
             </div>
           )}
+          {/* 详情面板 */}
+          {detailPanel.visible && (
+            <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-30">
+              <div className="bg-white shadow-lg w-full max-w-md h-full overflow-y-auto transform transition-transform duration-300 ease-in-out">
+                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                  <h4 className="text-xl font-bold">Leave Request Details</h4>
+                  <button
+                    onClick={closeDetailPanel}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-6">
+                  {detailPanel.loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-gray-600">Loading...</span>
+                    </div>
+                  ) : detailPanel.data ? (
+                    <div className="space-y-6">
+                      {/* 基本信息 */}
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h5 className="font-semibold text-blue-800 mb-3">Basic Information</h5>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Request ID:</span>
+                            <span className="font-medium">#{detailPanel.data.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Booking ID:</span>
+                            <span className="font-medium">#{detailPanel.data.book_id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              detailPanel.data.status === '00' ? 'bg-yellow-100 text-yellow-800' : 
+                              detailPanel.data.status === '10' ? 'bg-red-100 text-red-800' : 
+                              detailPanel.data.status === '20' ? 'bg-green-100 text-green-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {detailPanel.data.status === '00' ? 'Pending Leave' : 
+                               detailPanel.data.status === '10' ? 'Leave Rejected' : 
+                               detailPanel.data.status === '20' ? 'Leave Confirmed' : 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 申请时间信息 */}
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <h5 className="font-semibold text-purple-800 mb-3">Request Details</h5>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Request Date:</span>
+                            <span className="font-medium">{formatDate(detailPanel.data.add_time)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Request Time:</span>
+                            <span className="font-medium">{formatDateTime(detailPanel.data.add_time)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Requester:</span>
+                            <span className="font-medium">{detailPanel.data.source === 0 ? 'Student' : 'Teacher'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 新的时间安排 */}
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <h5 className="font-semibold text-green-800 mb-3">Proposed Schedule</h5>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-medium">{formatDate(detailPanel.data.pending_date)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Time:</span>
+                            <span className="font-medium">
+                              {detailPanel.data.pending_start_time?.slice(0, 5)} - {detailPanel.data.pending_end_time?.slice(0, 5)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 状态信息 */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-800 mb-3">Leave Status</h5>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status Code:</span>
+                            <span className="font-medium">{detailPanel.data.status}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              detailPanel.data.status === '00' ? 'bg-yellow-100 text-yellow-800' : 
+                              detailPanel.data.status === '10' ? 'bg-red-100 text-red-800' : 
+                              detailPanel.data.status === '20' ? 'bg-green-100 text-green-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {detailPanel.data.status === '00' ? 'Pending' : 
+                               detailPanel.data.status === '10' ? 'Rejected' : 
+                               detailPanel.data.status === '20' ? 'Confirmed' : 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p>No leave request details available.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-100">
@@ -340,32 +565,73 @@ export default function TimetableListView() {
                   })();
                   const isRequesting = item.status === '100';
                   return (
-                    <tr key={item.id} className={isRequesting ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}>
+                    <tr 
+                      key={item.id} 
+                      className={`${isRequesting ? 'bg-yellow-50 border-l-4 border-yellow-400 cursor-pointer hover:bg-yellow-100 transition-all duration-200' : ''} ${!isRequesting ? 'hover:bg-gray-50' : ''}`}
+                      onClick={(e) => {
+                        // 如果点击的是按钮，不触发行点击
+                        if ((e.target as HTMLElement).closest('button')) {
+                          return;
+                        }
+                        // 只有Pending Leave状态的行才能点击
+                        if (isRequesting) {
+                          handlePendingLeaveClick(item);
+                        }
+                      }}
+                      title={isRequesting ? "Click to view leave request details" : ""}
+                    >
                       {/* <td className="py-2 px-4">{item.booking_no}</td> */}
                       <td className="py-2 px-4">{item.course_name}</td>
                       <td className="py-2 px-4">{item.student_name}</td>
                       <td className="py-2 px-4">{item.teacher_name}</td>
                       <td className="py-2 px-4">{item.lesson_date?.slice(0, 10)}</td>
                       <td className="py-2 px-4">{item.start_time?.slice(0, 5)} - {item.end_time?.slice(0, 5)}</td>
-                      <td className="py-2 px-4">{statusMap[item.status] || item.status}</td>
+                      <td className="py-2 px-4">
+                        <div className="flex items-center">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            isRequesting 
+                              ? 'bg-yellow-100 text-yellow-800 animate-pulse' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {statusMap[item.status] || item.status}
+                            {isRequesting && (
+                              <svg className="ml-1 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </span>
+                          {isRequesting && (
+                            <span className="ml-2 text-xs text-gray-500 italic">(Click to view details)</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2 px-4">
                         <div className="flex flex-row gap-1 items-center">
                           <button
                             className="px-2 py-0.5 border border-green-400 text-green-500 rounded-md text-xs font-normal hover:bg-green-50 transition-colors whitespace-nowrap"
-                            onClick={() => window.open(`/timetable/meeting-note/${item.uc_id}?btid=${item.id}`, '_blank')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/timetable/meeting-note/${item.uc_id}?btid=${item.id}`, '_blank');
+                            }}
                           >
                             Class Notes
                           </button>
                           <button
                             className="px-2 py-0.5 border border-blue-400 text-blue-500 rounded-md text-xs font-normal hover:bg-blue-50 transition-colors whitespace-nowrap"
-                            onClick={() => window.open(`/timetable/feedback/${item.uc_id}?btid=${item.id}`, '_blank')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/timetable/feedback/${item.uc_id}?btid=${item.id}`, '_blank');
+                            }}
                           >
                             Feedback
                           </button>
                           {isTodayOrFuture && !isRequesting && (
                             <button
                               className="px-2 py-0.5 border border-yellow-400 text-yellow-500 rounded-md text-xs font-normal hover:bg-yellow-50 transition-colors whitespace-nowrap"
-                              onClick={() => openLeaveModal(item)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openLeaveModal(item);
+                              }}
                             >Request Leave</button>
                           )}
                         </div>
@@ -409,4 +675,4 @@ export default function TimetableListView() {
       )}
     </div>
   );
-} 
+}

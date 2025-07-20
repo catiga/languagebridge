@@ -50,6 +50,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/course/time/list", auth.CourseTimeList)
 	authGroup.GET("/course/time/range", auth.CourseTimeRange)
 	authGroup.POST("/course/time/requestLeave", auth.CourseTimeRequestLeave)
+	authGroup.GET("/course/time/leaveDetail", auth.CourseTimeLeaveDetail)
 	authGroup.GET("/course/meeting/fetch", auth.CourseGetMeetingInfo)
 	authGroup.GET("/course/meeting/end", auth.CourseGetMeetingEnd)
 	authGroup.GET("/course/review/fetch", auth.CourseGetReview)
