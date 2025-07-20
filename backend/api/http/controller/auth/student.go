@@ -560,7 +560,7 @@ func StudentPullStageGoal(c *gin.Context) {
 	var taskList []model.UserPlanSchedule
 	var overIds []uint64
 
-	err = db.Model(&model.UserPlanOverview{}).Where("student_id = ?", studentId).Find(&overviewList).Error
+	err = db.Model(&model.UserPlanOverview{}).Where("student_id = ? and flag != ?", studentId, -1).Find(&overviewList).Error
 	if err != nil {
 		log.Error(err)
 	}
