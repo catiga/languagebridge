@@ -194,7 +194,7 @@ export default function TimetableListView() {
   const statusTabs = [
     { key: 'all', label: 'All' },
     { key: '000', label: 'Normal' },
-    { key: '100', label: 'Requesting Leave' },
+    { key: '100', label: 'Pending Leave' },
   ];
 
   return (
