@@ -944,7 +944,7 @@ func StudentLogin(c *gin.Context) {
 		return
 	}
 
-	originalStr := fmt.Sprintf("%d,%s,%d", studentInfo.ID, studentInfo.UserID, time.Now().Unix())
+	originalStr := fmt.Sprintf("%d,%d,%d", studentInfo.ID, studentInfo.UserID, time.Now().Unix())
 	token, err := security.Encrypt([]byte(originalStr))
 
 	if err != nil {

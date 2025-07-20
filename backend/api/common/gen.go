@@ -18,6 +18,7 @@ type HeaderParam struct {
 	RequestId string
 	XAuth     string
 	TAuth     string
+	SAuth     string
 }
 
 func (h HeaderParam) Join() string {

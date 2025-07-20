@@ -16,14 +16,16 @@ import (
 
 func StudentTokenInterceptor() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		_, ok := c.Get("HEADERS")
+		headers, ok := c.Get("HEADERS")
 		if !ok {
 			log.Info("unable to get headers")
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token check failed")
 			return
 		}
-		token, err := security.Decrypt(c.Request.Header.Get("SAUTH"))
-		log.Info("STUDENT TOKENCHECK ", c.Request.Header.Get("SAUTH"), token)
+		log.Info(headers)
+		sauth := c.Request.Header.Get("SAUTH")
+		token, err := security.Decrypt(sauth)
+		log.Info("STUDENT TOKENCHECK ", sauth, token)
 		if err != nil {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "token check failed")
 			return
@@ -43,9 +45,9 @@ func StudentTokenInterceptor() gin.HandlerFunc {
 			return
 		}
 		// check user info
-		var userInfo model.Teacher
+		var userInfo model.UserMember
 		db := system.GetDb()
-		db.Model(&model.Teacher{}).Where("id = ?", tokenArr[0]).First(&userInfo)
+		db.Model(&model.UserMember{}).Where("id = ?", tokenArr[0]).First(&userInfo)
 		if userInfo.ID == 0 {
 			makeFaileRes(c, codes.CODE_ERR_SECURITY, "please login")
 			return
