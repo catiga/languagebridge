@@ -72,6 +72,7 @@ type UserMember struct {
 	Character   string    `gorm:"column:character" json:"character"`
 	LoginID     string    `gorm:"column:login_id" json:"login_id"`
 	Password    string    `gorm:"column:password" json:"-"`
+	Avatar      string    `gorm:"column:avatar" json:"avatar"`
 }
 
 func (UserMember) TableName() string {

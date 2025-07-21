@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaBookOpen, FaStar, FaStickyNote, FaRobot, FaCalendarAlt, FaRocket } from "react-icons/fa";
+import { FaBookOpen, FaStar, FaStickyNote, FaRobot, FaCalendarAlt, FaRocket, FaCamera } from "react-icons/fa";
 import Image from "next/image";
 import Cookies from "js-cookie";
 import { motion } from "framer-motion";
@@ -26,6 +26,10 @@ export default function StudentPortalPage() {
     lesson_past_count: 0,
     total_student_count: 0,
   });
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const avatarFileRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Logout handler
@@ -120,9 +124,103 @@ export default function StudentPortalPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 pb-10">
       {/* Student Info Section */}
       <div className="flex flex-col items-center mt-10 mb-4">
-        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-2 bg-white">
-          <Image src={studentInfo?.avatar || "/default-avatar.svg"} alt="avatar" width={96} height={96} />
+        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mb-2 bg-white relative">
+          <img src={studentInfo?.avatar || "/default-avatar.svg"} alt="avatar" width={96} height={96} className="w-24 h-24 rounded-full object-cover" />
+          <button
+            type="button"
+            onClick={() => setShowAvatarModal(true)}
+            className="absolute bottom-2 right-2 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+          >
+            <FaCamera className="w-4 h-4" />
+          </button>
         </div>
+        {/* 更换头像模态框 */}
+        {showAvatarModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm relative flex flex-col items-center">
+              <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={() => setShowAvatarModal(false)}>&times;</button>
+              <h2 className="text-xl font-bold mb-4 text-blue-700">Change Avatar</h2>
+              <div className="mb-4">
+                <img
+                  src={avatarPreview || studentInfo?.avatar || "/default-avatar.svg"}
+                  alt="avatar-preview"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-blue-200"
+                />
+              </div>
+              <input
+                type="file"
+                ref={avatarFileRef}
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    // 自动压缩为256x256正方形
+                    const img = new window.Image();
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                      img.src = ev.target?.result as string;
+                    };
+                    reader.readAsDataURL(file);
+                    img.onload = async function() {
+                      // 计算正方形裁剪区域
+                      const size = 256;
+                      const canvas = document.createElement('canvas');
+                      canvas.width = size;
+                      canvas.height = size;
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) return;
+                      // 居中裁剪
+                      const minSide = Math.min(img.width, img.height);
+                      const sx = (img.width - minSide) / 2;
+                      const sy = (img.height - minSide) / 2;
+                      ctx.clearRect(0, 0, size, size);
+                      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+                      canvas.toBlob(async (blob) => {
+                        if (!blob) return;
+                        setAvatarPreview(URL.createObjectURL(blob));
+                        const uploadData = new FormData();
+                        uploadData.append('image', blob, 'avatar.jpg');
+                        setUploading(true);
+                        const apiKey = 'bbf086ea0c965eeb43bb982b048f1d1b';
+                        try {
+                          const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`,
+                            { method: 'POST', body: uploadData });
+                          const result = await response.json();
+                          if (result.success) {
+                            const res: any = await apiClient.post('/spwapi/student/auth/profile/update', { avatar: result.data.url });
+                            if (res && res.code === 0) {
+                              setStudentInfo((info: any) => ({ ...info, avatar: result.data.url }));
+                              setShowAvatarModal(false);
+                              setAvatarPreview(null);
+                            } else {
+                              alert(res?.msg || 'Failed to update avatar');
+                            }
+                          } else {
+                            alert('Image upload failed: ' + (result.error?.message || ''));
+                          }
+                        } catch (err) {
+                          alert('Image upload failed');
+                        } finally {
+                          setUploading(false);
+                        }
+                      }, 'image/jpeg', 0.8);
+                    };
+                  }
+                }}
+                className="hidden"
+                accept="image/png, image/jpeg, image/gif"
+              />
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
+                onClick={() => avatarFileRef.current?.click()}
+                disabled={uploading}
+              >
+                <FaCamera className="w-4 h-4" />
+                {uploading ? 'Uploading...' : 'Select Image'}
+              </button>
+            </div>
+          </div>
+        )}
         {/* Centered name and logout button */}
         <div className="flex items-center gap-4 mb-1">
           <div className="text-lg font-bold text-gray-800 tracking-wide flex items-center gap-2">

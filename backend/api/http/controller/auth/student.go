@@ -24,6 +24,10 @@ type StudentResponse struct {
 	Avatar  string    `gorm:"column:avatar" json:"avatar"`
 }
 
+type StudentProfileRequest struct {
+	Avatar string `json:"avatar"`
+}
+
 func StudentOverview(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -110,9 +114,49 @@ func StudentOverview(c *gin.Context) {
 			Email:   studentInfo.Email,
 			Name:    studentInfo.Name,
 			AddTime: studentInfo.AddTime,
-			Avatar:  "",
+			Avatar:  studentInfo.Avatar,
 		},
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func StudentUpdateProfile(c *gin.Context) {
+	var req StudentProfileRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+
+	currentUser, exist := c.Get("student_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	student_id, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	if len(req.Avatar) > 0 {
+		db.Model(&model.UserMember{}).Where("id = ?", student_id).Update("avatar", req.Avatar)
+	}
+
 	c.JSON(http.StatusOK, res)
 }
 
