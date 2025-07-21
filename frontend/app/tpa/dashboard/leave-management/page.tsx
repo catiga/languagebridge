@@ -46,6 +46,13 @@ export default function LeaveManagementPage() {
     data: null,
   });
 
+  // 新增：操作确认弹窗状态
+  const [actionConfirm, setActionConfirm] = useState<{
+    visible: boolean;
+    action: 'approve' | 'reject';
+    leaveId: number | null;
+  }>({ visible: false, action: 'approve', leaveId: null });
+
   // 状态映射
   const statusMap: Record<string, { label: string; color: string; bgColor: string }> = {
     '00': { label: 'Pending', color: 'text-yellow-800', bgColor: 'bg-yellow-100' },
@@ -85,26 +92,27 @@ export default function LeaveManagementPage() {
   }, [pagination.currentPage, statusFilter]);
 
   // 处理申请
-  const handleLeaveAction = async (action: 'approve' | 'reject', requestIds: number[]) => {
+  const handleLeaveAction = async (action: 'approve' | 'reject', leaveId: number) => {
     setActionLoading(true);
     try {
-      const res = await apiClient.post('/spwapi/auth/course/time/processLeave', {
-        action: action === 'approve' ? 'confirm' : 'reject',
-        request_ids: requestIds,
-      }) as any;
-      
+      const url =
+        action === 'approve'
+          ? `/spwapi/tpa/auth/course/time/leaveConfirm?leave_id=${leaveId}`
+          : `/spwapi/tpa/auth/course/time/leaveReject?leave_id=${leaveId}`;
+      const res = await apiClient.post(url, {}) as any;
       if (res && res.code === 0) {
-        toast.success(`Successfully ${action === 'approve' ? 'approved' : 'rejected'} ${requestIds.length} request(s)`);
+        toast.success(`Successfully ${action === 'approve' ? 'confirmed' : 'rejected'} leave request`);
         setSelectedRequests([]);
         fetchLeaveRequests(pagination.currentPage);
       } else {
-        toast.error(res?.msg || `Failed to ${action} requests`);
+        toast.error(res?.msg || `Failed to ${action} leave request`);
       }
     } catch (e: any) {
-      toast.error(e?.message || `Failed to ${action} requests`);
+      toast.error(e?.message || `Failed to ${action} leave request`);
     } finally {
       setActionLoading(false);
-      setConfirmModal({ visible: false, action: 'approve', requestIds: [] });
+      setActionConfirm({ visible: false, action: 'approve', leaveId: null });
+      closeDetailPanel();
     }
   };
 
@@ -181,6 +189,11 @@ export default function LeaveManagementPage() {
 
   const pendingCount = leaveRequests.filter(req => req.status === '00').length;
   const hasSelected = selectedRequests.length > 0;
+
+  // 新增：弹出确认弹窗
+  const showActionConfirm = (action: 'approve' | 'reject', leaveId: number) => {
+    setActionConfirm({ visible: true, action, leaveId });
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -374,7 +387,7 @@ export default function LeaveManagementPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleLeaveAction('approve', [request.id]);
+                              showActionConfirm('approve', request.id);
                             }}
                             disabled={actionLoading}
                             className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
@@ -384,7 +397,7 @@ export default function LeaveManagementPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleLeaveAction('reject', [request.id]);
+                              showActionConfirm('reject', request.id);
                             }}
                             disabled={actionLoading}
                             className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
@@ -565,20 +578,14 @@ export default function LeaveManagementPage() {
                     <h5 className="font-semibold text-yellow-800 mb-3">Actions</h5>
                     <div className="flex gap-3">
                       <button
-                        onClick={() => {
-                          closeDetailPanel();
-                          handleLeaveAction('approve', [detailPanel.data!.id]);
-                        }}
+                        onClick={() => showActionConfirm('approve', detailPanel.data!.id)}
                         disabled={actionLoading}
                         className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
                       >
                         {actionLoading ? 'Processing...' : 'Confirm'}
                       </button>
                       <button
-                        onClick={() => {
-                          closeDetailPanel();
-                          handleLeaveAction('reject', [detailPanel.data!.id]);
-                        }}
+                        onClick={() => showActionConfirm('reject', detailPanel.data!.id)}
                         disabled={actionLoading}
                         className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
                       >
@@ -601,7 +608,18 @@ export default function LeaveManagementPage() {
         confirmText={actionLoading ? 'Processing...' : `Confirm ${confirmModal.action === 'approve' ? 'Approval' : 'Rejection'}`}
         cancelText="Cancel"
         onCancel={() => setConfirmModal({ visible: false, action: 'approve', requestIds: [] })}
-        onConfirm={() => handleLeaveAction(confirmModal.action, confirmModal.requestIds)}
+        onConfirm={() => handleLeaveAction(confirmModal.action, confirmModal.requestIds[0])} // Assuming only one selected for batch
+        loading={actionLoading}
+      />
+      {/* 自定义操作确认弹窗 */}
+      <ConfirmModal
+        isOpen={actionConfirm.visible}
+        title={`Confirm ${actionConfirm.action === 'approve' ? 'Approval' : 'Rejection'}`}
+        content={`Are you sure you want to ${actionConfirm.action === 'approve' ? 'confirm' : 'reject'} this leave request? This action cannot be undone.`}
+        confirmText={actionLoading ? 'Processing...' : `Confirm ${actionConfirm.action === 'approve' ? 'Approval' : 'Rejection'}`}
+        cancelText="Cancel"
+        onCancel={() => setActionConfirm({ visible: false, action: 'approve', leaveId: null })}
+        onConfirm={() => actionConfirm.leaveId && handleLeaveAction(actionConfirm.action, actionConfirm.leaveId)}
         loading={actionLoading}
       />
     </div>

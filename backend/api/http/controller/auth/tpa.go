@@ -1869,3 +1869,168 @@ func TeacherLeaveList(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+func TeacherLeaveConfirm(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveIdStr, exist := c.GetQuery("leave_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select pending leave to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveId, err := strconv.ParseUint(leaveIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select pending leave to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var leaveObj model.CourseBookLeave
+	var bookTran model.CourseBookTrans
+	db.Model(&model.CourseBookLeave{}).Where("id = ?", leaveId).First(&leaveObj)
+	if leaveObj.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Leave request not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.CourseBookTrans{}).Where("id = ?", leaveObj.BookID).First(&bookTran)
+	if bookTran.TeacherID != uint64(teacherId) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Leave request not found, please check data again"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if leaveObj.Status != common.BookLeaveStatusApply {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Have already handled this leave request"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if bookTran.Status != common.BookTransStatusRequestLeave {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Student might withdraw this request"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveObj.Status = common.BookLeaveStatusComfirmed
+	db.Updates(&leaveObj)
+	bookTran.Status = common.BookTransStatusNormal
+	bookTran.LessonDate = leaveObj.PendingDate
+	bookTran.StartTime = leaveObj.PendingStartTime
+	bookTran.EndTime = leaveObj.PendingEndTime
+	db.Updates(&bookTran)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}
+
+func TeacherLeaveReject(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("teacher_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	teacherId, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveIdStr, exist := c.GetQuery("leave_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select pending leave to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveId, err := strconv.ParseUint(leaveIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select pending leave to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	var leaveObj model.CourseBookLeave
+	var bookTran model.CourseBookTrans
+	db.Model(&model.CourseBookLeave{}).Where("id = ?", leaveId).First(&leaveObj)
+	if leaveObj.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Leave request not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.CourseBookTrans{}).Where("id = ?", leaveObj.BookID).First(&bookTran)
+	if bookTran.TeacherID != uint64(teacherId) {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "Leave request not found, please check data again"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if leaveObj.Status != common.BookLeaveStatusApply {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Have already handled this leave request"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if bookTran.Status != common.BookTransStatusRequestLeave {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "Student might withdraw this request"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	leaveObj.Status = common.BookLeaveStatusRejected
+	db.Updates(&leaveObj)
+	bookTran.Status = common.BookTransStatusNormal
+	db.Updates(&bookTran)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}
