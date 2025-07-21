@@ -1947,6 +1947,19 @@ func TeacherLeaveConfirm(c *gin.Context) {
 	bookTran.EndTime = leaveObj.PendingEndTime
 	db.Updates(&bookTran)
 
+	var teacherInfo model.Teacher
+	var userInfo model.UserInfo
+	var courseInfo model.CourseInfo
+	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
+	db.Model(&model.UserInfo{}).Where("id = ?", bookTran.UserID).First(&userInfo)
+	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
+
+	utils.SendLeaveResultToUserMail(userInfo.Email, teacherInfo.Name, courseInfo.Name,
+		leaveObj.PendingDate.Format("2006-01-02"),
+		leaveObj.PendingStartTime, leaveObj.PendingEndTime, "Accepted",
+		fmt.Sprintf("Hi, I've accepted the lesson change from %s %s-%s to %s %s-%s, please noted this update",
+			leaveObj.OriginalDate.Format("2006-01-02"), leaveObj.OriginalStartTime, leaveObj.OriginalEndTime, leaveObj.PendingDate.Format("2006-01-02"), leaveObj.PendingStartTime, leaveObj.PendingEndTime))
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = nil
@@ -2027,6 +2040,18 @@ func TeacherLeaveReject(c *gin.Context) {
 	db.Updates(&leaveObj)
 	bookTran.Status = common.BookTransStatusNormal
 	db.Updates(&bookTran)
+
+	var teacherInfo model.Teacher
+	var userInfo model.UserInfo
+	var courseInfo model.CourseInfo
+	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
+	db.Model(&model.UserInfo{}).Where("id = ?", bookTran.UserID).First(&userInfo)
+	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
+
+	utils.SendLeaveResultToUserMail(userInfo.Email, teacherInfo.Name, courseInfo.Name,
+		leaveObj.PendingDate.Format("2006-01-02"),
+		leaveObj.PendingStartTime, leaveObj.PendingEndTime, "Declined",
+		"The requested time conflicts with an existing class")
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"

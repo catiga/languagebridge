@@ -23,14 +23,17 @@ func (CourseBookTrans) TableName() string {
 }
 
 type CourseBookLeave struct {
-	ID               uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	BookID           uint64    `gorm:"column:book_id" json:"book_id"`
-	PendingDate      time.Time `gorm:"column:pending_date" json:"pending_date"`
-	PendingStartTime string    `gorm:"column:pending_start_time" json:"pending_start_time"`
-	PendingEndTime   string    `gorm:"column:pending_end_time" json:"pending_end_time"`
-	Source           int       `gorm:"column:source" json:"source"`
-	AddTime          time.Time `gorm:"column:add_time" json:"add_time"`
-	Status           string    `gorm:"column:status" json:"status"`
+	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	BookID            uint64    `gorm:"column:book_id" json:"book_id"`
+	PendingDate       time.Time `gorm:"column:pending_date" json:"pending_date"`
+	PendingStartTime  string    `gorm:"column:pending_start_time" json:"pending_start_time"`
+	PendingEndTime    string    `gorm:"column:pending_end_time" json:"pending_end_time"`
+	Source            int       `gorm:"column:source" json:"source"`
+	AddTime           time.Time `gorm:"column:add_time" json:"add_time"`
+	Status            string    `gorm:"column:status" json:"status"`
+	OriginalDate      time.Time `gorm:"column:original_date" json:"original_date"`
+	OriginalStartTime string    `gorm:"column:original_start_time" json:"original_start_time"`
+	OriginalEndTime   string    `gorm:"column:original_end_time" json:"original_end_time"`
 }
 
 func (CourseBookLeave) TableName() string {

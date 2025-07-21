@@ -787,6 +787,9 @@ func CourseTimeRequestLeave(c *gin.Context) {
 	bookLeave.PendingEndTime = newEndTime.Format(layoutTime)
 	bookLeave.Status = common.BookLeaveStatusApply
 	bookLeave.Source = common.BookLeaveSourceUser
+	bookLeave.OriginalDate = bookTran.LessonDate
+	bookLeave.OriginalStartTime = bookTran.StartTime
+	bookLeave.OriginalEndTime = bookTran.EndTime
 	err = db.Save(&bookLeave).Error
 	if err != nil {
 		res.Code = codes.CODE_ERR_UNKNOWN
@@ -797,6 +800,16 @@ func CourseTimeRequestLeave(c *gin.Context) {
 	}
 	bookTran.Status = common.BookTransStatusRequestLeave
 	db.Updates(&bookTran)
+
+	var teacherInfo model.Teacher
+	var userInfo model.UserInfo
+	var courseInfo model.CourseInfo
+	db.Model(&model.Teacher{}).Where("id = ?", bookTran.TeacherID).First(&teacherInfo)
+	db.Model(&model.UserInfo{}).Where("id = ?", bookTran.UserID).First(&userInfo)
+	db.Model(&model.CourseInfo{}).Where("id = ?", bookTran.CourseID).First(&courseInfo)
+	if len(teacherInfo.Email) > 0 {
+		utils.SendLeaveRequestToTeacherMail(teacherInfo.Email, userInfo.Name, courseInfo.Name, bookTran.LessonDate.Format(layout), bookTran.StartTime, bookTran.EndTime)
+	}
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
