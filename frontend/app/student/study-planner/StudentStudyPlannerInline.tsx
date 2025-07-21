@@ -264,6 +264,10 @@ export default function StudentStudyPlannerInline() {
 }
 
 function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStart, periodEnd }: any) {
+  const [showTaskListModal, setShowTaskListModal] = useState(false);
+  const [modalDate, setModalDate] = useState<string>("");
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+
   const start = new Date(periodStart);
   const end = new Date(periodEnd);
   const days: string[] = [];
@@ -281,35 +285,52 @@ function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStar
   const grid: (null | string)[] = Array(firstDayIdx).fill(null).concat(days);
   while (grid.length % 7 !== 0) grid.push(null);
   return (
-    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow flex flex-col items-center">
-      <div className="text-lg font-bold mb-2">{periodStart} ~ {periodEnd}</div>
-      <div className="grid grid-cols-7 gap-2 w-full mb-2">
-        {weekDays.map(d => <div key={d} className="text-center text-gray-500 font-semibold">{d}</div>)}
+    <>
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow flex flex-col items-center">
+        <div className="text-lg font-bold mb-2">{periodStart} ~ {periodEnd}</div>
+        <div className="grid grid-cols-7 gap-2 w-full mb-2">
+          {weekDays.map(d => <div key={d} className="text-center text-gray-500 font-semibold">{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-2 w-full">
+          {grid.map((date, idx) => {
+            if (!date) return <div key={idx} />;
+            const dayTasks = tasks.filter((t: any) => t.date === date);
+            return (
+              <button
+                key={date}
+                className={`rounded-lg p-2 flex flex-col items-center border transition-all min-h-[60px] ${selectedDate === date ? "bg-blue-200 border-blue-500" : "bg-white border-gray-200 hover:bg-blue-50"}`}
+                onClick={() => { setModalDate(date); setShowTaskListModal(true); setSelectedDate(date); }}
+              >
+                <span className="font-semibold">{Number(date.slice(-2))}</span>
+                <div className="flex flex-col gap-1 mt-1 w-full">
+                  {dayTasks.map((t: any) => (
+                    <div key={t.id} className="flex items-center text-xs w-full">
+                      <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
+                      <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="grid grid-cols-7 gap-2 w-full">
-        {grid.map((date, idx) => {
-          if (!date) return <div key={idx} />;
-          const dayTasks = tasks.filter((t: any) => t.date === date);
-          return (
-            <button
-              key={date}
-              className={`rounded-lg p-2 flex flex-col items-center border transition-all min-h-[60px] ${selectedDate === date ? "bg-blue-200 border-blue-500" : "bg-white border-gray-200 hover:bg-blue-50"}`}
-              onClick={() => { setSelectedDate(date); onAddTask(date); }}
-            >
-              <span className="font-semibold">{Number(date.slice(-2))}</span>
-              <div className="flex flex-col gap-1 mt-1 w-full">
-                {dayTasks.map((t: any) => (
-                  <div key={t.id} className="flex items-center text-xs w-full">
-                    <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
-                    <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
-                  </div>
-                ))}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+      {showTaskListModal && (
+        <TaskListModal
+          date={modalDate}
+          tasks={tasks.filter((t: any) => t.date === modalDate)}
+          onClose={() => setShowTaskListModal(false)}
+          onAddTask={() => { setShowAddTaskModal(true); }}
+        />
+      )}
+      {showAddTaskModal && (
+        <AddTaskModal
+          onClose={() => setShowAddTaskModal(false)}
+          onSubmit={(task: any) => { onAddTask(task); setShowAddTaskModal(false); }}
+          date={modalDate}
+        />
+      )}
+    </>
   );
 }
 
@@ -327,22 +348,24 @@ function WeekView({ tasks, selectedDate, setSelectedDate }: any) {
     '00': 'text-gray-500', '10': 'text-blue-500', '20': 'text-orange-500', '50': 'text-green-600', '51': 'text-yellow-500', '52': 'text-teal-500', '53': 'text-purple-500', '54': 'text-pink-500',
   };
   return (
-    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow">
-      <div className="flex justify-between mb-2">
+    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow overflow-x-auto">
+      <div className="flex min-w-[1540px]">
         {weekDays.map((d, i) => (
-          <div key={d} className="text-center font-semibold text-gray-500 flex-1">{d}<br /><span className="text-xs">{weekDates[i].slice(-2)}</span></div>
+          <div key={d} className="text-center font-semibold text-gray-500 flex-1 min-w-[220px]">
+            {d}<br /><span className="text-xs">{weekDates[i].slice(-2)}</span>
+          </div>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 min-w-[1540px]">
         {weekDates.map((date, i) => {
           const dayTasks = tasks.filter((t: any) => t.date === date);
           return (
-            <div key={date} className="flex-1 min-h-[80px] bg-white rounded-lg shadow p-2 flex flex-col gap-2">
+            <div key={date} className="flex-1 min-w-[220px] bg-white rounded-lg shadow p-2 flex flex-col gap-2">
               {dayTasks.length === 0 ? <div className="text-xs text-gray-300 text-center">No tasks</div> :
                 dayTasks.map((t: any) => (
-                  <div key={t.id} className="flex items-center text-xs w-full">
-                    <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
-                    <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
+                  <div key={t.id} className="flex items-start text-xs w-full break-words whitespace-pre-line">
+                    <span className="inline-block w-10 text-left text-gray-400 flex-shrink-0">{t.start_time || '-'}</span>
+                    <span className={`ml-1 truncate font-medium break-words whitespace-pre-line ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
                   </div>
                 ))}
             </div>
@@ -371,9 +394,7 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
     { value: '54', label: 'Lately complete' },
   ];
   const [editingTask, setEditingTask] = useState<any>(null);
-  const [deletingTask, setDeletingTask] = useState<any>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
+  // 删除相关state和逻辑已移除
 
   return (
     <div>
@@ -405,12 +426,7 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
                   >
                     Edit
                   </button>
-                  <button 
-                    className="px-3 py-1 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200"
-                    onClick={() => setDeletingTask(t)}
-                  >
-                    Delete
-                  </button>
+                  {/* 删除按钮已移除 */}
                 </div>
               )}
             </li>
@@ -423,7 +439,6 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
           statusOptions={statusOptions}
           onClose={() => setEditingTask(null)}
           onSubmit={async (updatedTask: any) => {
-            setEditLoading(true);
             try {
               const res = await apiClient.post('/spwapi/student/auth/planner/task/update', {
                 id: updatedTask.id,
@@ -439,40 +454,12 @@ function DayView({ tasks, selectedDate, setSelectedDate, periodStart, periodEnd,
               }
             } catch (e: any) {
               toast.error(e?.message || 'Failed to update task');
-            } finally {
-              setEditLoading(false);
             }
           }}
-          loading={editLoading}
+          loading={false}
         />
       )}
-      <ConfirmModal
-        isOpen={!!deletingTask}
-        title="Delete Task"
-        content="Are you sure you want to delete this task? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        loading={deleteLoading}
-        onCancel={() => setDeletingTask(null)}
-        onConfirm={async () => {
-          if (!deletingTask) return;
-          setDeleteLoading(true);
-          try {
-            const res = await apiClient.get(`/spwapi/student/auth/planner/task/delete?id=${deletingTask.id}`) as any;
-            if (res && res.code === 0) {
-              toast.success('Task deleted successfully');
-              onDeleteTask(deletingTask.id);
-              setDeletingTask(null);
-            } else {
-              toast.error(res?.msg || 'Failed to delete task');
-            }
-          } catch (e: any) {
-            toast.error(e?.message || 'Failed to delete task');
-          } finally {
-            setDeleteLoading(false);
-          }
-        }}
-      />
+      {/* 删除确认弹窗已移除 */}
     </div>
   );
 }
@@ -608,6 +595,33 @@ function StatsPanel({ stats, loading }: any) {
         <div className="text-gray-500">Lately complete</div>
       </div>
       <div className="ml-auto text-green-700 font-bold text-lg">{total > 0 ? `Completion rate ${completion}%` : ""}</div>
+    </div>
+  );
+}
+
+function TaskListModal({ date, tasks, onClose, onAddTask }: { date: string, tasks: any[], onClose: () => void, onAddTask: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative">
+        <button type="button" className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold mb-4 text-blue-700">Tasks for {date}</h2>
+        {tasks.length === 0 ? (
+          <div className="text-gray-400 mb-4">No tasks for this day.</div>
+        ) : (
+          <ul className="space-y-2 mb-4">
+            {tasks.map((t: any) => (
+              <li key={t.id} className="rounded bg-blue-50 px-4 py-2 flex flex-col">
+                <span className="text-sm text-gray-500">{t.start_time || '-'} {t.end_time ? `~ ${t.end_time}` : ''}</span>
+                <span className="font-medium text-gray-800 break-words whitespace-pre-line">{t.title}</span>
+                {t.note && <span className="text-xs text-gray-500 mt-1">{t.note}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex justify-end gap-4 mt-6">
+          <button type="button" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" onClick={onAddTask}>+ Add Task</button>
+        </div>
+      </div>
     </div>
   );
 }
