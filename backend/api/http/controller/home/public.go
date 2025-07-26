@@ -55,3 +55,35 @@ func PublicCountries(c *gin.Context) {
 	res.Data = countries
 	c.JSON(http.StatusOK, res)
 }
+
+func PublicTags(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	db := system.GetDb()
+
+	var tags []model.SysTag
+	err := db.Model(&model.SysTag{}).Where("parent_id = ? and active = ?", 1, 1).Order("sort asc").Find(&tags).Error
+
+	if err != nil {
+		log.Error("failed to fetch country data", err)
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = "failed to fetch country data"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var result []common.ShowTag
+	for _, v := range tags {
+		result = append(result, common.ShowTag{
+			ID:   v.ID,
+			Name: v.Name,
+			Desc: v.Description,
+		})
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = result
+	c.JSON(http.StatusOK, res)
+}

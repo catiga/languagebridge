@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -133,6 +134,12 @@ type SendSystemMessageRequest struct {
 	Message  string `json:"message"`
 }
 
+type WithTagRequest struct {
+	ProvisionalToken string   `json:"provisiontal_token"`
+	UserNo           string   `json:"user_no"`
+	Tags             []uint64 `json:"tags"`
+}
+
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -220,14 +227,96 @@ func Register(c *gin.Context) {
 	err = db.Save(&userProfile).Error
 	log.Error("save profile error", err)
 
+	proToken := fmt.Sprintf("%d,%d", userInfo.ID, time.Now().Unix())
+	token, err := security.Encrypt([]byte(proToken))
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = struct {
-		UserNo string `json:"user_no"`
+		UserNo           string `json:"user_no"`
+		ProvisionalToken string `json:"provisional_token"`
 	}{
-		UserNo: userInfo.UserNo,
+		UserNo:           userInfo.UserNo,
+		ProvisionalToken: token,
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+func WithTagsAfterReg(c *gin.Context) {
+	var req WithTagRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	provisionalToken, err := security.Decrypt(req.ProvisionalToken)
+	if err != nil {
+		res.Code = codes.CODE_ERR_SECURITY
+		res.Msg = "invalid security code"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	provisionalTokenArr := strings.Split(provisionalToken, ",")
+	if len(provisionalTokenArr) != 2 {
+		res.Code = codes.CODE_ERR_SECURITY
+		res.Msg = "invalid security code length"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	userId, err1 := strconv.ParseUint(provisionalTokenArr[0], 10, 64)
+	validTime, err2 := strconv.ParseInt(provisionalTokenArr[1], 10, 64)
+	if err1 != nil || err2 != nil {
+		res.Code = codes.CODE_ERR_SECURITY
+		res.Msg = "invalid security code format"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if (time.Now().Unix()-validTime) > 10*60 || validTime <= 0 || len(req.Tags) == 0 {
+		// ignore this step
+		res.Code = codes.CODE_SUCCESS
+		res.Msg = "success"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userInfo model.UserInfo
+	db.Model(&model.UserInfo{}).Where("id = ?", userId).First(&userInfo)
+	if userInfo.UserNo != req.UserNo {
+		res.Code = codes.CODE_ERR_SECURITY
+		res.Msg = "invalid security code to match"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var tags []model.SysTag
+	db.Model(&model.SysTag{}).Where("id IN ?", req.Tags).Find(&tags)
+
+	if len(tags) > 0 {
+		addTime := time.Now()
+		var userTags []model.UserTag
+		for _, v := range tags {
+			userTags = append(userTags, model.UserTag{
+				AddTime: addTime,
+				UserID:  userInfo.ID,
+				TagID:   v.ID,
+				TagName: v.Name,
+			})
+		}
+		db.CreateInBatches(&userTags, 50)
+	}
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	c.JSON(http.StatusOK, res)
+	return
 }
 
 func Login(c *gin.Context) {

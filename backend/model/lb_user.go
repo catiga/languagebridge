@@ -213,3 +213,15 @@ type UserPlanSchedule struct {
 func (UserPlanSchedule) TableName() string {
 	return "user_plan_schedule"
 }
+
+type UserTag struct {
+	ID      uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AddTime time.Time `gorm:"column:add_time" json:"add_time"`
+	UserID  uint64    `gorm:"column:user_id" json:"user_id"`
+	TagID   uint64    `gorm:"column:tag_id" json:"tag_id"`
+	TagName string    `gorm:"column:tag_name" json:"tag_name"`
+}
+
+func (UserTag) TableName() string {
+	return "user_tag"
+}
