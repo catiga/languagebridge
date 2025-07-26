@@ -47,7 +47,7 @@ export default function TrialMeetingPage() {
     }
     const fetchMeetingInfo = async () => {
       try {
-        const res = await apiClient.get('/spwapi/auth/trial/lesson/meeting', { trial_id: id }) as any;
+        const res = await apiClient.get('/spwapi/tpa/auth/trial/lesson/meeting', { trial_id: id }) as any;
         if (res && res.code === 0 && res.data) {
           setDetails(res.data);
         } else {
