@@ -17,13 +17,18 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 interface StageGoal {
   id: number;
+  student_id: number;
   title: string;
   description: string;
   goal: string;
-  startDate: string;
-  endDate: string;
-  student_id?: string | number;
-  student_name?: string;
+  add_time: string;
+  start_date: string;
+  end_date: string;
+  tasks: any[] | null;
+  goal_period_type: string;
+  target_level: number;
+  init_level: number;
+  status: string;
 }
 type Executor = { id: string; name: string };
 
@@ -54,13 +59,8 @@ export default function StudentStudyPlannerInline() {
     apiClient.get(url).then((res: any) => {
       if (ignore) return;
       if (res && res.code === 0 && Array.isArray(res.data) && res.data.length > 0) {
-        const goals = res.data.map((g: any) => ({
-          ...g,
-          startDate: g.start_date,
-          endDate: g.end_date,
-        }));
-        setStageGoals(goals);
-        setCurrentStageGoalId(goals[0].id);
+        setStageGoals(res.data);
+        setCurrentStageGoalId(res.data[0].id);
         const allTasks: any[] = [];
         for (const g of res.data) {
           if (Array.isArray(g.tasks)) {
@@ -76,12 +76,14 @@ export default function StudentStudyPlannerInline() {
         }
         setTasks(allTasks);
         const today = new Date().toISOString().slice(0, 10);
-        if (today >= goals[0].startDate && today <= goals[0].endDate) {
+        if (res.data[0].start_date && today >= res.data[0].start_date && today <= res.data[0].end_date) {
           setSelectedDate(today);
+        } else if (res.data[0].start_date) {
+          setSelectedDate(res.data[0].start_date);
         } else {
-          setSelectedDate(goals[0].startDate);
+          setSelectedDate(today);
         }
-        fetchStats(goals[0].id);
+        fetchStats(res.data[0].id);
       } else {
         setStageGoals([]);
         setCurrentStageGoalId(null);
@@ -118,13 +120,16 @@ export default function StudentStudyPlannerInline() {
     }
   }, [currentStageGoalId]);
 
+  // 切换到Day视图时，selectedDate自动设为周期内的今天或startDate
   useEffect(() => {
     if (view === 'day' && currentStageGoal) {
       const today = new Date().toISOString().slice(0, 10);
-      if (today >= currentStageGoal.startDate && today <= currentStageGoal.endDate) {
+      if (currentStageGoal.start_date && today >= currentStageGoal.start_date && today <= currentStageGoal.end_date) {
         setSelectedDate(today);
+      } else if (currentStageGoal.start_date) {
+        setSelectedDate(currentStageGoal.start_date);
       } else {
-        setSelectedDate(currentStageGoal.startDate);
+        setSelectedDate(today);
       }
     }
   }, [view, currentStageGoal]);
@@ -135,8 +140,18 @@ export default function StudentStudyPlannerInline() {
   const deleteTask = (id: number) => {
     setTasks(ts => ts.filter(t => t.id !== id));
   };
-  const handleAddStageGoal = (goal: Omit<StageGoal, 'id'>) => {
-    const newGoal: StageGoal = { ...goal, id: Math.max(0, ...stageGoals.map(g => g.id)) + 1 };
+  const handleAddStageGoal = (goal: any) => {
+    const newGoal: StageGoal = { 
+      ...goal, 
+      id: Math.max(0, ...stageGoals.map(g => g.id)) + 1,
+      student_id: 0,
+      add_time: new Date().toISOString(),
+      tasks: null,
+      goal_period_type: 'medium_term',
+      target_level: 3,
+      init_level: 1,
+      status: '00'
+    };
     setStageGoals(gs => [...gs, newGoal]);
     setCurrentStageGoalId(newGoal.id);
     setShowAddStage(false);
@@ -161,10 +176,21 @@ export default function StudentStudyPlannerInline() {
       <div className="max-w-5xl mx-auto min-h-[70vh]">
         {/* Remove executor selection UI */}
         {stageGoals.length === 0 ? (
-          <div className="max-w-xl mx-auto mt-24 bg-white/90 rounded-3xl shadow-xl p-8 flex flex-col items-center">
-            <h2 className="text-2xl font-bold mb-4 text-blue-700">No Study Plan Found</h2>
-            <div className="text-gray-600 mb-6 text-center">You have not created any study plan yet.<br/>Click the button below to create your first stage goal and start your learning journey!</div>
-            <button className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold text-lg shadow hover:bg-blue-700 transition" onClick={() => setShowAddStage(true)}>+ Create Stage Goal</button>
+          <div className="max-w-2xl mx-auto mt-16 bg-gradient-to-br from-blue-50 to-purple-50 rounded-3xl shadow-xl p-12 flex flex-col items-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
+              <span className="text-3xl text-white">🎯</span>
+            </div>
+            <h2 className="text-3xl font-bold mb-4 text-gray-800 text-center">Set Your Learning Goal</h2>
+            <div className="text-gray-600 mb-8 text-center max-w-md leading-relaxed">
+              Create a personalized learning plan to track your progress and achieve your English learning objectives.
+            </div>
+            <button 
+              className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2" 
+              onClick={() => setShowAddStage(true)}
+            >
+              <span className="text-xl">+</span>
+              Set Learning Goal
+            </button>
             {showAddStage && <AddStageGoalModal onClose={() => setShowAddStage(false)} onSubmit={handleAddStageGoal} />}
           </div>
         ) : (
@@ -178,12 +204,25 @@ export default function StudentStudyPlannerInline() {
                 <button className="ml-2 px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200" onClick={() => setShowAddStage(true)}>+ New</button>
               </div>
               {currentStageGoal && (
-                <div className="bg-blue-50 rounded-xl px-4 py-2 text-sm text-gray-700 max-w-xl flex items-center gap-4">
-                  <div>
-                    <div><b>Theme:</b> {currentStageGoal.title}</div>
-                    <div><b>Description:</b> {currentStageGoal.description}</div>
-                    <div><b>Goal:</b> {currentStageGoal.goal}</div>
-                    <div><b>Period:</b> {currentStageGoal.startDate} ~ {currentStageGoal.endDate}</div>
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl px-6 py-4 text-sm text-gray-700 max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="mb-2"><span className="font-semibold text-blue-700">Title:</span> {currentStageGoal.title}</div>
+                      <div className="mb-2"><span className="font-semibold text-blue-700">Description:</span> {currentStageGoal.description}</div>
+                      <div className="mb-2"><span className="font-semibold text-blue-700">Goal:</span> {currentStageGoal.goal}</div>
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-700">Period:</span> 
+                        {currentStageGoal.start_date ? `${currentStageGoal.start_date} ~ ${currentStageGoal.end_date}` : `Until ${currentStageGoal.end_date}`}
+                      </div>
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-700">Level:</span> 
+                        {currentStageGoal.init_level} → {currentStageGoal.target_level}
+                      </div>
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-700">Type:</span> 
+                        <span className="capitalize ml-1">{currentStageGoal.goal_period_type.replace('_', ' ')}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -212,8 +251,8 @@ export default function StudentStudyPlannerInline() {
                   selectedDate={selectedDate}
                   setSelectedDate={setSelectedDate}
                   onAddTask={(date: string) => setAddTaskDate(date)}
-                  periodStart={currentStageGoal.startDate}
-                  periodEnd={currentStageGoal.endDate}
+                  periodStart={currentStageGoal.start_date}
+                  periodEnd={currentStageGoal.end_date}
                 />
               )}
               {view === "week" && <WeekView tasks={filteredTasks} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
@@ -222,8 +261,8 @@ export default function StudentStudyPlannerInline() {
                   tasks={filteredTasks}
                   selectedDate={selectedDate}
                   setSelectedDate={setSelectedDate}
-                  periodStart={currentStageGoal?.startDate}
-                  periodEnd={currentStageGoal?.endDate}
+                  periodStart={currentStageGoal?.start_date}
+                  periodEnd={currentStageGoal?.end_date}
                   onUpdateTask={(updatedTask: any) => setTasks(ts => ts.map(t => t.id === updatedTask.id ? updatedTask : t))}
                   onDeleteTask={(id: number) => setTasks(ts => ts.filter(t => t.id !== id))}
                 />
@@ -727,7 +766,7 @@ function AddTaskModal(props: AddTaskModalProps) {
   );
 }
 
-function AddStageGoalModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (goal: Omit<StageGoal, 'id'>) => void }) {
+function AddStageGoalModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (goal: any) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
@@ -783,7 +822,7 @@ function AddStageGoalModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
         });
         if (!res.ok) throw new Error('Failed');
       }
-      onSubmit({ title, description, goal, startDate: formatDate(startDate), endDate: formatDate(endDate) });
+      onSubmit({ title, description, goal, start_date: formatDate(startDate), end_date: formatDate(endDate) });
     } catch (err: any) {
       setError(err?.message || "Failed to create stage goal");
     } finally {

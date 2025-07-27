@@ -178,16 +178,20 @@ func (auth AuthMessage) Format() string {
 }
 
 type UserPlanOverview struct {
-	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID      uint64    `gorm:"column:user_id" json:"user_id"`
-	StudentID   uint64    `gorm:"column:student_id" json:"student_id"`
-	Title       string    `gorm:"column:title" json:"title"`
-	Description string    `gorm:"column:description" json:"description"`
-	Goal        string    `gorm:"column:goal" json:"goal"`
-	StartDate   string    `gorm:"column:start_date" json:"start_date"`
-	EndDate     string    `gorm:"column:end_date" json:"end_date"`
-	AddTime     time.Time `gorm:"column:add_time" json:"add_time"`
-	Flag        int       `gorm:"column:flag" json:"flag"`
+	ID             uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID         uint64    `gorm:"column:user_id" json:"user_id"`
+	StudentID      uint64    `gorm:"column:student_id" json:"student_id"`
+	Title          string    `gorm:"column:title" json:"title"`
+	Description    string    `gorm:"column:description" json:"description"`
+	Goal           string    `gorm:"column:goal" json:"goal"`
+	StartDate      string    `gorm:"column:start_date" json:"start_date"`
+	EndDate        string    `gorm:"column:end_date" json:"end_date"`
+	AddTime        time.Time `gorm:"column:add_time" json:"add_time"`
+	Flag           int       `gorm:"column:flag" json:"flag"`
+	GoalPeriodType string    `gorm:"column:goal_period_type" json:"goal_period_type"`
+	TargetLevel    int       `gorm:"column:target_level" json:"target_level"`
+	InitLevel      int       `gorm:"column:init_level" json:"init_level"`
+	Status         string    `gorm:"column:status" json:"status"`
 }
 
 func (UserPlanOverview) TableName() string {

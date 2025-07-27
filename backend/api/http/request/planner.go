@@ -1,11 +1,15 @@
 package request
 
 type CreatePlannerStageGoalRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Goal        string `json:"goal"`
-	StartDate   string `json:"start_date"`
-	EndDate     string `json:"end_date"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Goal           string `json:"goal"`
+	StartDate      string `json:"start_date"`
+	EndDate        string `json:"end_date"`
+	GoalPeriodType string `json:"goal_period_type"`
+	TargetLevel    int    `json:"target_level"`
+	InitLevel      int    `json:"init_level"`
+	StudentID      uint64 `json:"student_id"`
 }
 
 type AddStageTaskRequest struct {

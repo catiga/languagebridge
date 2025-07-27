@@ -1,6 +1,7 @@
 package common
 
 type StudyPlannerScheduleStatus string
+type StudyPlannerOverviewStatus string
 
 const (
 	StudyPlannerScheduleCreate            = "00"
@@ -11,6 +12,10 @@ const (
 	StudyPlannerScheduleMostlyComplete    = "52"
 	StudyPlannerSchedulePartiallyComplete = "53"
 	StudyPlannerScheduleLatelyComplete    = "54"
+
+	StudyPlannerOverviewStatusCreate   = "00"
+	StudyPlannerOverviewStatusOngoing  = "10"
+	StudyPlannerOverviewStatusFinished = "20"
 )
 
 func StatusCheck(ss string) bool {

@@ -35,40 +35,24 @@ export default function LearningStats() {
         realStats = {
           total_courses: overviewRes.data.my_course_count || 0,
           completed_courses: Math.floor((overviewRes.data.my_course_count || 0) * 0.7),
-          total_study_hours: Math.floor(Math.random() * 100) + 20,
-          current_streak: Math.floor(Math.random() * 30) + 1,
-          certificates_earned: Math.floor(Math.random() * 10) + 1,
-          average_score: Math.floor(Math.random() * 20) + 80,
-          level_progress: Math.floor(Math.random() * 100)
+          total_study_hours: 0,
+          current_streak: 0,
+          certificates_earned: 0,
+          average_score: 0,
+          level_progress: 0
         };
       }
 
       if (realStats) {
         setStats(realStats);
       } else {
-        // 使用假数据
-        setStats({
-          total_courses: 8,
-          completed_courses: 6,
-          total_study_hours: 48,
-          current_streak: 12,
-          certificates_earned: 5,
-          average_score: 92,
-          level_progress: 75
-        });
+        // 如果没有数据，设置为空
+        setStats(null);
       }
     } catch (error) {
       console.error('Failed to fetch learning stats:', error);
-      // 使用假数据作为fallback
-      setStats({
-        total_courses: 8,
-        completed_courses: 6,
-        total_study_hours: 48,
-        current_streak: 12,
-        certificates_earned: 5,
-        average_score: 92,
-        level_progress: 75
-      });
+      // 如果获取失败，设置为空
+      setStats(null);
     } finally {
       setLoading(false);
     }

@@ -54,51 +54,8 @@ export default function RecommendedCourses({ showRecommendations = true }: Recom
         }));
         setCourses(courseList);
       } else {
-        // 使用假数据
-        setCourses([
-          {
-            id: 1,
-            title: 'English Conversation for Beginners',
-            description: 'Start your English learning journey with basic conversations',
-            teacher_name: 'Sarah Wilson',
-            teacher_avatar: '',
-            level: 1,
-            duration: 45,
-            rating: 4.8,
-            price: 89,
-            is_trial_available: true,
-            category: 'english',
-            thumbnail: ''
-          },
-          {
-            id: 2,
-            title: 'Python Programming Fundamentals',
-            description: 'Learn the basics of Python programming language',
-            teacher_name: 'David Chen',
-            teacher_avatar: '',
-            level: 2,
-            duration: 60,
-            rating: 4.6,
-            price: 120,
-            is_trial_available: true,
-            category: 'programming',
-            thumbnail: ''
-          },
-          {
-            id: 3,
-            title: 'Business Chinese for Professionals',
-            description: 'Master Chinese for business communication',
-            teacher_name: 'Li Wei',
-            teacher_avatar: '',
-            level: 3,
-            duration: 50,
-            rating: 4.9,
-            price: 95,
-            is_trial_available: false,
-            category: 'chinese',
-            thumbnail: ''
-          }
-        ]);
+        // 如果没有推荐课程数据，设置为空数组
+        setCourses([]);
       }
     } catch (error) {
       console.error('Failed to fetch recommended courses:', error);

@@ -35,35 +35,14 @@ export default function StudentOverview() {
           avatar: member.avatar,
           level: member.level || 1,
           target_level: member.target_level || 3,
-          progress_percentage: Math.floor(Math.random() * 100), // 假数据
+          progress_percentage: 0, // 移除假数据
           last_study_date: member.last_study_date || new Date().toISOString(),
-          total_study_hours: Math.floor(Math.random() * 50) + 10 // 假数据
+          total_study_hours: 0 // 移除假数据
         }));
         setStudents(studentList);
       } else {
-        // 使用假数据
-        setStudents([
-          {
-            id: 1,
-            name: 'Emma Johnson',
-            avatar: '',
-            level: 2,
-            target_level: 4,
-            progress_percentage: 65,
-            last_study_date: new Date().toISOString(),
-            total_study_hours: 28
-          },
-          {
-            id: 2,
-            name: 'Michael Chen',
-            avatar: '',
-            level: 1,
-            target_level: 3,
-            progress_percentage: 35,
-            last_study_date: new Date(Date.now() - 86400000).toISOString(),
-            total_study_hours: 15
-          }
-        ]);
+        // 如果没有数据，设置为空数组
+        setStudents([]);
       }
     } catch (error) {
       console.error('Failed to fetch students:', error);

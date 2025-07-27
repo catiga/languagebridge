@@ -74,6 +74,7 @@ func Routers(e *gin.RouterGroup) {
 
 	authGroup.POST("/planner/add", auth.CreateStageGoal)
 	authGroup.GET("/planner/pull", auth.PullStageGoal)
+	authGroup.GET("/planner/view", auth.ViewStageGoal)
 	authGroup.GET("/planner/stat", auth.StatStageGoal)
 	authGroup.GET("/planner/bind", auth.BindStageGoal)
 	authGroup.GET("/planner/delete", auth.DeleteStageGoal)
