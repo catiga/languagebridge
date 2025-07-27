@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../../../utils/api';
+import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
 
 interface Student {
@@ -33,6 +34,21 @@ export default function StudentCenteredOverview() {
 
   useEffect(() => {
     fetchStudents();
+    
+    // 监听来自考试窗口的消息
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'ASSESSMENT_COMPLETED') {
+        // 考试完成，刷新学生数据
+        fetchStudents();
+        toast.success('Assessment completed! Student data has been updated.');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const fetchStudents = async () => {
@@ -138,7 +154,15 @@ export default function StudentCenteredOverview() {
   };
 
   const handleAssessment = (studentId: number) => {
-    router.push(`/v2/auth/assessment?student_id=${studentId}`);
+    // 获取当前学生的学习计划ID
+    const currentStudent = students.find(s => s.id === studentId);
+    const planId = currentStudent?.active_goals && currentStudent.active_goals.length > 0 
+      ? currentStudent.active_goals[0].id 
+      : null;
+    
+    // 在新窗口中打开考试页面
+    const assessmentUrl = `/v2/auth/assessment?student_id=${studentId}${planId ? `&plan_id=${planId}` : ''}`;
+    window.open(assessmentUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
   };
 
   const handleStudyPlanner = (studentId: number) => {
