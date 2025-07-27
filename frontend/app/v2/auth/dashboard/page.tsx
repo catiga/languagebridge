@@ -1,115 +1,108 @@
-// frontend/app/v2/auth/dashboard/page.tsx
-
 'use client';
 
-import React, { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import WelcomeSection from './components/WelcomeSection';
+import StudentCenteredOverview from './components/StudentCenteredOverview';
+import RecommendedCourses from './components/RecommendedCourses';
+import QuickActions from './components/QuickActions';
+import LearningStats from './components/LearningStats';
+import FeatureUnlock from './components/FeatureUnlock';
+import Navigation from './components/Navigation';
 
-const DashboardPageV2: React.FC = () => {
+export default function V2Dashboard() {
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check for token in localStorage and sessionStorage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (!token) {
-      // If token is not found, redirect to login page
-      router.push('/login');
-    }
-  }, [router]);
+    // 模拟加载时间
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
 
-  // If token exists, render the dashboard content
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Loading Your Dashboard
+          </h2>
+          <p className="text-gray-600">
+            Preparing your personalized learning experience...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Top Navigation Bar */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          {/* Logo */}
-          <div className="text-xl font-bold text-gray-800">Your Logo</div>
-          {/* Search Bar (Placeholder)*/}
-          <div className="flex items-center">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            {/* Search Icon (Placeholder)*/}
-            <button className="ml-2 p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-          {/* User Info and Notifications (Placeholders)*/}
-          <div className="flex items-center space-x-4">
-            {/* Notification Icon */}
-            <button className="p-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h2m-2 0h-2m2 0H9m9 0a2 2 0 100-4 2 2 0 000 4zM7 17h2m-2 0H5m2 0a2 2 0 100-4 2 2 0 000 4zM12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2m-4 0h-4" />
-              </svg>
-            </button>
-            {/* User Avatar/Name */}
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-gray-300"></div>
-              <span className="text-gray-700">User Name</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-semibold text-gray-900">
+                EnglishBridge V2
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Navigation />
+              <button
+                onClick={() => router.push('/v2/auth/profile')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => router.push('/logout')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content Area */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Left Column (e.g., Study Planner, My Students) */}
-          <div className="md:col-span-2 space-y-8">
-            {/* Study Planner Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Study Planner</h3>
-              {/* Study Planner Content Goes Here */}
-              <p className="text-gray-600">Your upcoming lessons and tasks.</p>
-            </div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          {/* Welcome Section */}
+          <WelcomeSection />
 
-            {/* My Students Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">My Students</h3>
-              {/* My Students Content Goes Here */}
-              <p className="text-gray-600">Manage your students and their progress.</p>
-            </div>
+          {/* Student Centered Overview - 核心功能 */}
+          <StudentCenteredOverview />
 
-            {/* Recommended Courses Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Recommended Courses</h3>
-              {/* Recommended Courses Content Goes Here */}
-              <p className="text-gray-600">Courses tailored to your interests and level.</p>
-            </div>
-          </div>
+          {/* Learning Stats - 学习统计 */}
+          <LearningStats />
 
-          {/* Right Column (e.g., Profile, Achievements, Community) */}
-          <div className="md:col-span-1 space-y-8">
-            {/* Profile Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Profile</h3>
-              {/* Profile Content Goes Here */}
-              <p className="text-gray-600">View and edit your profile.</p>
-            </div>
+          {/* Quick Actions - 快捷操作 */}
+          <QuickActions />
 
-            {/* Achievements Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Achievements & Level</h3>
-              {/* Achievements Content Goes Here */}
-              <p className="text-gray-600">Track your progress and unlocked achievements.</p>
-            </div>
+          {/* Recommended Courses - 推荐课程 */}
+          <RecommendedCourses />
 
-            {/* Community Module (Placeholder) */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Learning Community</h3>
-              {/* Community Content Goes Here */}
-              <p className="text-gray-600">Connect with other learners and teachers.</p>
-            </div>
+          {/* Feature Unlock - 功能解锁提示 */}
+          <FeatureUnlock />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-white border-t border-gray-200 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-gray-600">
+            <p>© 2024 EnglishBridge. All rights reserved.</p>
+            <p className="mt-2 text-sm">
+              Empowering your learning journey with AI-driven personalized education
+            </p>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
-};
-
-export default DashboardPageV2;
+}

@@ -134,12 +134,6 @@ type SendSystemMessageRequest struct {
 	Message  string `json:"message"`
 }
 
-type WithTagRequest struct {
-	ProvisionalToken string   `json:"provisiontal_token"`
-	UserNo           string   `json:"user_no"`
-	Tags             []uint64 `json:"tags"`
-}
-
 func Welcome(c *gin.Context) {
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
@@ -243,7 +237,7 @@ func Register(c *gin.Context) {
 }
 
 func WithTagsAfterReg(c *gin.Context) {
-	var req WithTagRequest
+	var req common.WithTagRequest
 	res := common.Response{}
 	res.Timestamp = time.Now().Unix()
 

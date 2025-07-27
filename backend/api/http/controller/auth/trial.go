@@ -361,3 +361,95 @@ func FetchTeacherAvailableDate(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+func FetchInterest(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	_, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var userTags []model.UserTag
+	db.Model(&model.UserTag{}).Where("user_id = ?", currentUserStr).Find(&userTags)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = userTags
+
+	c.JSON(http.StatusOK, res)
+}
+
+func UpdateInterest(c *gin.Context) {
+	var req common.SubmitTagRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+	}
+
+	currentUserStr, _ := currentUser.(string)
+	userId, err := strconv.ParseUint(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if len(req.Tags) == 0 {
+		res.Code = codes.CODE_SUCCESS
+		res.Msg = "success"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+
+	db.Where("user_id = ?", currentUserStr).Delete(&model.UserTag{})
+
+	var tags []model.SysTag
+	db.Model(&model.SysTag{}).Where("id IN ?", req.Tags).Find(&tags)
+
+	if len(tags) > 0 {
+		var userTags []model.UserTag
+		addTime := time.Now()
+		for _, v := range tags {
+			userTags = append(userTags, model.UserTag{
+				UserID:  userId,
+				TagID:   v.ID,
+				TagName: v.Name,
+				AddTime: addTime,
+			})
+		}
+		db.CreateInBatches(&userTags, 50)
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+
+	c.JSON(http.StatusOK, res)
+}

@@ -286,35 +286,35 @@ function MonthView({ tasks, selectedDate, setSelectedDate, onAddTask, periodStar
   while (grid.length % 7 !== 0) grid.push(null);
   return (
     <>
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow flex flex-col items-center">
-        <div className="text-lg font-bold mb-2">{periodStart} ~ {periodEnd}</div>
-        <div className="grid grid-cols-7 gap-2 w-full mb-2">
-          {weekDays.map(d => <div key={d} className="text-center text-gray-500 font-semibold">{d}</div>)}
-        </div>
-        <div className="grid grid-cols-7 gap-2 w-full">
-          {grid.map((date, idx) => {
-            if (!date) return <div key={idx} />;
-            const dayTasks = tasks.filter((t: any) => t.date === date);
-            return (
-              <button
-                key={date}
-                className={`rounded-lg p-2 flex flex-col items-center border transition-all min-h-[60px] ${selectedDate === date ? "bg-blue-200 border-blue-500" : "bg-white border-gray-200 hover:bg-blue-50"}`}
-                onClick={() => { setModalDate(date); setShowTaskListModal(true); setSelectedDate(date); }}
-              >
-                <span className="font-semibold">{Number(date.slice(-2))}</span>
-                <div className="flex flex-col gap-1 mt-1 w-full">
-                  {dayTasks.map((t: any) => (
-                    <div key={t.id} className="flex items-center text-xs w-full">
-                      <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
-                      <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow flex flex-col items-center">
+      <div className="text-lg font-bold mb-2">{periodStart} ~ {periodEnd}</div>
+      <div className="grid grid-cols-7 gap-2 w-full mb-2">
+        {weekDays.map(d => <div key={d} className="text-center text-gray-500 font-semibold">{d}</div>)}
       </div>
+      <div className="grid grid-cols-7 gap-2 w-full">
+        {grid.map((date, idx) => {
+          if (!date) return <div key={idx} />;
+          const dayTasks = tasks.filter((t: any) => t.date === date);
+          return (
+            <button
+              key={date}
+              className={`rounded-lg p-2 flex flex-col items-center border transition-all min-h-[60px] ${selectedDate === date ? "bg-blue-200 border-blue-500" : "bg-white border-gray-200 hover:bg-blue-50"}`}
+                onClick={() => { setModalDate(date); setShowTaskListModal(true); setSelectedDate(date); }}
+            >
+              <span className="font-semibold">{Number(date.slice(-2))}</span>
+              <div className="flex flex-col gap-1 mt-1 w-full">
+                {dayTasks.map((t: any) => (
+                  <div key={t.id} className="flex items-center text-xs w-full">
+                    <span className="inline-block w-10 text-left text-gray-400">{t.start_time || '-'}</span>
+                    <span className={`ml-1 truncate font-medium ${statusColor[t.status] || 'text-gray-400'}`}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
       {showTaskListModal && (
         <TaskListModal
           date={modalDate}

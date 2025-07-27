@@ -581,11 +581,11 @@ export default function TimetableListView() {
                       title={isRequesting ? "Click to view leave request details" : ""}
                     >
                       {/* <td className="py-2 px-4">{item.booking_no}</td> */}
-                      <td className="py-2 px-4">{item.course_name}</td>
-                      <td className="py-2 px-4">{item.student_name}</td>
-                      <td className="py-2 px-4">{item.teacher_name}</td>
-                      <td className="py-2 px-4">{item.lesson_date?.slice(0, 10)}</td>
-                      <td className="py-2 px-4">{item.start_time?.slice(0, 5)} - {item.end_time?.slice(0, 5)}</td>
+                    <td className="py-2 px-4">{item.course_name}</td>
+                    <td className="py-2 px-4">{item.student_name}</td>
+                    <td className="py-2 px-4">{item.teacher_name}</td>
+                    <td className="py-2 px-4">{item.lesson_date?.slice(0, 10)}</td>
+                    <td className="py-2 px-4">{item.start_time?.slice(0, 5)} - {item.end_time?.slice(0, 5)}</td>
                       <td className="py-2 px-4">
                         <div className="flex items-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -636,7 +636,7 @@ export default function TimetableListView() {
                           )}
                         </div>
                       </td>
-                    </tr>
+                  </tr>
                   );
                 })
               )}
@@ -675,4 +675,4 @@ export default function TimetableListView() {
       )}
     </div>
   );
-}
+} 

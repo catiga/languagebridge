@@ -303,16 +303,16 @@ export default function StudyPlannerPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 ml-auto">
-                    <button
+                  <button
                       className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
-                      onClick={() => {
-                        setBindPlanId(currentStageGoal.id);
-                        setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
-                        setBindModalOpen(true);
-                      }}
-                    >
-                      <FaLink className="mr-1 w-4 h-4" /> Bind Student
-                    </button>
+                    onClick={() => {
+                      setBindPlanId(currentStageGoal.id);
+                      setBindSelected(currentStageGoal.student_id ? String(currentStageGoal.student_id) : '');
+                      setBindModalOpen(true);
+                    }}
+                  >
+                    <FaLink className="mr-1 w-4 h-4" /> Bind Student
+                  </button>
                     <button
                       className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded shadow flex items-center gap-1 text-sm hover:scale-105 transition"
                       onClick={() => setDeleteStageId(currentStageGoal.id)}
