@@ -63,27 +63,27 @@ export default function FeatureUnlock() {
   const totalTasks = tasks.length;
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Unlock More Features</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Unlock More Features</h2>
+          <p className="text-gray-600 text-sm mt-1">
             Complete these tasks to unlock advanced features and get personalized recommendations
           </p>
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-500">Progress</div>
-          <div className="text-2xl font-bold text-blue-600">
+          <div className="text-xs text-gray-500">Progress</div>
+          <div className="text-xl font-bold text-blue-600">
             {completedTasks}/{totalTasks}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {tasks.map((task) => (
           <div
             key={task.id}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 rounded-lg border-2 transition-all ${
               task.isCompleted
                 ? 'border-green-200 bg-green-50'
                 : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'

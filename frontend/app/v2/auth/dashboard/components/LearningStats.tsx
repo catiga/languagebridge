@@ -92,60 +92,60 @@ export default function LearningStats() {
   if (!stats) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Learning Progress</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Learning Progress</h2>
+          <p className="text-gray-600 text-sm mt-1">
             Track your learning achievements and progress
           </p>
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-500">Current Level Progress</div>
-          <div className="text-2xl font-bold text-blue-600">{stats.level_progress}%</div>
+          <div className="text-xs text-gray-500">Current Level Progress</div>
+          <div className="text-xl font-bold text-blue-600">{stats.level_progress}%</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Courses */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-2xl">📚</span>
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <span className="text-xl">📚</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{stats.total_courses}</div>
-          <div className="text-sm text-gray-600">Total Courses</div>
+          <div className="text-lg font-bold text-gray-900">{stats.total_courses}</div>
+          <div className="text-xs text-gray-600">Total Courses</div>
         </div>
 
         {/* Study Hours */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-2xl">⏰</span>
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <span className="text-xl">⏰</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{stats.total_study_hours}h</div>
-          <div className="text-sm text-gray-600">Study Hours</div>
+          <div className="text-lg font-bold text-gray-900">{stats.total_study_hours}h</div>
+          <div className="text-xs text-gray-600">Study Hours</div>
         </div>
 
         {/* Current Streak */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-2xl">🔥</span>
+          <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <span className="text-xl">🔥</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{stats.current_streak}</div>
-          <div className="text-sm text-gray-600">Day Streak</div>
+          <div className="text-lg font-bold text-gray-900">{stats.current_streak}</div>
+          <div className="text-xs text-gray-600">Day Streak</div>
         </div>
 
         {/* Certificates */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-2xl">🏆</span>
+          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <span className="text-xl">🏆</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{stats.certificates_earned}</div>
-          <div className="text-sm text-gray-600">Certificates</div>
+          <div className="text-lg font-bold text-gray-900">{stats.certificates_earned}</div>
+          <div className="text-xs text-gray-600">Certificates</div>
         </div>
       </div>
 
       {/* Progress Bars */}
-      <div className="mt-8 space-y-4">
+      <div className="mt-6 space-y-3">
         <div>
           <div className="flex justify-between text-sm text-gray-600 mb-1">
             <span>Course Completion</span>
@@ -174,8 +174,8 @@ export default function LearningStats() {
       </div>
 
       {/* Recent Achievements */}
-      <div className="mt-8 pt-6 border-t border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Achievements</h3>
+      <div className="mt-6 pt-4 border-t border-gray-100">
+        <h3 className="text-base font-semibold text-gray-900 mb-3">Recent Achievements</h3>
         <div className="flex flex-wrap gap-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
             🎯 Completed 5 courses

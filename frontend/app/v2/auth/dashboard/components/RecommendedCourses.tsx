@@ -19,7 +19,11 @@ interface Course {
   thumbnail?: string;
 }
 
-export default function RecommendedCourses() {
+interface RecommendedCoursesProps {
+  showRecommendations?: boolean;
+}
+
+export default function RecommendedCourses({ showRecommendations = true }: RecommendedCoursesProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -170,14 +174,30 @@ export default function RecommendedCourses() {
     ? courses 
     : courses.filter(course => course.category === selectedCategory);
 
+  if (!showRecommendations) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+        <div className="text-center py-6">
+          <div className="text-3xl mb-3">📚</div>
+          <h3 className="text-base font-medium text-gray-900 mb-2">
+            Complete Student Assessment First
+          </h3>
+          <p className="text-gray-600 text-sm">
+            Set learning goals and complete assessments to get personalized course recommendations
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="h-5 bg-gray-200 rounded w-1/3 mb-3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+              <div key={i} className="h-40 bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
@@ -186,19 +206,19 @@ export default function RecommendedCourses() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Recommended for You</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Recommended for You</h2>
+          <p className="text-gray-600 text-sm mt-1">
             Personalized courses based on your interests and level
           </p>
         </div>
         <button
           onClick={() => router.push('/v2/auth/courses')}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
-          View All Courses →
+          View All →
         </button>
       </div>
 
