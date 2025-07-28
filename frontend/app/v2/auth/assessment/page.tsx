@@ -16,14 +16,16 @@ import {
   FaExclamationTriangle
 } from 'react-icons/fa';
 import QuestionNavigator from './components/QuestionNavigator';
+import GeneratingAssessment from './components/GeneratingAssessment';
 
 interface Question {
-  id: number;
-  type: 'multiple_choice' | 'multiple_select' | 'cloze' | 'essay';
+  id?: number;
+  type: 'single_choice' | 'multiple_choice' | 'cloze' | 'writing';
   question: string;
   options?: string[];
-  correct_answer?: string | string[];
-  points: number;
+  answer: string;
+  explanation: string;
+  points?: number;
   time_limit?: number; // 单个题目时间限制（秒）
 }
 
@@ -47,7 +49,7 @@ interface StudyPlan {
 }
 
 interface Answer {
-  question_id: number;
+  question_id: number | undefined;
   answer: string | string[];
   time_spent: number; // 答题用时（秒）
 }
@@ -67,6 +69,7 @@ export default function AssessmentPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // 计时相关
@@ -90,50 +93,10 @@ export default function AssessmentPage() {
           }
         }
 
-        // 获取考试题目（这里使用模拟数据，实际应该从后端获取）
-        const mockAssessment: Assessment = {
-          id: 1,
-          title: "English Level Assessment",
-          description: "Comprehensive assessment to evaluate your current English proficiency level",
-          total_time: 60, // 60分钟
-          passing_score: 70,
-          questions: [
-            {
-              id: 1,
-              type: 'multiple_choice',
-              question: "Choose the correct form of the verb: 'She _____ to the store yesterday.'",
-              options: ["go", "goes", "went", "going"],
-              correct_answer: "went",
-              points: 5
-            },
-            {
-              id: 2,
-              type: 'multiple_select',
-              question: "Which of the following are correct English expressions?",
-              options: ["How are you?", "What's up?", "I'm fine, thank you.", "Good morning!"],
-              correct_answer: ["How are you?", "What's up?", "I'm fine, thank you.", "Good morning!"],
-              points: 10
-            },
-            {
-              id: 3,
-              type: 'cloze',
-              question: "Complete the sentence: 'The weather is _____ today, so I think I'll stay inside.'",
-              options: ["sunny", "rainy", "cold", "warm"],
-              correct_answer: "rainy",
-              points: 5
-            },
-            {
-              id: 4,
-              type: 'essay',
-              question: "Write a short paragraph (50-100 words) about your favorite hobby. Explain why you enjoy it and how often you do it.",
-              points: 20,
-              time_limit: 300 // 5分钟
-            }
-          ]
-        };
-
-        setAssessment(mockAssessment);
-        setTotalTimeLeft(mockAssessment.total_time * 60);
+        // 生成考试题目
+        if (planId) {
+          await generateAssessment(planId);
+        }
       } catch (error) {
         console.error('Failed to fetch assessment data:', error);
         toast.error('Failed to load assessment');
@@ -144,6 +107,107 @@ export default function AssessmentPage() {
 
     fetchData();
   }, [planId]);
+
+  // 生成考试题目
+  const generateAssessment = async (overviewId: string) => {
+    try {
+      setGenerating(true);
+      setLoading(false);
+      
+      // 调用生成接口
+      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/generate?overview_id=${overviewId}`) as any;
+      
+      if (response && response.code === 0 && response.data) {
+        toast.success('Assessment generated successfully!');
+        
+        // 处理返回的数据结构
+        const aiReply = response.data.ai_reply;
+        const questions = aiReply?.questions || [];
+        
+        console.log('Raw questions from API:', questions);
+        
+        // 为每个题目添加ID和分数
+        const processedQuestions = questions.map((q: any, index: number) => ({
+          ...q,
+          id: index + 1,
+          points: q.type === 'writing' ? 20 : q.type === 'multiple_choice' ? 10 : 5,
+          time_limit: q.type === 'writing' ? 300 : undefined
+        }));
+        
+        console.log('Processed questions:', processedQuestions);
+        
+        // 设置考试数据
+        const generatedAssessment: Assessment = {
+          id: response.data.exam_id || 1,
+          title: "AI-Generated English Assessment",
+          description: "Personalized assessment created based on your learning goals",
+          total_time: 60,
+          passing_score: 70,
+          questions: processedQuestions
+        };
+
+        setAssessment(generatedAssessment);
+        setTotalTimeLeft(generatedAssessment.total_time * 60);
+      } else {
+        throw new Error(response?.msg || 'Failed to generate assessment');
+      }
+    } catch (error) {
+      console.error('Failed to generate assessment:', error);
+      toast.error('Failed to generate assessment. Please try again.');
+      
+              // 如果生成失败，使用默认题目
+        const fallbackAssessment: Assessment = {
+          id: 1,
+          title: "English Level Assessment",
+          description: "Comprehensive assessment to evaluate your current English proficiency level",
+          total_time: 60,
+          passing_score: 70,
+          questions: [
+            {
+              id: 1,
+              type: 'single_choice',
+              question: "Choose the correct form of the verb: 'She _____ to the store yesterday.'",
+              options: ["go", "goes", "went", "going"],
+              answer: "went",
+              explanation: "The correct form is 'went' for past tense.",
+              points: 5
+            },
+            {
+              id: 2,
+              type: 'multiple_choice',
+              question: "Which of the following are correct English expressions?",
+              options: ["How are you?", "What's up?", "I'm fine, thank you.", "Good morning!"],
+              answer: "How are you?;What's up?;I'm fine, thank you.;Good morning!",
+              explanation: "All of these are common English expressions.",
+              points: 10
+            },
+            {
+              id: 3,
+              type: 'cloze',
+              question: "Complete the sentence: 'The weather is _____ today, so I think I'll stay inside.'",
+              options: ["sunny", "rainy", "cold", "warm"],
+              answer: "rainy",
+              explanation: "The context suggests bad weather, so 'rainy' is appropriate.",
+              points: 5
+            },
+            {
+              id: 4,
+              type: 'writing',
+              question: "Write a short paragraph (50-100 words) about your favorite hobby. Explain why you enjoy it and how often you do it.",
+              answer: "",
+              explanation: "This task evaluates your writing skills and ability to express personal preferences.",
+              points: 20,
+              time_limit: 300
+            }
+          ]
+        };
+
+      setAssessment(fallbackAssessment);
+      setTotalTimeLeft(fallbackAssessment.total_time * 60);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // 开始考试
   const startAssessment = () => {
@@ -341,12 +405,21 @@ export default function AssessmentPage() {
   // 渲染题目
   const renderQuestion = () => {
     const currentQuestion = assessment?.questions[currentQuestionIndex];
-    if (!currentQuestion) return null;
+    if (!currentQuestion) {
+      console.log('No current question found:', { currentQuestionIndex, questions: assessment?.questions });
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No question available</p>
+        </div>
+      );
+    }
+
+    console.log('Rendering question:', currentQuestion);
 
     const currentAnswer = getCurrentAnswer();
 
     switch (currentQuestion.type) {
-      case 'multiple_choice':
+      case 'single_choice':
         return (
           <div className="space-y-3">
             <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
@@ -368,7 +441,7 @@ export default function AssessmentPage() {
           </div>
         );
 
-      case 'multiple_select':
+      case 'multiple_choice':
         const selectedAnswers = Array.isArray(currentAnswer) ? currentAnswer : [];
         return (
           <div className="space-y-3">
@@ -399,20 +472,17 @@ export default function AssessmentPage() {
         return (
           <div className="space-y-3">
             <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
-            <select
+            <input
+              type="text"
               value={currentAnswer as string}
               onChange={(e) => handleAnswerChange(e.target.value)}
+              placeholder="Type your answer here..."
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select an answer</option>
-              {currentQuestion.options?.map((option, index) => (
-                <option key={index} value={option}>{option}</option>
-              ))}
-            </select>
+            />
           </div>
         );
 
-      case 'essay':
+      case 'writing':
         return (
           <div className="space-y-3">
             <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
@@ -471,6 +541,10 @@ export default function AssessmentPage() {
         </div>
       </div>
     );
+  }
+
+  if (generating) {
+    return <GeneratingAssessment studyPlan={studyPlan || undefined} />;
   }
 
   if (isSubmitted) {

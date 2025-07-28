@@ -4,14 +4,14 @@ import React from 'react';
 import { FaCheck, FaCircle, FaQuestion } from 'react-icons/fa';
 
 interface Question {
-  id: number;
+  id?: number;
   type: string;
   question: string;
-  points: number;
+  points?: number;
 }
 
 interface Answer {
-  question_id: number;
+  question_id: number | undefined;
   answer: string | string[];
   time_spent: number;
 }

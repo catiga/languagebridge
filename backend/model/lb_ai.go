@@ -34,6 +34,7 @@ type UserAgentRecord struct {
 	UserID        uint64    `gorm:"column:user_id" json:"user_id"`
 	CategoryPath  string    `gorm:"column:category_path" json:"category_path"`
 	CategoryLevel string    `gorm:"column:category_level" json:"category_level"`
+	OverviewID    uint64    `gorm:"column:overview_id" json:"overview_id"`
 }
 
 func (UserAgentRecord) TableName() string {
