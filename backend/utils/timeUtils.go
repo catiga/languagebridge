@@ -167,3 +167,25 @@ func GetCurrentWeekRange() (time.Time, time.Time) {
 
 	return weekStart, weekEnd
 }
+
+func CalculateAge(birthdayStr string) (int, error) {
+	// 解析生日字符串
+	layout := "2006-01-02"
+	birthday, err := time.Parse(layout, birthdayStr)
+	if err != nil {
+		return 0, err
+	}
+
+	// 获取当前日期
+	now := time.Now()
+
+	// 计算年龄
+	age := now.Year() - birthday.Year()
+
+	// 如果当前月份和日小于生日月份和日，说明还没过生日，年龄要减1
+	if now.Month() < birthday.Month() || (now.Month() == birthday.Month() && now.Day() < birthday.Day()) {
+		age--
+	}
+
+	return age, nil
+}

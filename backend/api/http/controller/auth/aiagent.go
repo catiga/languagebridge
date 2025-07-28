@@ -518,6 +518,18 @@ func GenerateAssessment(c *gin.Context) {
 		return
 	}
 
+	var age = "not sure"
+	if overview.StudentID > 0 {
+		var userMember model.UserMember
+		db.Model(&model.UserMember{}).Where("id = ?", overview.StudentID).First(&userMember)
+		if userMember.ID > 0 && len(userMember.Birthday) > 0 {
+			realAge, err := utils.CalculateAge(userMember.Birthday)
+			if err == nil {
+				age = fmt.Sprintf("%d years old", realAge+1)
+			}
+		}
+	}
+
 	categoryPath := "goal/assessment/exam"
 	categoryLevel := "free"
 
@@ -569,6 +581,7 @@ func GenerateAssessment(c *gin.Context) {
 		"goal":        overview.Goal,
 		"goal_term":   overview.GoalPeriodType,
 		"description": overview.Description,
+		"age":         age,
 	}
 
 	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, vmap), "")

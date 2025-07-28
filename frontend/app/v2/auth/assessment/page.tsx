@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 import QuestionNavigator from './components/QuestionNavigator';
 import GeneratingAssessment from './components/GeneratingAssessment';
+import { calculateAssessmentResult } from './utils/resultCalculator';
 
 interface Question {
   id?: number;
@@ -348,17 +349,31 @@ export default function AssessmentPage() {
     if (questionTimerRef.current) clearInterval(questionTimerRef.current);
 
     try {
-      // 提交答案到后端
+      // 计算考试结果
+      const totalTimeSpent = assessment ? (assessment.total_time * 60 - totalTimeLeft) : 0;
+      const totalTime = assessment ? assessment.total_time * 60 : 0;
+      
+      const result = calculateAssessmentResult(
+        assessment?.questions || [],
+        answers,
+        totalTimeSpent,
+        totalTime,
+        Number(studentId),
+        Number(planId),
+        assessment?.id || 1
+      );
+
+      // 提交答案到后端（这里可以保存结果）
       const submitData = {
         assessment_id: assessment?.id,
         student_id: studentId,
         plan_id: planId,
         answers: answers,
-        total_time_spent: assessment ? (assessment.total_time * 60 - totalTimeLeft) : 0
+        result: result,
+        total_time_spent: totalTimeSpent
       };
 
-      // 这里应该调用实际的提交接口
-      console.log('Submitting assessment:', submitData);
+      console.log('Submitting assessment with result:', submitData);
       
       // 模拟提交
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -366,14 +381,15 @@ export default function AssessmentPage() {
       setIsSubmitted(true);
       toast.success('Assessment submitted successfully!');
       
+      // 将结果数据传递给结果页面
+      const resultData = encodeURIComponent(JSON.stringify(result));
+      const resultUrl = `/v2/auth/assessment/result?student_id=${studentId}&plan_id=${planId}&result_id=${result.id}&result_data=${resultData}`;
+      
       // 跳转到结果页面
       setTimeout(() => {
-        const resultUrl = `/v2/auth/assessment/result?student_id=${studentId}&plan_id=${planId}&result_id=1`;
-        // 如果是在新窗口中打开的，则在当前窗口跳转
         if (window.opener) {
           router.push(resultUrl);
         } else {
-          // 如果不在新窗口中，则在新窗口打开结果页面
           window.open(resultUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         }
       }, 2000);

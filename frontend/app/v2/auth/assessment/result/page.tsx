@@ -54,6 +54,7 @@ export default function AssessmentResultPage() {
   const resultId = searchParams.get('result_id');
   const studentId = searchParams.get('student_id');
   const planId = searchParams.get('plan_id');
+  const resultData = searchParams.get('result_data');
 
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
@@ -72,68 +73,83 @@ export default function AssessmentResultPage() {
           }
         }
 
-        // 模拟评估结果数据
-        const mockResult: AssessmentResult = {
-          id: 1,
-          student_id: Number(studentId),
-          plan_id: Number(planId),
-          total_score: 75,
-          max_score: 100,
-          percentage: 75,
-          time_spent: 45 * 60, // 45分钟
-          total_time: 60 * 60, // 60分钟
-          passed: true,
-          level_assessment: 2,
-          recommendations: [
-            "Focus on improving vocabulary in business contexts",
-            "Practice more complex sentence structures",
-            "Work on pronunciation and speaking fluency",
-            "Continue reading English materials regularly"
-          ],
-          detailed_analysis: [
-            {
-              category: "Grammar",
-              score: 18,
-              max_score: 25,
-              percentage: 72,
-              feedback: "Good understanding of basic grammar rules, but needs improvement in complex structures."
-            },
-            {
-              category: "Vocabulary",
-              score: 15,
-              max_score: 25,
-              percentage: 60,
-              feedback: "Basic vocabulary is solid, but advanced and business vocabulary needs work."
-            },
-            {
-              category: "Reading Comprehension",
-              score: 20,
-              max_score: 25,
-              percentage: 80,
-              feedback: "Excellent reading skills with good comprehension of main ideas and details."
-            },
-            {
-              category: "Writing",
-              score: 22,
-              max_score: 25,
-              percentage: 88,
-              feedback: "Strong writing skills with good organization and clear expression."
-            }
-          ],
-          submitted_at: new Date().toISOString()
-        };
-
-        setResult(mockResult);
+        // 处理结果数据
+        if (resultData) {
+          try {
+            // 从URL参数中解析真实的结果数据
+            const parsedResult = JSON.parse(decodeURIComponent(resultData)) as AssessmentResult;
+            setResult(parsedResult);
+          } catch (parseError) {
+            console.error('Failed to parse result data:', parseError);
+            // 如果解析失败，使用模拟数据作为备用
+            setResult(getFallbackResult());
+          }
+        } else {
+          // 如果没有结果数据，使用模拟数据
+          setResult(getFallbackResult());
+        }
       } catch (error) {
         console.error('Failed to fetch assessment result:', error);
         toast.error('Failed to load assessment result');
+        setResult(getFallbackResult());
       } finally {
         setLoading(false);
       }
     };
 
     fetchResult();
-  }, [resultId, studentId, planId]);
+  }, [resultId, studentId, planId, resultData]);
+
+  // 备用结果数据
+  const getFallbackResult = (): AssessmentResult => ({
+    id: 1,
+    student_id: Number(studentId),
+    plan_id: Number(planId),
+    total_score: 75,
+    max_score: 100,
+    percentage: 75,
+    time_spent: 45 * 60,
+    total_time: 60 * 60,
+    passed: true,
+    level_assessment: 2,
+    recommendations: [
+      "Focus on improving vocabulary in business contexts",
+      "Practice more complex sentence structures",
+      "Work on pronunciation and speaking fluency",
+      "Continue reading English materials regularly"
+    ],
+    detailed_analysis: [
+      {
+        category: "Grammar",
+        score: 18,
+        max_score: 25,
+        percentage: 72,
+        feedback: "Good understanding of basic grammar rules, but needs improvement in complex structures."
+      },
+      {
+        category: "Vocabulary",
+        score: 15,
+        max_score: 25,
+        percentage: 60,
+        feedback: "Basic vocabulary is solid, but advanced and business vocabulary needs work."
+      },
+      {
+        category: "Reading Comprehension",
+        score: 20,
+        max_score: 25,
+        percentage: 80,
+        feedback: "Excellent reading skills with good comprehension of main ideas and details."
+      },
+      {
+        category: "Writing",
+        score: 22,
+        max_score: 25,
+        percentage: 88,
+        feedback: "Strong writing skills with good organization and clear expression."
+      }
+    ],
+    submitted_at: new Date().toISOString()
+  });
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
