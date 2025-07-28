@@ -113,96 +113,138 @@ export default function AssessmentPage() {
   const generateAssessment = async (overviewId: string) => {
     try {
       setGenerating(true);
-      setLoading(false);
-      
-      // 调用生成接口
-      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/generate?overview_id=${overviewId}`) as any;
-      
-      if (response && response.code === 0 && response.data) {
-        toast.success('Assessment generated successfully!');
+      setLoading(false); // Stop initial loading, start generating animation
+
+      let attempts = 0;
+      const maxAttempts = 60; // 最多等待5分钟 (60 * 5秒)
+      const pollInterval = 5000; // 5秒轮询一次
+
+      const pollForAssessment = async (): Promise<any> => {
+        attempts++;
         
-        // 处理返回的数据结构
-        const aiReply = response.data.ai_reply;
-        const questions = aiReply?.questions || [];
-        
-        console.log('Raw questions from API:', questions);
-        
-        // 为每个题目添加ID和分数
-        const processedQuestions = questions.map((q: any, index: number) => ({
-          ...q,
-          id: index + 1,
-          points: q.type === 'writing' ? 20 : q.type === 'multiple_choice' ? 10 : 5,
-          time_limit: q.type === 'writing' ? 300 : undefined
-        }));
-        
-        console.log('Processed questions:', processedQuestions);
-        
-        // 设置考试数据
-        const generatedAssessment: Assessment = {
+        try {
+          const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/generate?overview_id=${overviewId}`) as any;
+          
+          console.log(`Poll attempt ${attempts}:`, response);
+          
+          if (response && response.code === 0 && response.data) {
+            // 生成成功
+            return response;
+          } else if (response && response.code === 17) {
+            // AI正在处理中，继续等待
+            if (attempts >= maxAttempts) {
+              throw new Error('Assessment generation timeout. Please try again later.');
+            }
+            
+            // 更新生成状态信息
+            const progressMessages = [
+              'Analyzing your learning goals...',
+              'Generating personalized questions...',
+              'Optimizing difficulty levels...',
+              'Finalizing assessment content...',
+              'Almost ready...'
+            ];
+            const messageIndex = Math.min(Math.floor(attempts / 10), progressMessages.length - 1);
+            
+            // 这里可以更新进度信息（如果需要的话）
+            console.log(`AI is processing... Attempt ${attempts}/${maxAttempts}: ${progressMessages[messageIndex]}`);
+            
+            // 等待后继续轮询
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            return pollForAssessment();
+          } else {
+            // 其他错误
+            throw new Error(response?.msg || 'Failed to generate assessment');
+          }
+        } catch (error) {
+          if (attempts >= maxAttempts) {
+            throw error;
+          }
+          
+          // 网络错误或其他临时错误，继续重试
+          console.warn(`Poll attempt ${attempts} failed:`, error);
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          return pollForAssessment();
+        }
+      };
+
+      const response = await pollForAssessment();
+
+      // 处理成功返回的数据
+      toast.success('Assessment generated successfully!');
+
+      const aiReply = response.data.ai_reply;
+      const questions = aiReply?.questions || [];
+
+      const processedQuestions = questions.map((q: any, index: number) => ({
+        ...q,
+        id: index + 1,
+        points: q.type === 'writing' ? 20 : q.type === 'multiple_choice' ? 10 : 5,
+        time_limit: q.type === 'writing' ? 300 : undefined
+      }));
+
+              const generatedAssessment: Assessment = {
           id: response.data.exam_id || 1,
           title: "AI-Generated English Assessment",
           description: "Personalized assessment created based on your learning goals",
-          total_time: 60,
+          total_time: 30,
           passing_score: 70,
           questions: processedQuestions
         };
 
-        setAssessment(generatedAssessment);
-        setTotalTimeLeft(generatedAssessment.total_time * 60);
-      } else {
-        throw new Error(response?.msg || 'Failed to generate assessment');
-      }
+      setAssessment(generatedAssessment);
+      setTotalTimeLeft(generatedAssessment.total_time * 60);
+
     } catch (error) {
       console.error('Failed to generate assessment:', error);
-      toast.error('Failed to generate assessment. Please try again.');
-      
-              // 如果生成失败，使用默认题目
-        const fallbackAssessment: Assessment = {
-          id: 1,
-          title: "English Level Assessment",
-          description: "Comprehensive assessment to evaluate your current English proficiency level",
-          total_time: 60,
-          passing_score: 70,
-          questions: [
-            {
-              id: 1,
-              type: 'single_choice',
-              question: "Choose the correct form of the verb: 'She _____ to the store yesterday.'",
-              options: ["go", "goes", "went", "going"],
-              answer: "went",
-              explanation: "The correct form is 'went' for past tense.",
-              points: 5
-            },
-            {
-              id: 2,
-              type: 'multiple_choice',
-              question: "Which of the following are correct English expressions?",
-              options: ["How are you?", "What's up?", "I'm fine, thank you.", "Good morning!"],
-              answer: "How are you?;What's up?;I'm fine, thank you.;Good morning!",
-              explanation: "All of these are common English expressions.",
-              points: 10
-            },
-            {
-              id: 3,
-              type: 'cloze',
-              question: "Complete the sentence: 'The weather is _____ today, so I think I'll stay inside.'",
-              options: ["sunny", "rainy", "cold", "warm"],
-              answer: "rainy",
-              explanation: "The context suggests bad weather, so 'rainy' is appropriate.",
-              points: 5
-            },
-            {
-              id: 4,
-              type: 'writing',
-              question: "Write a short paragraph (50-100 words) about your favorite hobby. Explain why you enjoy it and how often you do it.",
-              answer: "",
-              explanation: "This task evaluates your writing skills and ability to express personal preferences.",
-              points: 20,
-              time_limit: 300
-            }
-          ]
-        };
+      toast.error(error instanceof Error ? error.message : 'Failed to generate assessment. Please try again.');
 
+      // Fallback to mock data if generation fails
+      const fallbackAssessment: Assessment = {
+        id: 1,
+        title: "English Level Assessment",
+        description: "Comprehensive assessment to evaluate your current English proficiency level",
+        total_time: 30,
+        passing_score: 70,
+        questions: [
+          {
+            id: 1,
+            type: 'single_choice',
+            question: "Choose the correct form of the verb: 'She _____ to the store yesterday.'",
+            options: ["go", "goes", "went", "going"],
+            answer: "went",
+            explanation: "The correct form is 'went' for past tense.",
+            points: 5
+          },
+          {
+            id: 2,
+            type: 'multiple_choice',
+            question: "Which of the following are correct English expressions?",
+            options: ["How are you?", "What's up?", "I'm fine, thank you.", "Good morning!"],
+            answer: "How are you?;What's up?;I'm fine, thank you.;Good morning!",
+            explanation: "All of these are common English expressions.",
+            points: 10
+          },
+          {
+            id: 3,
+            type: 'cloze',
+            question: "Complete the sentence: 'The weather is _____ today, so I think I'll stay inside.'",
+            options: ["sunny", "rainy", "cold", "warm"],
+            answer: "rainy",
+            explanation: "The context suggests bad weather, so 'rainy' is appropriate.",
+            points: 5
+          },
+          {
+            id: 4,
+            type: 'writing',
+            question: "Write a short paragraph (50-100 words) about your favorite hobby. Explain why you enjoy it and how often you do it.",
+            answer: "",
+            explanation: "This task evaluates your writing skills and ability to express personal preferences.",
+            points: 20,
+            time_limit: 300
+          }
+        ]
+      };
       setAssessment(fallbackAssessment);
       setTotalTimeLeft(fallbackAssessment.total_time * 60);
     } finally {
@@ -363,23 +405,70 @@ export default function AssessmentPage() {
         assessment?.id || 1
       );
 
-      // 提交答案到后端（这里可以保存结果）
+      // 准备提交给后台的数据
+      const examQuestions = assessment?.questions.map(question => {
+        const userAnswer = answers.find(a => a.question_id === question.id);
+        const userAnswerStr = userAnswer ? 
+          (Array.isArray(userAnswer.answer) ? userAnswer.answer.join(';') : userAnswer.answer) : '';
+        
+        // 判断答案是否正确
+        let isCorrect = false;
+        switch (question.type) {
+          case 'single_choice':
+            isCorrect = userAnswerStr === question.answer;
+            break;
+          case 'multiple_choice':
+            const correctAnswers = question.answer.split(';').sort();
+            const userAnswers = userAnswerStr.split(';').sort();
+            isCorrect = correctAnswers.length === userAnswers.length && 
+                       correctAnswers.every((ans, index) => ans === userAnswers[index]);
+            break;
+          case 'cloze':
+            const normalizedCorrect = question.answer.toLowerCase().trim();
+            const normalizedUser = userAnswerStr.toLowerCase().trim();
+            isCorrect = normalizedUser === normalizedCorrect;
+            break;
+          case 'writing':
+            // 写作题基于字数判断
+            const wordCount = userAnswerStr.split(/\s+/).length;
+            isCorrect = wordCount >= 10; // 至少10个单词算正确
+            break;
+        }
+
+        return {
+          type: question.type,
+          question: question.question,
+          options: question.options || [],
+          answer: question.answer,
+          explanation: question.explanation,
+          user_answer: userAnswerStr,
+          correct: isCorrect
+        };
+      }) || [];
+
+      // 调用后台接口保存考试记录
       const submitData = {
-        assessment_id: assessment?.id,
-        student_id: studentId,
-        plan_id: planId,
-        answers: answers,
-        result: result,
-        total_time_spent: totalTimeSpent
+        exam_id: assessment?.id || 1,
+        questions: examQuestions
       };
 
-      console.log('Submitting assessment with result:', submitData);
+      console.log('Submitting to backend:', submitData);
       
-      // 模拟提交
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      try {
+        const response = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam/mark', submitData) as any;
+        
+        if (response && response.code === 0) {
+          toast.success('Assessment submitted and saved successfully!');
+        } else {
+          console.warn('Backend save failed, but continuing with result display:', response?.msg);
+          toast.warning('Assessment completed, but save failed. Results still available.');
+        }
+      } catch (backendError) {
+        console.error('Backend save error:', backendError);
+        toast.warning('Assessment completed, but save failed. Results still available.');
+      }
       
       setIsSubmitted(true);
-      toast.success('Assessment submitted successfully!');
       
       // 将结果数据传递给结果页面
       const resultData = encodeURIComponent(JSON.stringify(result));
@@ -437,20 +526,22 @@ export default function AssessmentPage() {
     switch (currentQuestion.type) {
       case 'single_choice':
         return (
-          <div className="space-y-3">
-            <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
-            <div className="space-y-2">
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-l-4 border-blue-500">
+              <p className="text-xl font-semibold text-gray-900 leading-relaxed">{currentQuestion.question}</p>
+            </div>
+            <div className="space-y-3">
               {currentQuestion.options?.map((option, index) => (
-                <label key={index} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label key={index} className="flex items-center space-x-4 p-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-all duration-200">
                   <input
                     type="radio"
                     name={`question-${currentQuestion.id}`}
                     value={option}
                     checked={currentAnswer === option}
                     onChange={(e) => handleAnswerChange(e.target.value)}
-                    className="text-blue-600"
+                    className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500 focus:ring-2"
                   />
-                  <span className="text-gray-700">{option}</span>
+                  <span className="text-gray-900 font-medium">{option}</span>
                 </label>
               ))}
             </div>
@@ -460,11 +551,13 @@ export default function AssessmentPage() {
       case 'multiple_choice':
         const selectedAnswers = Array.isArray(currentAnswer) ? currentAnswer : [];
         return (
-          <div className="space-y-3">
-            <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
-            <div className="space-y-2">
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-l-4 border-purple-500">
+              <p className="text-xl font-semibold text-gray-900 leading-relaxed">{currentQuestion.question}</p>
+            </div>
+            <div className="space-y-3">
               {currentQuestion.options?.map((option, index) => (
-                <label key={index} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label key={index} className="flex items-center space-x-4 p-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-purple-300 cursor-pointer transition-all duration-200">
                   <input
                     type="checkbox"
                     value={option}
@@ -475,9 +568,9 @@ export default function AssessmentPage() {
                         : selectedAnswers.filter(a => a !== option);
                       handleAnswerChange(newAnswers);
                     }}
-                    className="text-blue-600"
+                    className="w-5 h-5 text-purple-600 border-gray-300 focus:ring-purple-500 focus:ring-2"
                   />
-                  <span className="text-gray-700">{option}</span>
+                  <span className="text-gray-900 font-medium">{option}</span>
                 </label>
               ))}
             </div>
@@ -486,31 +579,36 @@ export default function AssessmentPage() {
 
       case 'cloze':
         return (
-          <div className="space-y-3">
-            <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border-l-4 border-green-500">
+              <p className="text-xl font-semibold text-gray-900 leading-relaxed">{currentQuestion.question}</p>
+            </div>
             <input
               type="text"
               value={currentAnswer as string}
               onChange={(e) => handleAnswerChange(e.target.value)}
               placeholder="Type your answer here..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-300 text-lg transition-all duration-200"
             />
           </div>
         );
 
       case 'writing':
         return (
-          <div className="space-y-3">
-            <p className="text-lg font-medium text-gray-900">{currentQuestion.question}</p>
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl border-l-4 border-orange-500">
+              <p className="text-xl font-semibold text-gray-900 leading-relaxed">{currentQuestion.question}</p>
+            </div>
             <textarea
               value={currentAnswer as string}
               onChange={(e) => handleAnswerChange(e.target.value)}
               placeholder="Write your answer here..."
-              className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full h-40 p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-300 resize-none text-lg transition-all duration-200"
             />
             {currentQuestion.time_limit && (
-              <div className="text-sm text-gray-600">
-                Time limit: {formatTime(currentQuestion.time_limit)}
+              <div className="flex items-center space-x-2 text-orange-600 bg-orange-50 px-4 py-2 rounded-lg">
+                <FaClock className="w-4 h-4" />
+                <span className="font-semibold">Time limit: {formatTime(currentQuestion.time_limit)}</span>
               </div>
             )}
           </div>
@@ -529,18 +627,24 @@ export default function AssessmentPage() {
     const answeredCount = answers.length;
 
     return (
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            Question {currentQuestionIndex + 1} of {assessment.questions.length}
-          </span>
-          <span className="text-sm text-gray-600">
-            {answeredCount} answered
-          </span>
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center space-x-4">
+            <span className="text-lg font-bold text-gray-900">
+              Question {currentQuestionIndex + 1} of {assessment.questions.length}
+            </span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              {answeredCount} answered
+            </span>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-gray-900">{Math.round(progress)}%</div>
+            <div className="text-sm text-gray-600">Complete</div>
+          </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out shadow-lg"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
@@ -579,20 +683,20 @@ export default function AssessmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Enhanced Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-6">
               <button
                 onClick={() => router.back()}
-                className="p-2 text-gray-400 hover:text-gray-600"
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all duration-200"
               >
                 <FaArrowLeft className="w-5 h-5" />
               </button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">
+              <div className="border-l border-gray-200 pl-6">
+                <h1 className="text-xl font-bold text-gray-900 mb-1">
                   {assessment?.title || 'Assessment'}
                 </h1>
                 <p className="text-sm text-gray-600">
@@ -601,27 +705,31 @@ export default function AssessmentPage() {
               </div>
             </div>
 
-            {/* Timer */}
+            {/* Enhanced Timer */}
             {isStarted && (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-6">
                 {isPaused && (
-                  <div className="flex items-center space-x-2 text-orange-600">
+                  <div className="flex items-center space-x-2 bg-orange-100 text-orange-700 px-3 py-2 rounded-full">
                     <FaExclamationTriangle className="w-4 h-4" />
-                    <span className="text-sm font-medium">PAUSED</span>
+                    <span className="text-sm font-semibold">PAUSED</span>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
-                  <FaClock className="w-4 h-4 text-gray-400" />
-                  <span className="text-lg font-mono font-semibold text-gray-900">
-                    {formatTime(totalTimeLeft)}
-                  </span>
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <FaClock className="w-4 h-4" />
+                    <span className="text-lg font-mono font-bold">
+                      {formatTime(totalTimeLeft)}
+                    </span>
+                  </div>
                 </div>
                 {questionTimeLeft > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">Question:</span>
-                    <span className="text-sm font-mono font-semibold text-blue-600">
-                      {formatTime(questionTimeLeft)}
-                    </span>
+                  <div className="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">Question:</span>
+                      <span className="text-sm font-mono font-bold">
+                        {formatTime(questionTimeLeft)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -630,34 +738,55 @@ export default function AssessmentPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Study Plan Info */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Enhanced Study Plan Info */}
         {studyPlan && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Study Plan Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Goal</h3>
-                <p className="text-gray-700">{studyPlan.goal}</p>
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 p-8 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">📚</span>
+                </div>
+                Study Plan Information
+              </h2>
+              <span className={`px-4 py-2 rounded-full text-sm font-semibold shadow-sm ${
+                studyPlan.status === '00' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                studyPlan.status === '10' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                'bg-green-100 text-green-700 border border-green-200'
+              }`}>
+                {studyPlan.status === '00' ? 'Needs Assessment' :
+                 studyPlan.status === '10' ? 'In Progress' : 'Completed'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center space-x-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    Goal
+                  </h3>
+                  <p className="text-gray-700 bg-gray-50 p-3 rounded-lg border-l-4 border-blue-500">
+                    {studyPlan.goal}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center space-x-2">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    Target Level
+                  </h3>
+                  <p className="text-gray-700 bg-gray-50 p-3 rounded-lg border-l-4 border-purple-500">
+                    Level {studyPlan.init_level} → Level {studyPlan.target_level}
+                  </p>
+                </div>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Description</h3>
-                <p className="text-gray-700">{studyPlan.description}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Target Level</h3>
-                <p className="text-gray-700">Level {studyPlan.init_level} → Level {studyPlan.target_level}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Status</h3>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  studyPlan.status === '00' ? 'bg-orange-100 text-orange-800' :
-                  studyPlan.status === '10' ? 'bg-blue-100 text-blue-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {studyPlan.status === '00' ? 'Needs Assessment' :
-                   studyPlan.status === '10' ? 'In Progress' : 'Completed'}
-                </span>
+                <h3 className="font-semibold text-gray-900 mb-2 flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Description
+                </h3>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded-lg border-l-4 border-green-500">
+                  {studyPlan.description}
+                </p>
               </div>
             </div>
           </div>
@@ -665,42 +794,66 @@ export default function AssessmentPage() {
 
         {/* Assessment Content */}
         {!isStarted ? (
-          /* Start Screen */
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FaPlay className="text-blue-600 text-3xl" />
+          /* Enhanced Start Screen */
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-12 text-center max-w-4xl mx-auto">
+            <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+              <FaPlay className="text-white text-4xl ml-1" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Start?</h2>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">Ready to Start?</h2>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
               This assessment will help us understand your current English level and create a personalized study plan.
-              You will have {assessment?.total_time} minutes to complete all questions.
+              You will have <span className="font-semibold text-blue-600">{assessment?.total_time} minutes</span> to complete all questions.
             </p>
             
-            <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
-              <h3 className="font-semibold text-gray-900 mb-3">Assessment Details:</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Total time: {assessment?.total_time} minutes</li>
-                <li>• Questions: {assessment?.questions.length}</li>
-                <li>• Passing score: {assessment?.passing_score}%</li>
-                <li>• You can pause the assessment at any time</li>
-                <li>• Time will automatically submit when time runs out</li>
-              </ul>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8 mb-8 text-left border border-blue-100">
+              <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center space-x-2">
+                <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">ℹ️</span>
+                </span>
+                Assessment Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ul className="space-y-3 text-gray-700">
+                  <li className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <span>Total time: <span className="font-semibold">{assessment?.total_time} minutes</span></span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span>Questions: <span className="font-semibold">{assessment?.questions.length}</span></span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span>Passing score: <span className="font-semibold">{assessment?.passing_score}%</span></span>
+                  </li>
+                </ul>
+                <ul className="space-y-3 text-gray-700">
+                  <li className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                    <span>You can pause anytime</span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span>Auto-submit when time runs out</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <button
               onClick={startAssessment}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
             >
               Start Assessment
             </button>
           </div>
         ) : (
-          /* Question Screen */
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          /* Enhanced Question Screen */
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
             {/* Main Content */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-lg shadow-lg p-8">
-                {/* Progress */}
+            <div className="xl:col-span-4">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 p-8">
+                {/* Enhanced Progress */}
                 {renderProgress()}
 
                 {/* Question */}
@@ -708,20 +861,20 @@ export default function AssessmentPage() {
                   {renderQuestion()}
                 </div>
 
-                {/* Navigation */}
-                <div className="flex items-center justify-between pt-6 border-t">
+                {/* Enhanced Navigation */}
+                <div className="flex items-center justify-between pt-8 border-t border-gray-200">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={handlePreviousQuestion}
                       disabled={currentQuestionIndex === 0}
-                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-3 text-gray-600 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
                     >
-                      Previous
+                      ← Previous
                     </button>
                     
                     <button
                       onClick={togglePause}
-                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="px-6 py-3 text-gray-600 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium"
                     >
                       {isPaused ? <FaPlay className="w-4 h-4" /> : <FaPause className="w-4 h-4" />}
                       {isPaused ? ' Resume' : ' Pause'}
@@ -732,7 +885,7 @@ export default function AssessmentPage() {
                     <button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-lg"
                     >
                       {submitting ? 'Submitting...' : 'Submit Assessment'}
                     </button>
@@ -740,15 +893,15 @@ export default function AssessmentPage() {
                     {currentQuestionIndex < (assessment?.questions.length || 0) - 1 ? (
                       <button
                         onClick={handleNextQuestion}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg"
                       >
-                        Next Question
+                        Next Question →
                       </button>
                     ) : (
                       <button
                         onClick={handleSubmit}
                         disabled={submitting}
-                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-lg"
                       >
                         {submitting ? 'Submitting...' : 'Finish Assessment'}
                       </button>
@@ -758,15 +911,17 @@ export default function AssessmentPage() {
               </div>
             </div>
 
-            {/* Sidebar - Question Navigator */}
-            <div className="lg:col-span-1">
+            {/* Enhanced Sidebar - Question Navigator */}
+            <div className="xl:col-span-1">
               {assessment && (
-                <QuestionNavigator
-                  questions={assessment.questions}
-                  currentIndex={currentQuestionIndex}
-                  answers={answers}
-                  onQuestionClick={handleQuestionClick}
-                />
+                <div className="sticky top-24">
+                  <QuestionNavigator
+                    questions={assessment.questions}
+                    currentIndex={currentQuestionIndex}
+                    answers={answers}
+                    onQuestionClick={handleQuestionClick}
+                  />
+                </div>
               )}
             </div>
           </div>
