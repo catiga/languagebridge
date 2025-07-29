@@ -427,6 +427,16 @@ func SelfAssessmentExamMark(c *gin.Context) {
 	}
 	db.Save(&saveRecord)
 
+	// handle agent record overview data
+	if recordedData.OverviewID > 0 {
+		var overview model.UserPlanOverview
+		db.Model(&model.UserPlanOverview{}).Where("id = ?", recordedData.OverviewID).First(&overview)
+		if overview.ID > 0 {
+			overview.Status = common.StudyPlannerOverviewStatusOngoing
+			db.Save(&overview)
+		}
+	}
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
 	res.Data = nil

@@ -62,3 +62,13 @@ type UserAgentRecordHistorical struct {
 	CategoryPath  string          `gorm:"column:category_path" json:"category_path"`
 	CategoryLevel string          `gorm:"column:category_level" json:"category_level"`
 }
+
+type UserAgentRecordOverview struct {
+	Score         decimal.Decimal `gorm:"column:score" json:"score"`
+	Result        string          `gorm:"column:result" json:"result"`
+	CategoryPath  string          `gorm:"category_path" json:"category_path"`
+	CategoryLevel string          `gorm:"category_level" json:"category_level"`
+	AgentRecordID uint64          `gorm:"column:agent_record_id" json:"agent_record_id"`
+	OverviewID    uint64          `gorm:"column:overview_id" json:"overview_id"`
+	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
+}

@@ -30,19 +30,20 @@ type UserPlanScheduleResponse struct {
 }
 
 type UserPlanOverviewResponse struct {
-	ID             uint64                     `json:"id"`
-	StudentID      uint64                     `json:"student_id"`
-	Title          string                     `json:"title"`
-	Description    string                     `json:"description"`
-	Goal           string                     `json:"goal"`
-	AddTime        time.Time                  `json:"add_time"`
-	StartDate      string                     `json:"start_date"`
-	EndDate        string                     `json:"end_date"`
-	Tasks          []UserPlanScheduleResponse `json:"tasks"`
-	GoalPeriodType string                     `json:"goal_period_type"`
-	TargetLevel    int                        `json:"target_level"`
-	InitLevel      int                        `json:"init_level"`
-	Status         string                     `json:"status"`
+	ID             uint64                          `json:"id"`
+	StudentID      uint64                          `json:"student_id"`
+	Title          string                          `json:"title"`
+	Description    string                          `json:"description"`
+	Goal           string                          `json:"goal"`
+	AddTime        time.Time                       `json:"add_time"`
+	StartDate      string                          `json:"start_date"`
+	EndDate        string                          `json:"end_date"`
+	Tasks          []UserPlanScheduleResponse      `json:"tasks"`
+	GoalPeriodType string                          `json:"goal_period_type"`
+	TargetLevel    int                             `json:"target_level"`
+	InitLevel      int                             `json:"init_level"`
+	Status         string                          `json:"status"`
+	Quizs          []model.UserAgentRecordOverview `json:"quizs"`
 }
 
 func CreateStageGoal(c *gin.Context) {
@@ -187,8 +188,19 @@ func PullStageGoal(c *gin.Context) {
 	for _, v := range overviewList {
 		overIds = append(overIds, v.ID)
 	}
+
+	var scoreSchedules []model.UserAgentRecordOverview
 	if len(overIds) > 0 {
 		err = db.Model(&model.UserPlanSchedule{}).Where("overview_id IN ? and flag != ?", overIds, -1).Order(("start_time DESC")).Find(&taskList).Error
+		if err != nil {
+			log.Error(err)
+		}
+
+		err = db.Table("exam_quiz_record eqr").
+			Joins("JOIN user_agent_record uar ON eqr.agent_record_id = uar.id").
+			Where("uar.overview_id IN ?", overIds).
+			Select("eqr.score, eqr.result, uar.category_path, uar.category_level, uar.id as agent_record_id, uar.overview_id, eqr.add_time").
+			Scan(&scoreSchedules).Error
 		if err != nil {
 			log.Error(err)
 		}
@@ -197,6 +209,7 @@ func PullStageGoal(c *gin.Context) {
 	var retOverviewList []UserPlanOverviewResponse
 	for _, v := range overviewList {
 		var taskDataSub []UserPlanScheduleResponse
+		var tmpScoreSchedules []model.UserAgentRecordOverview
 		if len(taskList) > 0 {
 			for _, s := range taskList {
 				if v.ID == s.OverviewID {
@@ -216,6 +229,13 @@ func PullStageGoal(c *gin.Context) {
 				}
 			}
 		}
+		if len(scoreSchedules) > 0 {
+			for _, s := range scoreSchedules {
+				if v.ID == s.OverviewID {
+					tmpScoreSchedules = append(tmpScoreSchedules, s)
+				}
+			}
+		}
 		retOverviewList = append(retOverviewList, UserPlanOverviewResponse{
 			ID:             v.ID,
 			StudentID:      v.StudentID,
@@ -230,6 +250,7 @@ func PullStageGoal(c *gin.Context) {
 			TargetLevel:    v.TargetLevel,
 			InitLevel:      v.InitLevel,
 			Status:         v.Status,
+			Quizs:          tmpScoreSchedules,
 		})
 	}
 
