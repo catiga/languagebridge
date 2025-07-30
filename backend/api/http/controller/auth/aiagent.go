@@ -2,12 +2,9 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,18 +25,6 @@ var levelMap = map[int]string{
 	2: "Intermediate (PET Level, Grades 5–8)",
 	3: "TOEFL Junior (Middle School Focus)",
 	4: "IELTS Practice (Advanced/High School)",
-}
-
-type Question struct {
-	Type        string   `json:"type"`
-	Question    string   `json:"question"`
-	Options     []string `json:"options"`
-	Answer      string   `json:"answer"`
-	Explanation string   `json:"explanation"`
-}
-
-type GPTResponse struct {
-	Questions []Question `json:"questions"`
 }
 
 func convertPromptContext(tpls []model.PromptContext, vmap map[string]string) []agent.PromptContext {
@@ -73,53 +58,6 @@ func convertPromptContext(tpls []model.PromptContext, vmap map[string]string) []
 		}
 	}
 	return result
-}
-
-func cleanAndParse(raw string) (*GPTResponse, error) {
-	// 清理前后多余空格
-	raw = strings.TrimSpace(raw)
-
-	// 若字符串中包含 JSON code block，则提取它；否则直接尝试解析整个内容
-	re := regexp.MustCompile("(?s)```json\\s*(\\{.*?\\})\\s*```")
-	matches := re.FindStringSubmatch(raw)
-
-	var jsonStr string
-	if len(matches) >= 2 {
-		jsonStr = matches[1]
-	} else {
-		jsonStr = raw
-	}
-
-	// 解析成 GPTResponse
-	var parsed GPTResponse
-	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
-		return nil, fmt.Errorf("json parse error: %w", err)
-	}
-
-	return &parsed, nil
-}
-
-func extractJSON(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-
-	// 优先匹配 ```json ... ``` 格式
-	reJSONBlock := regexp.MustCompile("(?s)```json\\s*(\\{.*?\\}|\\$begin:math:display$.*?\\$end:math:display$)\\s*```")
-	if matches := reJSONBlock.FindStringSubmatch(raw); len(matches) >= 2 {
-		return matches[1], nil
-	}
-
-	// 尝试匹配 ``` ... ``` 但没有 json 标记的情况
-	reCodeBlock := regexp.MustCompile("(?s)```\\s*(\\{.*?\\}|\\$begin:math:display$.*?\\$end:math:display$)\\s*```")
-	if matches := reCodeBlock.FindStringSubmatch(raw); len(matches) >= 2 {
-		return matches[1], nil
-	}
-
-	// 直接是 JSON（没有代码块包裹）
-	if strings.HasPrefix(raw, "{") || strings.HasPrefix(raw, "[") {
-		return raw, nil
-	}
-
-	return "", errors.New("no valid JSON content found")
 }
 
 func SelfAssessment(c *gin.Context) {
@@ -199,6 +137,27 @@ func SelfAssessment(c *gin.Context) {
 		return
 	}
 
+	examJson, err := agent.ExtractJSON(agentResp.Content)
+	if err != nil {
+		res.Code = codes.CODE_ERR_GPT_COMPLETE
+		res.Msg = "AI agent failed: " + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	examRes, err := agent.CleanAndParse(examJson)
+	if err != nil {
+		res.Code = codes.CODE_ERR_GPT_COMPLETE
+		res.Msg = "AI agent failed: " + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	objectForStore, err := json.Marshal(examRes)
+	if err != nil {
+		res.Code = codes.CODE_ERR_GPT_COMPLETE
+		res.Msg = "AI agent failed: " + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
 	// insert record for user generation ai result
 	ur := model.UserAgentRecord{
 		AddTime:       time.Now(),
@@ -206,7 +165,7 @@ func SelfAssessment(c *gin.Context) {
 		CategoryPath:  categoryPath,
 		CategoryLevel: categoryLevel,
 		Input:         req.Content,
-		Result:        agentResp.Content,
+		Result:        string(objectForStore),
 		UserID:        uint64(userID),
 	}
 	db.Save(&ur)
@@ -267,7 +226,7 @@ func SelfAssessmentExam(c *gin.Context) {
 		Where("user_id = ? AND category_path = ? AND category_level = ? AND DATE(add_time) = CURRENT_DATE", userID, categoryPath, categoryLevel).
 		First(&generatedData)
 	if generatedData.ID > 0 {
-		var r GPTResponse
+		var r agent.QuizGPTResponse
 		err := json.Unmarshal([]byte(generatedData.Result), &r)
 		if err != nil {
 			log.Error(err)
@@ -323,7 +282,7 @@ func SelfAssessmentExam(c *gin.Context) {
 	//handle content of response
 	jsonContent := agentResp.Content
 
-	responseData, err := cleanAndParse(jsonContent)
+	responseData, err := agent.CleanAndParse(jsonContent)
 	if err != nil {
 		res.Code = codes.CODE_ERR_GPT_COMPLETE
 		res.Msg = "AI agent complete error: " + err.Error()
@@ -331,7 +290,7 @@ func SelfAssessmentExam(c *gin.Context) {
 		return
 	}
 
-	responseJson, _ := extractJSON(jsonContent)
+	responseJson, _ := agent.ExtractJSON(jsonContent)
 
 	// insert record for user generation ai result
 	ur := model.UserAgentRecord{
@@ -344,6 +303,14 @@ func SelfAssessmentExam(c *gin.Context) {
 		UserID:        uint64(userID),
 	}
 	db.Save(&ur)
+	var uap []model.UserAgentPrompt
+	for _, tpl := range tpls {
+		uap = append(uap, model.UserAgentPrompt{
+			PromptID:      tpl.ID,
+			AgentRecordID: ur.ID,
+		})
+	}
+	db.Save(&uap)
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
@@ -432,7 +399,7 @@ func SelfAssessmentExamMark(c *gin.Context) {
 		var overview model.UserPlanOverview
 		db.Model(&model.UserPlanOverview{}).Where("id = ?", recordedData.OverviewID).First(&overview)
 		if overview.ID > 0 {
-			overview.Status = common.StudyPlannerOverviewStatusOngoing
+			overview.Status = common.StudyPlannerOverviewStatusAIProcessing
 			db.Save(&overview)
 		}
 	}
@@ -546,7 +513,7 @@ func GenerateAssessment(c *gin.Context) {
 	var userAgentRecord model.UserAgentRecord
 	db.Model(&model.UserAgentRecord{}).Where("overview_id = ? AND user_id = ? AND category_path = ? AND category_level = ?", overviewId, userID, categoryPath, categoryLevel).First(&userAgentRecord)
 	if userAgentRecord.ID > 0 {
-		responseData, err := cleanAndParse(userAgentRecord.Result)
+		responseData, err := agent.CleanAndParse(userAgentRecord.Result)
 		if err != nil {
 			res.Code = codes.CODE_ERR_GPT_COMPLETE
 			res.Msg = "Failed to parse AI reply: " + err.Error()
@@ -617,7 +584,7 @@ func GenerateAssessment(c *gin.Context) {
 	//handle content of response
 	jsonContent := agentResp.Content
 
-	responseData, err := cleanAndParse(jsonContent)
+	responseData, err := agent.CleanAndParse(jsonContent)
 	if err != nil {
 		res.Code = codes.CODE_ERR_GPT_COMPLETE
 		res.Msg = "AI agent complete error: " + err.Error()
@@ -625,7 +592,7 @@ func GenerateAssessment(c *gin.Context) {
 		return
 	}
 
-	responseJson, _ := extractJSON(jsonContent)
+	responseJson, _ := agent.ExtractJSON(jsonContent)
 
 	// insert record for user generation ai result
 	ur := model.UserAgentRecord{

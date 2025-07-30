@@ -13,9 +13,12 @@ const (
 	StudyPlannerSchedulePartiallyComplete = "53"
 	StudyPlannerScheduleLatelyComplete    = "54"
 
-	StudyPlannerOverviewStatusCreate   = "00"
-	StudyPlannerOverviewStatusOngoing  = "10"
-	StudyPlannerOverviewStatusFinished = "20"
+	StudyPlannerOverviewStatusCreate       = "00"
+	StudyPlannerOverviewStatusAIError      = "01"
+	StudyPlannerOverviewStatusAIProcessing = "05"
+	StudyPlannerOverviewStatusAIComplete   = "06"
+	StudyPlannerOverviewStatusOngoing      = "10"
+	StudyPlannerOverviewStatusFinished     = "20"
 )
 
 func StatusCheck(ss string) bool {

@@ -41,6 +41,16 @@ func (UserAgentRecord) TableName() string {
 	return "user_agent_record"
 }
 
+type UserAgentPrompt struct {
+	ID            uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
+	PromptID      uint64 `gorm:"column:prompt_id" json:"prompt_id"`
+	AgentRecordID uint64 `gorm:"column:agent_record_id" json:"agent_record_id"`
+}
+
+func (UserAgentPrompt) TableName() string {
+	return "user_agent_prompt"
+}
+
 type ExamQuizRecord struct {
 	ID            uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
