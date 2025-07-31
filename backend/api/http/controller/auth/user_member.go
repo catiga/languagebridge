@@ -63,7 +63,49 @@ func FetchMemberList(c *gin.Context) {
 
 	db.Model(&model.UserMember{}).Where("user_id = ? and flag != ?", userID, -1).Find(&memberList)
 
-	res.Data = memberList
+	// 为每个学生添加等级信息
+	type MemberWithLevel struct {
+		model.UserMember
+		CurrentLevel int    `json:"current_level"`
+		TargetLevel  int    `json:"target_level"`
+		HasGoal      bool   `json:"has_goal"`
+		GoalStatus   string `json:"goal_status"`
+	}
+
+	var result []MemberWithLevel
+	for _, member := range memberList {
+		// 查找该学生最新的学习计划
+		var overview model.UserPlanOverview
+		db.Model(&model.UserPlanOverview{}).
+			Where("student_id = ? and flag != ?", member.ID, -1).
+			Order("add_time DESC").
+			First(&overview)
+
+		memberWithLevel := MemberWithLevel{
+			UserMember:   member,
+			CurrentLevel: 0, // 0表示未设置
+			TargetLevel:  0, // 0表示未设置
+			HasGoal:      overview.ID > 0,
+			GoalStatus:   "",
+		}
+
+		if overview.ID > 0 {
+			memberWithLevel.GoalStatus = overview.Status
+			// 只有在AI测评完成后才显示真实的等级信息
+			if overview.Status == common.StudyPlannerOverviewStatusAIComplete {
+				memberWithLevel.CurrentLevel = overview.InitLevel
+				memberWithLevel.TargetLevel = overview.TargetLevel
+			} else {
+				// AI测评未完成，只显示目标等级，当前等级显示为未测评
+				memberWithLevel.CurrentLevel = 0 // 未测评
+				memberWithLevel.TargetLevel = overview.TargetLevel
+			}
+		}
+
+		result = append(result, memberWithLevel)
+	}
+
+	res.Data = result
 	c.JSON(http.StatusOK, res)
 }
 

@@ -20,46 +20,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var levelMap = map[int]string{
-	1: "Beginner (KET Level, Grades 1–4)",
-	2: "Intermediate (PET Level, Grades 5–8)",
-	3: "TOEFL Junior (Middle School Focus)",
-	4: "IELTS Practice (Advanced/High School)",
-}
-
-func convertPromptContext(tpls []model.PromptContext, vmap map[string]string) []agent.PromptContext {
-	var result []agent.PromptContext
-	if len(tpls) > 0 {
-		for _, r := range tpls {
-			var vars []string
-			json.Unmarshal([]byte(r.PromptVariables), &vars)
-			var varmap map[string]string = make(map[string]string)
-			if len(vars) > 0 {
-				for _, v := range vars {
-					if ok, exist := vmap[v]; exist {
-						varmap[v] = ok
-					}
-				}
-			}
-			var enableFunc bool = false
-			var funcName string = ""
-			if len(r.FuncName) > 0 {
-				enableFunc = true
-				funcName = r.FuncName
-			}
-			result = append(result, agent.PromptContext{
-				PromptType:     r.PromptType,
-				GeneralContext: r.GeneralContext,
-				Sort:           r.Sort,
-				Variables:      varmap,
-				EnableFunc:     enableFunc,
-				FuncName:       funcName,
-			})
-		}
-	}
-	return result
-}
-
 func SelfAssessment(c *gin.Context) {
 	var req request.SelfAssessmentRequest
 	res := common.Response{}
@@ -113,7 +73,7 @@ func SelfAssessment(c *gin.Context) {
 		return
 	}
 
-	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, nil), req.Content)
+	messages := agent.BuildMessagesFromPromptTemplates(agent.ConvertPromptContext(tpls, nil), req.Content)
 	if len(messages) == 0 {
 		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
 		res.Msg = "Agent service unavailable, due to internal configuration"
@@ -256,10 +216,10 @@ func SelfAssessmentExam(c *gin.Context) {
 	}
 
 	var vmap map[string]string = make(map[string]string)
-	vmap["level"] = levelMap[req.Level]
+	vmap["level"] = agent.LevelMap[req.Level]
 	vmap["min_question_count"] = "20"
 
-	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, vmap), "")
+	messages := agent.BuildMessagesFromPromptTemplates(agent.ConvertPromptContext(tpls, vmap), "")
 	if len(messages) == 0 {
 		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
 		res.Msg = "Agent service unavailable, due to internal configuration"
@@ -298,7 +258,7 @@ func SelfAssessmentExam(c *gin.Context) {
 		Flag:          0,
 		CategoryPath:  categoryPath,
 		CategoryLevel: categoryLevel,
-		Input:         levelMap[req.Level],
+		Input:         agent.LevelMap[req.Level],
 		Result:        responseJson,
 		UserID:        uint64(userID),
 	}
@@ -401,6 +361,7 @@ func SelfAssessmentExamMark(c *gin.Context) {
 		if overview.ID > 0 {
 			overview.Status = common.StudyPlannerOverviewStatusAIProcessing
 			db.Save(&overview)
+			go agent.HandleAssessment(&saveRecord)
 		}
 	}
 
@@ -561,7 +522,7 @@ func GenerateAssessment(c *gin.Context) {
 		"age":         age,
 	}
 
-	messages := agent.BuildMessagesFromPromptTemplates(convertPromptContext(tpls, vmap), "")
+	messages := agent.BuildMessagesFromPromptTemplates(agent.ConvertPromptContext(tpls, vmap), "")
 	if len(messages) == 0 {
 		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
 		res.Msg = "Agent service unavailable, due to internal configuration"
@@ -614,5 +575,164 @@ func GenerateAssessment(c *gin.Context) {
 		"user_input": "",
 		"ai_reply":   responseData,
 	}
+	c.JSON(http.StatusOK, res)
+}
+
+func EvaluateAssessment(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	overviewIdStr, exist := c.GetQuery("overview_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	overviewId, err := strconv.ParseUint(overviewIdStr, 10, 64)
+
+	db := system.GetDb()
+	var overview model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ? AND user_id = ?", overviewId, userID).First(&overview)
+	if overview.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no overview record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if overview.Status != common.StudyPlannerOverviewStatusCreate && overview.Status != common.StudyPlannerOverviewStatusWaitingAIAssessment && overview.Status != common.StudyPlannerOverviewStatusAIError {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "all evaluation has been completed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overviewId).Update("status", common.StudyPlannerOverviewStatusAIProcessing)
+
+	var quizRecord model.ExamQuizRecord
+	err = db.Table("exam_quiz_record eqr").Joins("JOIN user_agent_record uar ON eqr.agent_record_id = uar.id").
+		Where("uar.overview_id = ?", overviewId).Select("eqr.*").Scan(&quizRecord).Error
+	if err != nil {
+		log.Error(err)
+	}
+	if quizRecord.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no quiz record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	go func(qr *model.ExamQuizRecord, overviewId uint64) {
+		log.Info("[AI] evaluate assessment start, quiz record id: ", qr.ID)
+		err := agent.HandleAssessment(qr)
+		if err != nil {
+			db.Model(&model.UserPlanOverview{}).Where("id = ?", overview.ID).Update("status", common.StudyPlannerOverviewStatusAIError)
+		}
+		log.Info("[AI] evaluate assessment end, quiz record id: ", qr.ID, err)
+	}(&quizRecord, overviewId)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	c.JSON(http.StatusOK, res)
+}
+
+func ViewAssessment(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	overviewIdStr, exist := c.GetQuery("overview_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	overviewId, err := strconv.ParseUint(overviewIdStr, 10, 64)
+
+	db := system.GetDb()
+	var overview model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ? AND user_id = ?", overviewId, userID).First(&overview)
+	if overview.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no overview record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if overview.Status != common.StudyPlannerOverviewStatusAIComplete && overview.Status != common.StudyPlannerOverviewStatusOngoing && overview.Status != common.StudyPlannerOverviewStatusFinished {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "evaluation is not completed"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var quizRecord []model.ExamQuizRecord
+	err = db.Table("exam_quiz_record eqr").Joins("JOIN user_agent_record uar ON eqr.agent_record_id = uar.id").
+		Where("uar.overview_id = ?", overviewId).Select("eqr.*").Scan(&quizRecord).Error
+	if err != nil {
+		log.Error(err)
+	}
+	if len(quizRecord) == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no quiz record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var uids []uint64
+	for _, v := range quizRecord {
+		uids = append(uids, v.ID)
+	}
+
+	var quizAssessment []model.ExamQuizAssessment
+	db.Model(&model.ExamQuizAssessment{}).Where("quiz_record_id IN ?", uids).Find(&quizAssessment)
+
+	for i := range quizRecord {
+		for j := range quizAssessment {
+			if quizRecord[i].ID == quizAssessment[j].QuizRecordID {
+				quizRecord[i].Assessments = append(quizRecord[i].Assessments, quizAssessment[j])
+			}
+		}
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = quizRecord
 	c.JSON(http.StatusOK, res)
 }

@@ -1,8 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../../../utils/api';
+import { toast } from 'react-toastify';
+
+// 等级映射
+const LEVEL_MAP: { [key: number]: string } = {
+  1: "Beginner (KET)",
+  2: "Intermediate (PET)", 
+  3: "TOEFL Junior",
+  4: "IELTS Practice",
+  5: "Advanced"
+};
+
+// 格式化等级显示
+const formatLevel = (level: number): string => {
+  if (level === 0) return "Needs Assessment";
+  return LEVEL_MAP[level] || `Level ${level}`;
+};
+
+// 获取状态显示文本
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case '00': return 'Not Started';
+    case '01': return 'Assessment Error';
+    case '02': return 'Waiting AI Assessment';
+    case '05': return 'AI Processing';
+    case '06': return 'Assessment Complete';
+    case '10': return 'In Progress';
+    case '20': return 'Finished';
+    default: return 'Unknown';
+  }
+};
+
+// 获取状态颜色
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case '00': return 'bg-gray-100 text-gray-800';
+    case '01': return 'bg-red-100 text-red-800';
+    case '02': return 'bg-orange-100 text-orange-800';
+    case '05': return 'bg-yellow-100 text-yellow-800';
+    case '06': return 'bg-green-100 text-green-800';
+    case '10': return 'bg-blue-100 text-blue-800';
+    case '20': return 'bg-green-100 text-green-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
 interface Student {
   id: number;
@@ -10,6 +54,9 @@ interface Student {
   avatar?: string;
   level?: number;
   target_level?: number;
+  has_goal?: boolean;
+  goal_status?: string;
+  learning_goal?: string;
   progress_percentage?: number;
   last_study_date?: string;
   total_study_hours?: number;
@@ -33,11 +80,14 @@ export default function StudentOverview() {
           id: member.id,
           name: member.name,
           avatar: member.avatar,
-          level: member.level || 1,
-          target_level: member.target_level || 3,
-          progress_percentage: 0, // 移除假数据
+          level: member.current_level || 0,
+          target_level: member.target_level || 0,
+          has_goal: member.has_goal || false,
+          goal_status: member.goal_status || "",
+          learning_goal: member.learning_goal || "",
+          progress_percentage: 0, // 这里可以后续添加真实的进度计算
           last_study_date: member.last_study_date || new Date().toISOString(),
-          total_study_hours: 0 // 移除假数据
+          total_study_hours: 0 // 这里可以后续添加真实的学习时长统计
         }));
         setStudents(studentList);
       } else {
@@ -46,29 +96,8 @@ export default function StudentOverview() {
       }
     } catch (error) {
       console.error('Failed to fetch students:', error);
-      // 使用假数据作为fallback
-      setStudents([
-        {
-          id: 1,
-          name: 'Emma Johnson',
-          avatar: '',
-          level: 2,
-          target_level: 4,
-          progress_percentage: 65,
-          last_study_date: new Date().toISOString(),
-          total_study_hours: 28
-        },
-        {
-          id: 2,
-          name: 'Michael Chen',
-          avatar: '',
-          level: 1,
-          target_level: 3,
-          progress_percentage: 35,
-          last_study_date: new Date(Date.now() - 86400000).toISOString(),
-          total_study_hours: 15
-        }
-      ]);
+      // 如果获取失败，设置为空数组
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -80,6 +109,18 @@ export default function StudentOverview() {
 
   const handleStudentClick = (studentId: number) => {
     router.push(`/v2/auth/students/${studentId}`);
+  };
+
+  const handleManualAIAssessment = async (studentId: number) => {
+    try {
+      // 这里需要获取学生的学习计划ID，但由于StudentOverview组件没有详细的学习计划数据
+      // 我们可以跳转到详细页面或者显示提示信息
+      toast.info('Please go to the student detail page to trigger AI assessment');
+      router.push(`/v2/auth/students/${studentId}`);
+    } catch (error) {
+      console.error('Failed to trigger AI assessment:', error);
+      toast.error('Failed to trigger AI assessment');
+    }
   };
 
   const handleSetTarget = (studentId: number) => {
@@ -150,9 +191,19 @@ export default function StudentOverview() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                  <p className="text-sm text-gray-600">
-                    Level {student.level || 'Not set'}
-                  </p>
+                                      <p className="text-sm text-gray-600">
+                      {student.has_goal ? 
+                        (student.goal_status === '05' ? 
+                          `AI Processing → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                          student.goal_status === '02' || student.goal_status === '01' ? 
+                            `Waiting AI Assessment → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                          student.goal_status === '00' ? 
+                            `Needs Assessment → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                            `${formatLevel(student.level || 0)} → ${student.learning_goal || formatLevel(student.target_level || 0)}`
+                        ) : 
+                        "No Learning Goal Set"
+                      }
+                    </p>
                 </div>
               </div>
 

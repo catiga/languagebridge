@@ -195,7 +195,7 @@ func StudentCourseGetMeetingInfo(c *gin.Context) {
 	var bookTran model.CourseBookTrans
 	// err = db.Model(&model.CourseBookTrans{}).Where("id = ? and user_id = ?", btid, userID).First(&bookTran).Error
 	err = db.Table("course_book_trans ct").Select("ct.*").
-		Joins("JOIN user_course uc on ct.uc_id = uc.id").
+		Joins("JOIN user_course uc ON ct.uc_id = uc.id").
 		Where("uc.student_id = ? and ct.id = ?", studentId, btid).Scan(&bookTran).Error
 
 	if err != nil {
@@ -337,7 +337,7 @@ func StudentCourseGetMeetingEnd(c *gin.Context) {
 	db := system.GetDb()
 	var bookTran model.CourseBookTrans
 	err = db.Table("course_book_trans ct").Select("ct.*").
-		Joins("JOIN user_course uc on ct.uc_id = uc.id").
+		Joins("JOIN user_course uc ON ct.uc_id = uc.id").
 		Where("uc.student_id = ? and ct.id = ?", studentId, btid).Scan(&bookTran).Error
 
 	if err != nil {
@@ -409,7 +409,7 @@ func StudentCourseMeetingNodeAdd(c *gin.Context) {
 	// err = db.Model(&model.CourseBookTrans{}).Where("id = ? and user_id = ?", req.BtID, userID).First(&bookTran).Error
 
 	err = db.Table("course_book_trans ct").Select("ct.*").
-		Joins("JOIN user_course uc on ct.uc_id = uc.id").
+		Joins("JOIN user_course uc ON ct.uc_id = uc.id").
 		Where("uc.student_id = ? and ct.id = ?", studentId, req.BtID).Scan(&bookTran).Error
 
 	if err != nil {

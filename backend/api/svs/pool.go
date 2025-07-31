@@ -26,7 +26,7 @@ func PoolsInMysql(ca string, chain string) ([]TokenPairRes, error) {
 	var indb []TokenPairRes
 	// todo 这里的sql需要进行转义
 	result := db.Table(model.TokenMeta{}.TableName()).
-		Joins("inner join token_pool_pair tpp on token_meta_info.id = tpp.token_id").
+		Joins("INNER JOIN token_pool_pair tpp ON token_meta_info.id = tpp.token_id").
 		Select("tpp.*,token_meta_info.ca ca").
 		Where("token_meta_info.ca = ?", ca).
 		Order("init_tvl desc").Find(&indb)

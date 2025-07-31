@@ -52,16 +52,42 @@ func (UserAgentPrompt) TableName() string {
 }
 
 type ExamQuizRecord struct {
-	ID            uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	AddTime       time.Time       `gorm:"column:add_time" json:"add_time"`
-	AgentRecordID uint64          `gorm:"column:agent_record_id" json:"agent_record_id"`
-	UserID        uint64          `gorm:"column:user_id" json:"user_id"`
-	Score         decimal.Decimal `gorm:"column:score" json:"score"`
-	Result        string          `gorm:"column:result" json:"result"`
+	ID            uint64               `gorm:"primaryKey;autoIncrement" json:"id"`
+	AddTime       time.Time            `gorm:"column:add_time" json:"add_time"`
+	AgentRecordID uint64               `gorm:"column:agent_record_id" json:"agent_record_id"`
+	UserID        uint64               `gorm:"column:user_id" json:"user_id"`
+	Score         decimal.Decimal      `gorm:"column:score" json:"score"`
+	Result        string               `gorm:"column:result" json:"result"`
+	Assessments   []ExamQuizAssessment `gorm:"-" json:"assessments"`
 }
 
 func (ExamQuizRecord) TableName() string {
 	return "exam_quiz_record"
+}
+
+type ExamQuizAssessment struct {
+	ID                      uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	AddTime                 time.Time       `gorm:"column:add_time" json:"add_time"`
+	OverviewID              uint64          `gorm:"column:overview_id" json:"overview_id"`
+	QuizRecordID            uint64          `gorm:"column:quiz_record_id" json:"quiz_record_id"`
+	UserID                  uint64          `gorm:"column:user_id" json:"user_id"`
+	StudentID               uint64          `gorm:"column:student_id" json:"student_id"`
+	InitLevel               int             `gorm:"column:init_level" json:"init_level"`
+	InitSubLevel            int             `gorm:"column:init_sub_level" json:"init_sub_level"`
+	EstimatedDurationDays   int             `gorm:"column:estimated_duration_days" json:"estimated_duration_days"`
+	AssessScore             decimal.Decimal `gorm:"column:assess_score" json:"assess_score"`
+	AssessMaxScore          decimal.Decimal `gorm:"column:assess_max_score" json:"assess_max_score"`
+	AssessLevelEstimate     string          `gorm:"column:assess_level_estimate" json:"assess_level_estimate"`
+	AssessOverAllComment    string          `gorm:"column:assess_overall_comment" json:"assess_over_all_comment"`
+	AssessStrengths         string          `gorm:"column:assess_strengths" json:"assess_strengths"`
+	AssessWeaknesses        string          `gorm:"column:assess_weaknesses" json:"assess_weaknesses"`
+	AssessSuggestions       string          `gorm:"column:assess_suggestions" json:"assess_suggestions"`
+	AssessWritingEvaluation string          `gorm:"column:assess_writing_evaluation" json:"assess_writing_evaluation"`
+	StudyPlanTpl            string          `gorm:"column:study_plan_tpl" json:"study_plan_tpl"`
+}
+
+func (ExamQuizAssessment) TableName() string {
+	return "exam_quiz_assessment"
 }
 
 type UserAgentRecordHistorical struct {

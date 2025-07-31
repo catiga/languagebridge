@@ -1,16 +1,60 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/langbridge/backend/api/common"
 	"github.com/langbridge/backend/model"
 	"github.com/langbridge/backend/system"
+	"github.com/langbridge/backend/utils"
+	"github.com/shopspring/decimal"
 )
+
+var LevelMap = map[int]string{
+	1: "Beginner (KET Level, Grades 1–4)",
+	2: "Intermediate (PET Level, Grades 5–8)",
+	3: "TOEFL Junior (Middle School Focus)",
+	4: "IELTS Practice (Advanced/High School)",
+}
+
+func ConvertPromptContext(tpls []model.PromptContext, vmap map[string]string) []PromptContext {
+	var result []PromptContext
+	if len(tpls) > 0 {
+		for _, r := range tpls {
+			var vars []string
+			json.Unmarshal([]byte(r.PromptVariables), &vars)
+			var varmap map[string]string = make(map[string]string)
+			if len(vars) > 0 {
+				for _, v := range vars {
+					if ok, exist := vmap[v]; exist {
+						varmap[v] = ok
+					}
+				}
+			}
+			var enableFunc bool = false
+			var funcName string = ""
+			if len(r.FuncName) > 0 {
+				enableFunc = true
+				funcName = r.FuncName
+			}
+			result = append(result, PromptContext{
+				PromptType:     r.PromptType,
+				GeneralContext: r.GeneralContext,
+				Sort:           r.Sort,
+				Variables:      varmap,
+				EnableFunc:     enableFunc,
+				FuncName:       funcName,
+			})
+		}
+	}
+	return result
+}
 
 type AssessmentGPTResponse struct {
 	InitLevel             int         `json:"initLevel"`             // 剑桥主等级：1~5
@@ -110,25 +154,128 @@ func ExtractJSON(raw string) (string, error) {
 	return "", errors.New("no valid JSON content found")
 }
 
-func HandleAssessment(quiz *model.ExamQuizRecord) {
+func HandleAssessment(quiz *model.ExamQuizRecord) error {
 	var agentRecordId = quiz.AgentRecordID
 	var quizString = quiz.Result
 
 	var overview model.UserPlanOverview
 	var agentRecord model.UserAgentRecord
+
 	var db = system.GetDb()
 
 	db.Model(&model.UserAgentRecord{}).Where("id = ?", agentRecordId).First(&agentRecord)
 	if agentRecord.ID == 0 {
-		return
+		return errors.New("agent record not found")
 	}
 
 	db.Model(&model.UserPlanOverview{}).Where("id = ?", agentRecord.OverviewID).First(&overview)
 	if overview.ID == 0 {
-		return
+		return errors.New("overview not found")
 	}
-	if overview.Status != common.StudyPlannerOverviewStatusAIError && overview.Status != common.StudyPlannerOverviewStatusAIError {
-		return
+	if overview.Status != common.StudyPlannerOverviewStatusAIError && overview.Status != common.StudyPlannerOverviewStatusAIProcessing {
+		return errors.New("overview status is not ai error or ai processing")
 	}
 	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview.ID).Update("status", common.StudyPlannerOverviewStatusAIProcessing)
+
+	categoryPath := "goal/assessment/evaluate"
+	categoryLevel := "free"
+	var tpls []model.PromptContext
+	db.Model(&model.PromptContext{}).Where("category_path = ? and category_level = ?", categoryPath, categoryLevel).Find(&tpls)
+
+	if len(tpls) == 0 {
+		return errors.New("prompt context not found")
+	}
+
+	var age = "not sure"
+	if overview.StudentID > 0 {
+		var userMember model.UserMember
+		db.Model(&model.UserMember{}).Where("id = ?", overview.StudentID).First(&userMember)
+		if userMember.ID > 0 && len(userMember.Birthday) > 0 {
+			realAge, err := utils.CalculateAge(userMember.Birthday)
+			if err == nil {
+				age = fmt.Sprintf("%d years old", realAge+1)
+			}
+		}
+	}
+
+	var vmap map[string]string = make(map[string]string)
+	vmap["target_level"] = LevelMap[overview.TargetLevel]
+	vmap["goal_title"] = overview.Goal
+	vmap["goal_term"] = overview.GoalPeriodType
+	vmap["description"] = overview.Description
+	vmap["age"] = age
+	vmap["test_submission_json"] = quizString
+
+	messages := BuildMessagesFromPromptTemplates(ConvertPromptContext(tpls, vmap), "")
+	if len(messages) == 0 {
+		return errors.New("messages not found")
+	}
+	agentReq := AgentRequest{
+		Model:    ModelDeepSeek,
+		Messages: messages,
+	}
+
+	agentResp, err := agentReq.Chat(context.Background())
+	if err != nil {
+		return err
+	}
+
+	jsonContent, err := ExtractJSON(agentResp.Content)
+	if err != nil {
+		return err
+	}
+
+	// 将responseData转换为AssessmentGPTResponse
+	var assessment AssessmentGPTResponse
+	if err := json.Unmarshal([]byte(jsonContent), &assessment); err != nil {
+		return fmt.Errorf("failed to unmarshal assessment response: %w", err)
+	}
+
+	// 更新UserPlanOverview的状态和初始等级
+	updates := map[string]interface{}{
+		"status":     common.StudyPlannerOverviewStatusAIComplete,
+		"init_level": assessment.InitLevel,
+	}
+	if err := db.Model(&model.UserPlanOverview{}).Where("id = ?", overview.ID).Updates(updates).Error; err != nil {
+		return fmt.Errorf("failed to update overview: %w", err)
+	}
+
+	// 创建ExamQuizAssessment记录
+	assessmentRecord := model.ExamQuizAssessment{
+		AddTime:               time.Now(),
+		OverviewID:            overview.ID,
+		QuizRecordID:          quiz.ID,
+		UserID:                overview.UserID,
+		StudentID:             overview.StudentID,
+		InitLevel:             assessment.InitLevel,
+		InitSubLevel:          assessment.InitSubLevel,
+		EstimatedDurationDays: assessment.EstimatedDurationDays,
+		AssessScore:           decimal.NewFromInt(int64(assessment.AssessmentResult.Score)),
+		AssessMaxScore:        decimal.NewFromInt(int64(assessment.AssessmentResult.MaxScore)),
+		AssessLevelEstimate:   assessment.AssessmentResult.LevelEstimate,
+		AssessOverAllComment:  assessment.AssessmentResult.OverallComment,
+		AssessStrengths:       strings.Join(assessment.AssessmentResult.Strengths, "|"),
+		AssessWeaknesses:      strings.Join(assessment.AssessmentResult.Weaknesses, "|"),
+		AssessSuggestions:     strings.Join(assessment.AssessmentResult.Suggestions, "|"),
+		AssessWritingEvaluation: func() string {
+			if jsonData, err := json.Marshal(assessment.AssessmentResult.WritingEvaluation); err == nil {
+				return string(jsonData)
+			}
+			return ""
+		}(),
+	}
+
+	// 序列化学习计划
+	if studyPlanJson, err := json.Marshal(assessment.StudyPlan); err == nil {
+		assessmentRecord.StudyPlanTpl = string(studyPlanJson)
+	}
+
+	// 保存评估记录
+	if err := db.Save(&assessmentRecord).Error; err != nil {
+		return fmt.Errorf("failed to save assessment record: %w", err)
+	}
+
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", overview.ID).Update("status", common.StudyPlannerOverviewStatusAIComplete)
+
+	return nil
 }

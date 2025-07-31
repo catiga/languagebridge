@@ -182,6 +182,8 @@ var examJson = `
 }
 `
 
+var realAssessmentJson = "```json\n{\n  \"initLevel\": 2,\n  \"initSubLevel\": 6,\n  \"targetLevel\": 3,\n  \"targetSubLevel\": 10,\n  \"estimatedDurationDays\": 60,\n  \"assessmentResult\": {\n    \"score\": 11,\n    \"maxScore\": 15,\n    \"levelEstimate\": \"Mid Level 2\",\n    \"overallComment\": \"The user shows a good grasp of basic vocabulary and simple sentence structures but needs improvement in identifying all correct answers in multiple-choice questions and using precise vocabulary in cloze tests.\",\n    \"strengths\": [\"vocabulary\", \"reading\"],\n    \"weaknesses\": [\"multiple-choice accuracy\", \"cloze test precision\"],\n    \"suggestions\": [\n      \"Practice identifying all correct options in multiple-choice questions.\",\n      \"Work on using more precise vocabulary in cloze tests.\",\n      \"Continue building on writing skills with more complex sentences.\"\n    ],\n    \"writingEvaluation\": {\n      \"task1\": {\n        \"coherence\": \"Good\",\n        \"grammar\": \"Good\",\n        \"score\": 4\n      },\n      \"task2\": {\n        \"coherence\": \"Good\",\n        \"grammar\": \"Good\",\n        \"score\": 4\n      }\n    }\n  },\n  \"studyPlan\": [\n    {\n      \"day\": 1,\n      \"objective\": \"Improve multiple-choice accuracy\",\n      \"tasks\": [\n        \"Practice identifying all correct options in a set of multiple-choice questions about animals.\",\n        \"Review vocabulary for common objects and actions.\"\n      ]\n    },\n    {\n      \"day\": 2,\n      \"objective\": \"Enhance cloze test precision\",\n      \"tasks\": [\n        \"Complete cloze sentences with the most appropriate words.\",\n        \"Read a short story and identify key vocabulary.\"\n      ]\n    },\n    {\n      \"day\": 3,\n      \"objective\": \"Build writing skills\",\n      \"tasks\": [\n        \"Write a short paragraph about a favorite activity using past tense.\",\n        \"Review and correct sentences with grammar mistakes.\"\n      ]\n    },\n    {\n      \"day\": 4,\n      \"objective\": \"Review and practice\",\n      \"tasks\": [\n        \"Take a short quiz on vocabulary and grammar.\",\n        \"Read aloud a short passage to improve pronunciation.\"\n      ]\n    },\n    {\n      \"day\": 5,\n      \"objective\": \"Consolidate learning\",\n      \"tasks\": [\n        \"Write a short story using new vocabulary words.\",\n        \"Practice listening to and repeating simple sentences.\"\n      ]\n    }\n  ]\n}\n```"
+
 func TestAssess(t *testing.T) {
 	var res AssessmentGPTResponse
 	json.Unmarshal([]byte(jsonOutput), &res)
@@ -193,4 +195,11 @@ func TestAssess(t *testing.T) {
 
 	res3, err := CleanAndParse(examJson)
 	fmt.Println(res3, err)
+
+	realAssessmentJson, err := ExtractJSON(realAssessmentJson)
+	fmt.Println(realAssessmentJson, err)
+	var assessment AssessmentGPTResponse
+	if err := json.Unmarshal([]byte(realAssessmentJson), &assessment); err != nil {
+		fmt.Println(err)
+	}
 }

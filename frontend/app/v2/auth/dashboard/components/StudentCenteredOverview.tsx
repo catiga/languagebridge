@@ -1,10 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
+import AssessmentResultModal from './AssessmentResultModal';
+
+// 等级映射
+const LEVEL_MAP: { [key: number]: string } = {
+  1: "Beginner (KET)",
+  2: "Intermediate (PET)", 
+  3: "TOEFL Junior",
+  4: "IELTS Practice",
+  5: "Advanced"
+};
+
+// 格式化等级显示
+const formatLevel = (level: number): string => {
+  if (level === 0) return "Needs Assessment";
+  return LEVEL_MAP[level] || `Level ${level}`;
+};
+
+// 获取状态显示文本
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case '00': return 'Not Started';
+    case '01': return 'Assessment Error';
+    case '02': return 'Waiting AI Assessment';
+    case '05': return 'AI Processing';
+    case '06': return 'Assessment Complete';
+    case '10': return 'In Progress';
+    case '20': return 'Finished';
+    default: return 'Unknown';
+  }
+};
+
+// 获取状态颜色
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case '00': return 'bg-gray-100 text-gray-800';
+    case '01': return 'bg-red-100 text-red-800';
+    case '02': return 'bg-orange-100 text-orange-800';
+    case '05': return 'bg-yellow-100 text-yellow-800';
+    case '06': return 'bg-green-100 text-green-800';
+    case '10': return 'bg-blue-100 text-blue-800';
+    case '20': return 'bg-green-100 text-green-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
 interface Quiz {
   score: string;
@@ -39,6 +83,8 @@ interface Student {
   avatar?: string;
   current_level?: number;
   target_level?: number;
+  has_goal?: boolean;
+  goal_status?: string;
   learning_goal?: string;
   goal_description?: string;
   assessment_status: 'not_started' | 'in_progress' | 'completed';
@@ -57,6 +103,8 @@ export default function StudentCenteredOverview() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [selectedStudentForGoal, setSelectedStudentForGoal] = useState<Student | null>(null);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [selectedStudentForAssessment, setSelectedStudentForAssessment] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -102,50 +150,47 @@ export default function StudentCenteredOverview() {
               }
               
               // 获取详细数据
-              if (plannerRes.data.length > 0) {
-                const viewRes = await apiClient.get(`/spwapi/auth/planner/view?overview_id=${plannerRes.data[0].id}`) as any;
-                if (viewRes && viewRes.code === 0 && Array.isArray(viewRes.data) && viewRes.data.length > 0) {
-                  // 从详细数据中提取统计信息
-                  const detailedData = viewRes.data[0];
-                  learningGoals = viewRes.data; // 保存完整的学习目标数据
-                  
-                  if (Array.isArray(detailedData.tasks)) {
-                    const completedTasks = detailedData.tasks.filter((t: any) => t.status === 'done').length;
-                    const totalTasks = detailedData.tasks.length;
-                    stats = {
-                      total_tasks: totalTasks,
-                      completed_tasks: completedTasks,
-                      total_hours: 0, // 可以从任务中计算
-                      upcoming_lessons: 0, // 可以从任务中计算
-                      progress_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-                    };
-                  }
-                }
+              if (stageGoals.length > 0) {
+                learningGoals = stageGoals.map((goal: any) => ({
+                  id: goal.id,
+                  student_id: goal.student_id,
+                  title: goal.title,
+                  description: goal.description,
+                  goal: goal.goal,
+                  add_time: goal.add_time,
+                  start_date: goal.start_date,
+                  end_date: goal.end_date,
+                  tasks: goal.tasks || [],
+                  goal_period_type: goal.goal_period_type,
+                  target_level: goal.target_level,
+                  init_level: goal.init_level,
+                  status: goal.status,
+                  quizs: goal.quizs || []
+                }));
               }
             }
           } catch (error) {
-            console.error(`Failed to fetch planner data for student ${member.id}:`, error);
+            console.error('Failed to fetch planner data for student:', member.id, error);
           }
-          
+
           // 计算进度百分比
-          const completedTasks = tasks.filter(t => t.status === 'done').length;
+          const completedTasks = tasks.filter((task: any) => task.status === 'done').length;
           const totalTasks = tasks.length;
           const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-          
-          // 处理开始日期为空的情况
-          const startDate = learningGoals.length > 0 && learningGoals[0].start_date ? 
-            learningGoals[0].start_date : 
-            new Date().toISOString().slice(0, 10);
+
+          const startDate = new Date().toISOString().slice(0, 10);
           
           return {
             id: member.id,
             name: member.name,
             avatar: member.avatar,
-            current_level: learningGoals.length > 0 ? learningGoals[0].init_level : 1,
-            target_level: learningGoals.length > 0 ? learningGoals[0].target_level : 3,
-            assessment_status: learningGoals.length > 0 ? 
-              (learningGoals[0].status === '20' ? 'completed' : 
-               learningGoals[0].status === '10' ? 'in_progress' : 'not_started') : 'not_started',
+            current_level: member.current_level || 0,
+            target_level: member.target_level || 0,
+            has_goal: member.has_goal || false,
+            goal_status: member.goal_status || "",
+            assessment_status: member.has_goal ? 
+              (member.goal_status === '06' ? 'completed' : 
+               member.goal_status === '05' ? 'in_progress' : 'not_started') : 'not_started',
             progress_percentage: progressPercentage,
             last_study_date: member.last_study_date || startDate,
             total_study_hours: stats?.total_hours || 0,
@@ -186,23 +231,109 @@ export default function StudentCenteredOverview() {
   };
 
   const handleAssessment = (studentId: number) => {
-    // 获取当前学生的学习计划ID
+    // 获取当前学生信息
     const currentStudent = students.find(s => s.id === studentId);
+    
+    if (!currentStudent) {
+      toast.error('Student not found');
+      return;
+    }
+
+    // 检查是否有学习计划
     const planId = currentStudent?.active_goals && currentStudent.active_goals.length > 0 
       ? currentStudent.active_goals[0].id 
       : null;
     
-    // 在新窗口中打开考试页面
-    const assessmentUrl = `/v2/auth/assessment?student_id=${studentId}${planId ? `&plan_id=${planId}` : ''}`;
-    window.open(assessmentUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    if (!planId) {
+      toast.error('No learning plan found for this student');
+      return;
+    }
+
+    // 设置选中的学生并打开模态框
+    setSelectedStudentForAssessment(currentStudent);
+    setShowAssessmentModal(true);
+  };
+
+  const handleManualAIAssessment = async (studentId: number) => {
+    try {
+      // 获取当前学生的学习计划ID
+      const currentStudent = students.find(s => s.id === studentId);
+      const planId = currentStudent?.active_goals && currentStudent.active_goals.length > 0 
+        ? currentStudent.active_goals[0].id 
+        : null;
+      
+      if (!planId) {
+        toast.error('No learning plan found for this student');
+        return;
+      }
+
+      // 调用手动触发AI测评接口
+      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/evaluate?overview_id=${planId}`) as any;
+      
+      if (response && response.code === 0) {
+        toast.success('AI assessment triggered successfully! Please wait for processing...');
+        // 刷新学生数据
+        fetchStudents();
+      } else {
+        toast.error(response?.msg || 'Failed to trigger AI assessment');
+      }
+    } catch (error) {
+      console.error('Failed to trigger AI assessment:', error);
+      toast.error('Failed to trigger AI assessment');
+    }
+  };
+
+  const handleGenerateStudyPlan = async (studentId: number) => {
+    try {
+      // 获取当前学生的学习计划ID
+      const currentStudent = students.find(s => s.id === studentId);
+      const planId = currentStudent?.active_goals && currentStudent.active_goals.length > 0 
+        ? currentStudent.active_goals[0].id 
+        : null;
+      
+      if (!planId) {
+        toast.error('No learning plan found for this student');
+        return;
+      }
+
+      // 弹出开始时间选择对话框
+      const startDate = prompt('Please enter the start date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+      if (!startDate) {
+        return;
+      }
+
+      // 验证日期格式
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        toast.error('Invalid date format. Please use YYYY-MM-DD');
+        return;
+      }
+
+      // 调用生成学习计划接口
+      const response = await apiClient.post(`/spwapi/auth/planner/generate`, {
+        overview_id: planId,
+        start_date: startDate
+      }) as any;
+      
+      if (response && response.code === 0) {
+        toast.success('Study plan generated successfully!');
+        // 刷新学生数据
+        fetchStudents();
+      } else {
+        toast.error(response?.msg || 'Failed to generate study plan');
+      }
+    } catch (error) {
+      console.error('Failed to generate study plan:', error);
+      toast.error('Failed to generate study plan');
+    }
   };
 
   const handleStudyPlanner = (studentId: number) => {
-    // 跳转到V2版本的Study Planner，传递学生ID
+    // 跳转到Study Planner页面
     router.push(`/v2/auth/study-planner?student_id=${studentId}`);
   };
 
   const handleProgress = (studentId: number) => {
+    // 跳转到Progress页面
     router.push(`/v2/auth/progress?student_id=${studentId}`);
   };
 
@@ -348,20 +479,25 @@ export default function StudentCenteredOverview() {
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 text-sm">{student.name}</h4>
                       <p className="text-xs text-gray-600">
-                        Level {student.current_level} → {student.target_level}
+                        {student.has_goal ? 
+                          (student.goal_status === '05' ? 
+                            `AI Processing → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                            student.goal_status === '02' || student.goal_status === '01' ? 
+                              `Waiting AI Assessment → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                            student.goal_status === '00' ? 
+                              `Needs Assessment → ${student.learning_goal || formatLevel(student.target_level || 0)}` : 
+                              `${formatLevel(student.current_level || 0)} → ${student.learning_goal || formatLevel(student.target_level || 0)}`
+                          ) : 
+                          "No Learning Goal Set"
+                        }
                       </p>
                     </div>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <div className="flex flex-col gap-1">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${getAssessmentStatusColor(student.assessment_status)}`}>
-                        {getAssessmentStatusText(student.assessment_status)}
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(student.goal_status || '00')}`}>
+                        {getStatusText(student.goal_status || '00')}
                       </span>
-                      {student.active_goals && student.active_goals.length > 0 && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${getPlanStatusColor(student.active_goals[0].status)}`}>
-                          {getPlanStatusText(student.active_goals[0].status)}
-                        </span>
-                      )}
                     </div>
                     <span className="text-gray-600">
                       {student.progress_percentage}% complete
@@ -392,7 +528,17 @@ export default function StudentCenteredOverview() {
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">{selectedStudent.name}</h3>
                       <p className="text-sm text-gray-600">
-                        Level {selectedStudent.current_level} → {selectedStudent.target_level}
+                        {selectedStudent.has_goal ? 
+                          (selectedStudent.goal_status === '05' ? 
+                            `AI Processing → ${selectedStudent.learning_goal || formatLevel(selectedStudent.target_level || 0)}` : 
+                            selectedStudent.goal_status === '02' || selectedStudent.goal_status === '01' ? 
+                              `Waiting AI Assessment → ${selectedStudent.learning_goal || formatLevel(selectedStudent.target_level || 0)}` : 
+                            selectedStudent.goal_status === '00' ? 
+                              `Needs Assessment → ${selectedStudent.learning_goal || formatLevel(selectedStudent.target_level || 0)}` : 
+                              `${formatLevel(selectedStudent.current_level || 0)} → ${selectedStudent.learning_goal || formatLevel(selectedStudent.target_level || 0)}`
+                          ) : 
+                          "No Learning Goal Set"
+                        }
                       </p>
                     </div>
                   </div>
@@ -408,11 +554,9 @@ export default function StudentCenteredOverview() {
                     <div className="mb-4 p-3 bg-white rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-semibold text-gray-900">Learning Goal</h4>
-                        {selectedStudent.active_goals && selectedStudent.active_goals.length > 0 && (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPlanStatusColor(selectedStudent.active_goals[0].status)}`}>
-                            {getPlanStatusText(selectedStudent.active_goals[0].status)}
-                          </span>
-                        )}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedStudent.goal_status || '00')}`}>
+                          {getStatusText(selectedStudent.goal_status || '00')}
+                        </span>
                       </div>
                       <p className="text-sm text-gray-700 mb-1">{selectedStudent.learning_goal}</p>
                       {selectedStudent.goal_description && (
@@ -539,13 +683,16 @@ export default function StudentCenteredOverview() {
                     </button>
                   ) : (
                     <>
-                      {/* 根据学习计划状态显示不同的按钮 */}
-                      {selectedStudent.active_goals && selectedStudent.active_goals.length > 0 && (
+                      {/* 根据学习目标状态显示不同的按钮 */}
+                      {selectedStudent.has_goal && (
                         (() => {
-                          const planStatus = selectedStudent.active_goals[0].status;
-                          const hasQuizzes = selectedStudent.active_goals[0].quizs && selectedStudent.active_goals[0].quizs.length > 0;
+                          const goalStatus = selectedStudent.goal_status || '00';
+                          const hasQuizzes = selectedStudent.active_goals && 
+                            selectedStudent.active_goals.length > 0 && 
+                            selectedStudent.active_goals[0].quizs && 
+                            selectedStudent.active_goals[0].quizs.length > 0;
                           
-                          switch (planStatus) {
+                                                    switch (goalStatus) {
                             case '00': // 需要测试
                               return (
                                 <>
@@ -561,6 +708,66 @@ export default function StudentCenteredOverview() {
                                     disabled
                                   >
                                     Study Planner (After Assessment)
+                                  </button>
+                                </>
+                              );
+                            case '01': // 测评错误
+                            case '02': // 等待AI测评
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => handleManualAIAssessment(selectedStudent.id)}
+                                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                                  >
+                                    Trigger AI Assessment
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanner(selectedStudent.id)}
+                                    className="bg-gray-400 text-white px-3 py-1.5 rounded text-xs font-medium cursor-not-allowed"
+                                    disabled
+                                  >
+                                    Study Planner (After Assessment)
+                                  </button>
+                                </>
+                              );
+                                                          case '05': // AI处理中
+                              return (
+                                <>
+                                  <button
+                                    className="bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium cursor-not-allowed"
+                                    disabled
+                                  >
+                                    AI Processing Assessment...
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanner(selectedStudent.id)}
+                                    className="bg-gray-400 text-white px-3 py-1.5 rounded text-xs font-medium cursor-not-allowed"
+                                    disabled
+                                  >
+                                    Study Planner (After Assessment)
+                                  </button>
+                                </>
+                              );
+                            case '06': // 测评完成
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => handleAssessment(selectedStudent.id)}
+                                    className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-green-200 transition-colors"
+                                  >
+                                    View Assessment Results
+                                  </button>
+                                  <button
+                                    onClick={() => handleGenerateStudyPlan(selectedStudent.id)}
+                                    className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
+                                  >
+                                    Generate Study Plan
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanner(selectedStudent.id)}
+                                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                                  >
+                                    View Study Plan
                                   </button>
                                 </>
                               );
@@ -590,14 +797,12 @@ export default function StudentCenteredOverview() {
                             case '20': // 已完成
                               return (
                                 <>
-                                  {hasQuizzes && (
-                                    <button
-                                      onClick={() => handleAssessment(selectedStudent.id)}
-                                      className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-green-200 transition-colors"
-                                    >
-                                      View Final Assessment
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => handleAssessment(selectedStudent.id)}
+                                    className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-green-200 transition-colors"
+                                  >
+                                    View Final Assessment
+                                  </button>
                                   <button
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
@@ -648,6 +853,20 @@ export default function StudentCenteredOverview() {
         student={selectedStudentForGoal}
         onGoalSaved={handleGoalSaved}
       />
+
+      {/* Assessment Result Modal */}
+      {selectedStudentForAssessment && (
+        <AssessmentResultModal
+          isOpen={showAssessmentModal}
+          onClose={() => {
+            setShowAssessmentModal(false);
+            setSelectedStudentForAssessment(null);
+          }}
+          studentId={selectedStudentForAssessment.id}
+          overviewId={selectedStudentForAssessment.active_goals?.[0]?.id || 0}
+          studentName={selectedStudentForAssessment.name}
+        />
+      )}
     </div>
   );
 }

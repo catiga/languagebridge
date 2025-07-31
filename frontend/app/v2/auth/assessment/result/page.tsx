@@ -73,19 +73,20 @@ export default function AssessmentResultPage() {
           }
         }
 
-        // 处理结果数据
-        if (resultData) {
-          try {
-            // 从URL参数中解析真实的结果数据
-            const parsedResult = JSON.parse(decodeURIComponent(resultData)) as AssessmentResult;
-            setResult(parsedResult);
-          } catch (parseError) {
-            console.error('Failed to parse result data:', parseError);
-            // 如果解析失败，使用模拟数据作为备用
+        // 从ViewAssessment接口获取评测数据
+        if (planId) {
+          const assessmentRes = await apiClient.get(`/spwapi/auth/aiagent/assessment/view?overview_id=${planId}`) as any;
+          if (assessmentRes && assessmentRes.code === 0 && assessmentRes.data.length > 0) {
+            // 转换后端数据格式为前端需要的格式
+            const assessmentData = assessmentRes.data[0]; // 取第一个评测记录
+            const convertedResult = convertAssessmentData(assessmentData);
+            setResult(convertedResult);
+          } else {
+            // 如果API调用失败，使用模拟数据作为备用
             setResult(getFallbackResult());
           }
         } else {
-          // 如果没有结果数据，使用模拟数据
+          // 如果没有planId，使用模拟数据
           setResult(getFallbackResult());
         }
       } catch (error) {
@@ -99,6 +100,53 @@ export default function AssessmentResultPage() {
 
     fetchResult();
   }, [resultId, studentId, planId, resultData]);
+
+  // 转换后端评测数据为前端格式
+  const convertAssessmentData = (assessmentData: any): AssessmentResult => {
+    const assessment = assessmentData.assessments && assessmentData.assessments.length > 0 
+      ? assessmentData.assessments[0] 
+      : null;
+    
+    return {
+      id: assessmentData.id,
+      student_id: Number(studentId),
+      plan_id: Number(planId),
+      total_score: assessment ? Number(assessment.assess_score) : Number(assessmentData.score),
+      max_score: assessment ? Number(assessment.assess_max_score) : 100,
+      percentage: assessment ? (Number(assessment.assess_score) / Number(assessment.assess_max_score)) * 100 : Number(assessmentData.score),
+      time_spent: 45 * 60, // 默认45分钟
+      total_time: 60 * 60, // 默认60分钟
+      passed: assessment ? Number(assessment.assess_score) >= (Number(assessment.assess_max_score) * 0.6) : Number(assessmentData.score) >= 60,
+      level_assessment: assessment ? assessment.init_level : 1,
+      recommendations: assessment ? [
+        assessment.assess_suggestions || "Continue practicing and improving your English skills.",
+        assessment.assess_strengths ? `Strengths: ${assessment.assess_strengths}` : "Focus on your strengths and build upon them.",
+        assessment.assess_weaknesses ? `Areas for improvement: ${assessment.assess_weaknesses}` : "Identify and work on areas that need improvement."
+      ] : [
+        "Focus on improving vocabulary in business contexts",
+        "Practice more complex sentence structures",
+        "Work on pronunciation and speaking fluency",
+        "Continue reading English materials regularly"
+      ],
+      detailed_analysis: [
+        {
+          category: "Overall Assessment",
+          score: assessment ? Number(assessment.assess_score) : Number(assessmentData.score),
+          max_score: assessment ? Number(assessment.assess_max_score) : 100,
+          percentage: assessment ? (Number(assessment.assess_score) / Number(assessment.assess_max_score)) * 100 : Number(assessmentData.score),
+          feedback: assessment?.assess_over_all_comment || "Good performance overall. Keep up the good work!"
+        },
+        {
+          category: "Level Assessment",
+          score: assessment ? assessment.init_level : 1,
+          max_score: 4,
+          percentage: assessment ? (assessment.init_level / 4) * 100 : 25,
+          feedback: assessment?.assess_level_estimate || `Current level: ${assessment?.init_level || 1}`
+        }
+      ],
+      submitted_at: assessmentData.add_time || new Date().toISOString()
+    };
+  };
 
   // 备用结果数据
   const getFallbackResult = (): AssessmentResult => ({

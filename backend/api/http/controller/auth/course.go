@@ -215,7 +215,7 @@ func CourseList(c *gin.Context) {
 
 	err = db.Table("user_course AS uc").
 		Joins("JOIN course_info AS c ON c.id = uc.course_id").
-		Joins("LEFT JOIN user_member AS um on uc.student_id = um.id").
+		Joins("LEFT JOIN user_member AS um ON uc.student_id = um.id").
 		Select(`
 		uc.id AS uc_id,
 		uc.user_id,
@@ -593,8 +593,8 @@ func CourseTimeList(c *gin.Context) {
 	err = db.Table("course_book_trans").
 		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
 		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
-		Joins("LEFT JOIN user_course uc on course_book_trans.uc_id = uc.id").
-		Joins("LEFT JOIN user_member um on uc.student_id = um.id").
+		Joins("LEFT JOIN user_course uc ON course_book_trans.uc_id = uc.id").
+		Joins("LEFT JOIN user_member um ON uc.student_id = um.id").
 		Where(querySql, querySqlParam...).
 		Select("course_book_trans.*, teacher_info.name AS teacher_name, course_info.name AS course_name, um.name AS student_name").
 		Order("lesson_date, start_time ASC").
@@ -1265,7 +1265,7 @@ func CourseGetHistories(c *gin.Context) {
 	var result []model.CourseBookWithJoin
 
 	err = db.Table("course_book_trans").
-		Joins("JOIN course_log_record clr on clr.book_id = course_book_trans.id").
+		Joins("JOIN course_log_record clr ON clr.book_id = course_book_trans.id").
 		Joins("LEFT JOIN teacher_info ON course_book_trans.teacher_id = teacher_info.id").
 		Joins("LEFT JOIN course_info ON course_book_trans.course_id = course_info.id").
 		Where("course_book_trans.user_id = ?", userID).
