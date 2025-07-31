@@ -6,6 +6,7 @@ import { apiClient } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
 import AssessmentResultModal from './AssessmentResultModal';
+import StudyPlanTemplateModal from './StudyPlanTemplateModal';
 
 // 等级映射
 const LEVEL_MAP: { [key: number]: string } = {
@@ -105,6 +106,8 @@ export default function StudentCenteredOverview() {
   const [selectedStudentForGoal, setSelectedStudentForGoal] = useState<Student | null>(null);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [selectedStudentForAssessment, setSelectedStudentForAssessment] = useState<Student | null>(null);
+  const [showStudyPlanModal, setShowStudyPlanModal] = useState(false);
+  const [selectedStudentForStudyPlan, setSelectedStudentForStudyPlan] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -328,8 +331,27 @@ export default function StudentCenteredOverview() {
   };
 
   const handleStudyPlanner = (studentId: number) => {
-    // 跳转到Study Planner页面
-    router.push(`/v2/auth/study-planner?student_id=${studentId}`);
+    // 获取当前学生信息
+    const currentStudent = students.find(s => s.id === studentId);
+    
+    if (!currentStudent) {
+      toast.error('Student not found');
+      return;
+    }
+
+    // 检查是否有学习计划
+    const planId = currentStudent?.active_goals && currentStudent.active_goals.length > 0 
+      ? currentStudent.active_goals[0].id 
+      : null;
+    
+    if (!planId) {
+      toast.error('No learning plan found for this student');
+      return;
+    }
+
+    // 设置选中的学生并打开建议学习计划模态框
+    setSelectedStudentForStudyPlan(currentStudent);
+    setShowStudyPlanModal(true);
   };
 
   const handleProgress = (studentId: number) => {
@@ -767,7 +789,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
                                   >
-                                    View Study Plan
+                                    Study Plan Template
                                   </button>
                                 </>
                               );
@@ -784,7 +806,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
-                                    Study Planner
+                                    Study Plan Template
                                   </button>
                                   <button
                                     onClick={() => handleProgress(selectedStudent.id)}
@@ -807,7 +829,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
-                                    Review Study Plan
+                                    Study Plan Template
                                   </button>
                                   <button
                                     onClick={() => handleProgress(selectedStudent.id)}
@@ -865,6 +887,20 @@ export default function StudentCenteredOverview() {
           studentId={selectedStudentForAssessment.id}
           overviewId={selectedStudentForAssessment.active_goals?.[0]?.id || 0}
           studentName={selectedStudentForAssessment.name}
+        />
+      )}
+
+      {/* Study Plan Template Modal */}
+      {selectedStudentForStudyPlan && (
+        <StudyPlanTemplateModal
+          isOpen={showStudyPlanModal}
+          onClose={() => {
+            setShowStudyPlanModal(false);
+            setSelectedStudentForStudyPlan(null);
+          }}
+          studentId={selectedStudentForStudyPlan.id}
+          overviewId={selectedStudentForStudyPlan.active_goals?.[0]?.id || 0}
+          studentName={selectedStudentForStudyPlan.name}
         />
       )}
     </div>
