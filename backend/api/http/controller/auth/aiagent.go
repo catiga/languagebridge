@@ -814,7 +814,7 @@ func GenerateStudyPlan(c *gin.Context) {
 	}
 
 	// Parse the study plan template
-	var studyPlanTemplate []map[string]interface{}
+	var studyPlanTemplate []agent.DailyPlan
 	if err := json.Unmarshal([]byte(assessment.StudyPlanTpl), &studyPlanTemplate); err != nil {
 		res.Code = codes.CODE_ERR_BAD_PARAMS
 		res.Msg = "failed to parse study plan template"
@@ -825,8 +825,27 @@ func GenerateStudyPlan(c *gin.Context) {
 	// Calculate total weeks needed based on duration
 	totalWeeks := (assessment.EstimatedDurationDays + 6) / 7 // Round up to nearest week
 
+	// Calculate end date based on duration
+	endDate := startDate.AddDate(0, 0, assessment.EstimatedDurationDays-1)
+	endDateStr := endDate.Format("2006-01-02")
+
+	// Update overview with start date, end date, and status
+	overviewUpdates := map[string]interface{}{
+		"start_date": req.StartDate,
+		"end_date":   endDateStr,
+		"status":     common.StudyPlannerOverviewStatusOngoing,
+	}
+
+	if err := db.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).Updates(overviewUpdates).Error; err != nil {
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = "failed to update overview"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
 	// Generate actual study plan with dates - repeat weekly template
 	var actualStudyPlan []map[string]interface{}
+	var scheduleRecords []model.UserPlanSchedule
 	planDay := 0
 
 	for week := 0; week < totalWeeks; week++ {
@@ -834,44 +853,54 @@ func GenerateStudyPlan(c *gin.Context) {
 			// Calculate the actual date for this day
 			dayDate := startDate.AddDate(0, 0, planDay)
 
-			// Handle both old format (string array) and new format (object array with priority)
-			var tasks interface{}
-			if tasksData, ok := day["tasks"]; ok {
-				if tasksArray, ok := tasksData.([]interface{}); ok {
-					// Check if it's new format (objects with priority) or old format (strings)
-					if len(tasksArray) > 0 {
-						if _, isObject := tasksArray[0].(map[string]interface{}); isObject {
-							// New format: objects with priority
-							tasks = tasksArray
-						} else {
-							// Old format: strings, convert to new format
-							var newTasks []map[string]interface{}
-							for _, task := range tasksArray {
-								if taskStr, ok := task.(string); ok {
-									newTasks = append(newTasks, map[string]interface{}{
-										"id":       fmt.Sprintf("%d-%d", planDay, len(newTasks)),
-										"content":  taskStr,
-										"priority": "medium",
-									})
-								}
-							}
-							tasks = newTasks
-						}
-					}
-				}
+			// Get the day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+			dayOfWeek := int(dayDate.Weekday())
+			if dayOfWeek == 0 {
+				dayOfWeek = 7 // Convert Sunday from 0 to 7
 			}
 
 			// Convert day number to week number for display
 			weekNumber := week + 1
 			dayInWeek := i + 1
 
+			// Create schedule record for each task in the day
+			for _, task := range day.Tasks {
+				// Convert priority string to int
+				priority := 2 // default medium
+				switch task.Priority {
+				case "high":
+					priority = 1
+				case "low":
+					priority = 3
+				}
+
+				// Create schedule record
+				scheduleRecord := model.UserPlanSchedule{
+					OverviewID: req.OverviewID,
+					StudentID:  overview.StudentID,
+					ExeDate:    dayDate.Format("2006-01-02"),
+					StartTime:  "09:00", // Default start time
+					EndTime:    "10:00", // Default end time
+					Duration:   60,      // Default 60 minutes
+					Priority:   priority,
+					Content:    task.Content,
+					Note:       fmt.Sprintf("Week %d, Day %d - %s", weekNumber, dayInWeek, day.Objective),
+					AddTime:    time.Now(),
+					Flag:       1,
+					Status:     common.StudyPlannerScheduleCreate,
+				}
+
+				scheduleRecords = append(scheduleRecords, scheduleRecord)
+			}
+
+			// Prepare response data
 			actualDay := map[string]interface{}{
 				"week":        weekNumber,
 				"day_in_week": dayInWeek,
 				"date":        dayDate.Format("2006-01-02"),
-				"objective":   day["objective"],
-				"tasks":       tasks,
-				"status":      "pending", // pending, in_progress, completed
+				"objective":   day.Objective,
+				"tasks":       day.Tasks,
+				"status":      common.StudyPlannerScheduleCreate,
 				"overview_id": req.OverviewID,
 				"user_id":     userID,
 				"student_id":  overview.StudentID,
@@ -881,8 +910,15 @@ func GenerateStudyPlan(c *gin.Context) {
 		}
 	}
 
-	// Update overview status to ongoing
-	db.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).Update("status", common.StudyPlannerOverviewStatusOngoing)
+	// Save all schedule records to database
+	if len(scheduleRecords) > 0 {
+		if err := db.Create(&scheduleRecords).Error; err != nil {
+			res.Code = codes.CODE_ERR_DB_ERROR
+			res.Msg = "failed to save study plan schedule"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+	}
 
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "study plan generated successfully"
@@ -890,9 +926,11 @@ func GenerateStudyPlan(c *gin.Context) {
 		"study_plan":     actualStudyPlan,
 		"overview_id":    req.OverviewID,
 		"start_date":     req.StartDate,
+		"end_date":       endDateStr,
 		"total_days":     len(actualStudyPlan),
 		"total_weeks":    totalWeeks,
 		"template_weeks": len(studyPlanTemplate),
+		"schedule_count": len(scheduleRecords),
 	}
 	c.JSON(http.StatusOK, res)
 }
