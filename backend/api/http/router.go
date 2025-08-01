@@ -95,6 +95,7 @@ func Routers(e *gin.RouterGroup) {
 	authGroup.GET("/aiagent/assessment/generate", auth.GenerateAssessment)
 	authGroup.GET("/aiagent/assessment/evaluate", auth.EvaluateAssessment)
 	authGroup.GET("/aiagent/assessment/view", auth.ViewAssessment)
+	authGroup.POST("/aiagent/assessment/studyplan/generate", auth.GenerateStudyPlan)
 
 	teacherAuthGroup := e.Group("/tpa/auth", interceptor.TeacherTokenInterceptor())
 	teacherAuthGroup.GET("/overview", auth.TeacherOverview)

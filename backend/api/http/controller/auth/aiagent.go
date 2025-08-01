@@ -736,3 +736,119 @@ func ViewAssessment(c *gin.Context) {
 	res.Data = quizRecord
 	c.JSON(http.StatusOK, res)
 }
+
+func GenerateStudyPlan(c *gin.Context) {
+	type GenerateStudyPlanRequest struct {
+		OverviewID uint64 `json:"overview_id"`
+		StartDate  string `json:"start_date"`
+	}
+
+	var req GenerateStudyPlanRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "invalid start date"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if startDate.Before(time.Now()) {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "start date must be in the future"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var overview model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ? AND user_id = ?", req.OverviewID, userID).First(&overview)
+	if overview.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no overview record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	if overview.Status != common.StudyPlannerOverviewStatusAIComplete {
+		res.Code = codes.CODE_STATUS_INVALID
+		res.Msg = "please wait for AI assessment to complete"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Get the assessment data to extract study plan template
+	var assessment model.ExamQuizAssessment
+	db.Model(&model.ExamQuizAssessment{}).Where("overview_id = ?", req.OverviewID).First(&assessment)
+	if assessment.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "assessment data not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Parse the study plan template
+	var studyPlanTemplate []map[string]interface{}
+	if err := json.Unmarshal([]byte(assessment.StudyPlanTpl), &studyPlanTemplate); err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "failed to parse study plan template"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Generate actual study plan with dates
+	var actualStudyPlan []map[string]interface{}
+	for i, day := range studyPlanTemplate {
+		dayDate := startDate.AddDate(0, 0, i)
+		actualDay := map[string]interface{}{
+			"day":         day["day"],
+			"date":        dayDate.Format("2006-01-02"),
+			"objective":   day["objective"],
+			"tasks":       day["tasks"],
+			"status":      "pending", // pending, in_progress, completed
+			"overview_id": req.OverviewID,
+			"user_id":     userID,
+			"student_id":  overview.StudentID,
+		}
+		actualStudyPlan = append(actualStudyPlan, actualDay)
+	}
+
+	// Update overview status to ongoing
+	db.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).Update("status", common.StudyPlannerOverviewStatusOngoing)
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "study plan generated successfully"
+	res.Data = map[string]interface{}{
+		"study_plan":  actualStudyPlan,
+		"overview_id": req.OverviewID,
+		"start_date":  req.StartDate,
+		"total_days":  len(actualStudyPlan),
+	}
+	c.JSON(http.StatusOK, res)
+}

@@ -64,6 +64,7 @@ type AssessmentGPTResponse struct {
 	EstimatedDurationDays int         `json:"estimatedDurationDays"` // 建议学习时长（天）
 	AssessmentResult      Assessment  `json:"assessmentResult"`      // 测评总结
 	StudyPlan             []DailyPlan `json:"studyPlan"`             // 学习计划（按天）
+	CourseTags            []string    `json:"courseTags"`            // 课程标签
 }
 
 type Assessment struct {

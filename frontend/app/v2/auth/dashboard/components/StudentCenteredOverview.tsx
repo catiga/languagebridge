@@ -312,13 +312,13 @@ export default function StudentCenteredOverview() {
       }
 
       // 调用生成学习计划接口
-      const response = await apiClient.post(`/spwapi/auth/planner/generate`, {
+      const response = await apiClient.post(`/spwapi/auth/aiagent/assessment/studyplan/generate`, {
         overview_id: planId,
         start_date: startDate
       }) as any;
       
       if (response && response.code === 0) {
-        toast.success('Study plan generated successfully!');
+        toast.success(`Study plan generated successfully! ${response.data?.total_days || 0} days plan created.`);
         // 刷新学生数据
         fetchStudents();
       } else {
