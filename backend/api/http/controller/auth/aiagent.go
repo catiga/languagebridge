@@ -912,9 +912,31 @@ func GenerateStudyPlan(c *gin.Context) {
 
 	// Save all schedule records to database
 	if len(scheduleRecords) > 0 {
+		tx := db.Begin() // 开启事务
+		if tx.Error != nil {
+			res.Code = codes.CODE_ERR_DB_ERROR
+			res.Msg = "failed to begin transaction"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		if err := tx.Where("overview_id = ?", req.OverviewID).Delete(&model.UserAgentPrompt{}).Error; err != nil {
+			tx.Rollback()
+			res.Code = codes.CODE_ERR_DB_ERROR
+			res.Msg = "failed to delete old study plan schedule"
+			c.JSON(http.StatusOK, res)
+			return
+		}
 		if err := db.Create(&scheduleRecords).Error; err != nil {
+			tx.Rollback()
 			res.Code = codes.CODE_ERR_DB_ERROR
 			res.Msg = "failed to save study plan schedule"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		if err := tx.Commit().Error; err != nil {
+			tx.Rollback()
+			res.Code = codes.CODE_ERR_DB_ERROR
+			res.Msg = "failed to commit study plan schedule"
 			c.JSON(http.StatusOK, res)
 			return
 		}
