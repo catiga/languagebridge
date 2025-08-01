@@ -822,21 +822,63 @@ func GenerateStudyPlan(c *gin.Context) {
 		return
 	}
 
-	// Generate actual study plan with dates
+	// Calculate total weeks needed based on duration
+	totalWeeks := (assessment.EstimatedDurationDays + 6) / 7 // Round up to nearest week
+
+	// Generate actual study plan with dates - repeat weekly template
 	var actualStudyPlan []map[string]interface{}
-	for i, day := range studyPlanTemplate {
-		dayDate := startDate.AddDate(0, 0, i)
-		actualDay := map[string]interface{}{
-			"day":         day["day"],
-			"date":        dayDate.Format("2006-01-02"),
-			"objective":   day["objective"],
-			"tasks":       day["tasks"],
-			"status":      "pending", // pending, in_progress, completed
-			"overview_id": req.OverviewID,
-			"user_id":     userID,
-			"student_id":  overview.StudentID,
+	planDay := 0
+
+	for week := 0; week < totalWeeks; week++ {
+		for i, day := range studyPlanTemplate {
+			// Calculate the actual date for this day
+			dayDate := startDate.AddDate(0, 0, planDay)
+
+			// Handle both old format (string array) and new format (object array with priority)
+			var tasks interface{}
+			if tasksData, ok := day["tasks"]; ok {
+				if tasksArray, ok := tasksData.([]interface{}); ok {
+					// Check if it's new format (objects with priority) or old format (strings)
+					if len(tasksArray) > 0 {
+						if _, isObject := tasksArray[0].(map[string]interface{}); isObject {
+							// New format: objects with priority
+							tasks = tasksArray
+						} else {
+							// Old format: strings, convert to new format
+							var newTasks []map[string]interface{}
+							for _, task := range tasksArray {
+								if taskStr, ok := task.(string); ok {
+									newTasks = append(newTasks, map[string]interface{}{
+										"id":       fmt.Sprintf("%d-%d", planDay, len(newTasks)),
+										"content":  taskStr,
+										"priority": "medium",
+									})
+								}
+							}
+							tasks = newTasks
+						}
+					}
+				}
+			}
+
+			// Convert day number to week number for display
+			weekNumber := week + 1
+			dayInWeek := i + 1
+
+			actualDay := map[string]interface{}{
+				"week":        weekNumber,
+				"day_in_week": dayInWeek,
+				"date":        dayDate.Format("2006-01-02"),
+				"objective":   day["objective"],
+				"tasks":       tasks,
+				"status":      "pending", // pending, in_progress, completed
+				"overview_id": req.OverviewID,
+				"user_id":     userID,
+				"student_id":  overview.StudentID,
+			}
+			actualStudyPlan = append(actualStudyPlan, actualDay)
+			planDay++
 		}
-		actualStudyPlan = append(actualStudyPlan, actualDay)
 	}
 
 	// Update overview status to ongoing
@@ -845,10 +887,92 @@ func GenerateStudyPlan(c *gin.Context) {
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "study plan generated successfully"
 	res.Data = map[string]interface{}{
-		"study_plan":  actualStudyPlan,
+		"study_plan":     actualStudyPlan,
+		"overview_id":    req.OverviewID,
+		"start_date":     req.StartDate,
+		"total_days":     len(actualStudyPlan),
+		"total_weeks":    totalWeeks,
+		"template_weeks": len(studyPlanTemplate),
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func UpdateStudyPlanTemplate(c *gin.Context) {
+	type SaveStudyPlanTemplateRequest struct {
+		OverviewID uint64            `json:"overview_id"`
+		Template   []agent.DailyPlan `json:"template"`
+	}
+
+	var req SaveStudyPlanTemplateRequest
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		res.Code = codes.CODE_ERR_REQFORMAT
+		res.Msg = "invalid request" + err.Error()
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	db := system.GetDb()
+	var overview model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ? AND user_id = ?", req.OverviewID, userID).First(&overview)
+	if overview.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "there is no overview record found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Get the assessment data to update study plan template
+	var assessment model.ExamQuizAssessment
+	db.Model(&model.ExamQuizAssessment{}).Where("overview_id = ?", req.OverviewID).First(&assessment)
+	if assessment.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "assessment data not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Convert template to JSON string
+	templateJson, err := json.Marshal(req.Template)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "failed to serialize template"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	// Update the study plan template
+	if err := db.Model(&model.ExamQuizAssessment{}).Where("id = ?", assessment.ID).Update("study_plan_tpl", string(templateJson)).Error; err != nil {
+		res.Code = codes.CODE_ERR_DB_ERROR
+		res.Msg = "failed to save template"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "study plan template saved successfully"
+	res.Data = map[string]interface{}{
 		"overview_id": req.OverviewID,
-		"start_date":  req.StartDate,
-		"total_days":  len(actualStudyPlan),
+		"template":    req.Template,
 	}
 	c.JSON(http.StatusOK, res)
 }

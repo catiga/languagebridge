@@ -90,9 +90,15 @@ type WritingTaskScore struct {
 }
 
 type DailyPlan struct {
-	Day       int      `json:"day"`       // 第几天
-	Objective string   `json:"objective"` // 当天学习目标
-	Tasks     []string `json:"tasks"`     // 学习任务列表
+	Week      int        `json:"week"`      // 第几天
+	Objective string     `json:"objective"` // 当天学习目标
+	Tasks     []TaskItem `json:"tasks"`     // 学习任务列表
+}
+
+type TaskItem struct {
+	Content  string `json:"content"`  // Task description
+	ID       string `json:"id"`       // e.g., "3-1"
+	Priority string `json:"priority"` // "medium"
 }
 
 // quiz gpt response

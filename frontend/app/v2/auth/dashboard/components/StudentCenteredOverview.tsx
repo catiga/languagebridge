@@ -780,16 +780,10 @@ export default function StudentCenteredOverview() {
                                     View Assessment Results
                                   </button>
                                   <button
-                                    onClick={() => handleGenerateStudyPlan(selectedStudent.id)}
-                                    className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
-                                  >
-                                    Generate Study Plan
-                                  </button>
-                                  <button
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
                                   >
-                                    Study Plan Template
+                                    Edit Study Plan Template
                                   </button>
                                 </>
                               );
@@ -806,7 +800,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
-                                    Study Plan Template
+                                    Edit Study Plan Template
                                   </button>
                                   <button
                                     onClick={() => handleProgress(selectedStudent.id)}
@@ -829,7 +823,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
-                                    Study Plan Template
+                                    Edit Study Plan Template
                                   </button>
                                   <button
                                     onClick={() => handleProgress(selectedStudent.id)}
@@ -852,7 +846,7 @@ export default function StudentCenteredOverview() {
                                     onClick={() => handleStudyPlanner(selectedStudent.id)}
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
-                                    Study Planner
+                                    Edit Study Plan Template
                                   </button>
                                 </>
                               );
@@ -890,7 +884,7 @@ export default function StudentCenteredOverview() {
         />
       )}
 
-      {/* Study Plan Template Modal */}
+      {/* Edit Study Plan Template Modal */}
       {selectedStudentForStudyPlan && (
         <StudyPlanTemplateModal
           isOpen={showStudyPlanModal}
