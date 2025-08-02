@@ -360,13 +360,13 @@ export default function StudyPlanTemplateModal({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">Weekly Objectives</h3>
-                  <button
+                  {/* <button
                     onClick={addWeek}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
                   >
                     <FaPlus className="mr-2" />
                     Add Week
-                  </button>
+                  </button> */}
                 </div>
                 
                 {studyPlanTemplate.map((week, weekIndex) => (
