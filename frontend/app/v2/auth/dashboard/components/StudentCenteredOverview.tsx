@@ -7,6 +7,8 @@ import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
 import AssessmentResultModal from './AssessmentResultModal';
 import StudyPlanTemplateModal from './StudyPlanTemplateModal';
+import StudyPlanManager from './StudyPlanManager';
+import StudyPlanCalendar from './StudyPlanCalendar';
 
 // 等级映射
 const LEVEL_MAP: { [key: number]: string } = {
@@ -108,6 +110,10 @@ export default function StudentCenteredOverview() {
   const [selectedStudentForAssessment, setSelectedStudentForAssessment] = useState<Student | null>(null);
   const [showStudyPlanModal, setShowStudyPlanModal] = useState(false);
   const [selectedStudentForStudyPlan, setSelectedStudentForStudyPlan] = useState<Student | null>(null);
+  const [showStudyPlanManager, setShowStudyPlanManager] = useState(false);
+  const [selectedStudentForManager, setSelectedStudentForManager] = useState<Student | null>(null);
+  const [showStudyPlanCalendar, setShowStudyPlanCalendar] = useState(false);
+  const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -352,6 +358,16 @@ export default function StudentCenteredOverview() {
     // 设置选中的学生并打开建议学习计划模态框
     setSelectedStudentForStudyPlan(currentStudent);
     setShowStudyPlanModal(true);
+  };
+
+  const handleStudyPlanManager = (student: Student) => {
+    setSelectedStudentForManager(student);
+    setShowStudyPlanManager(true);
+  };
+
+  const handleStudyPlanCalendar = (student: Student) => {
+    setSelectedStudentForCalendar(student);
+    setShowStudyPlanCalendar(true);
   };
 
   const handleProgress = (studentId: number) => {
@@ -803,6 +819,18 @@ export default function StudentCenteredOverview() {
                                     Edit Study Plan Template
                                   </button>
                                   <button
+                                    onClick={() => handleStudyPlanManager(selectedStudent)}
+                                    className="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-indigo-700 transition-colors"
+                                  >
+                                    Manage Study Plan
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanCalendar(selectedStudent)}
+                                    className="bg-orange-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-orange-700 transition-colors"
+                                  >
+                                    View Study Plan
+                                  </button>
+                                  <button
                                     onClick={() => handleProgress(selectedStudent.id)}
                                     className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-green-700 transition-colors"
                                   >
@@ -826,6 +854,18 @@ export default function StudentCenteredOverview() {
                                     Edit Study Plan Template
                                   </button>
                                   <button
+                                    onClick={() => handleStudyPlanManager(selectedStudent)}
+                                    className="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-indigo-700 transition-colors"
+                                  >
+                                    Manage Study Plan
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanCalendar(selectedStudent)}
+                                    className="bg-orange-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-orange-700 transition-colors"
+                                  >
+                                    View Study Plan
+                                  </button>
+                                  <button
                                     onClick={() => handleProgress(selectedStudent.id)}
                                     className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
                                   >
@@ -847,6 +887,12 @@ export default function StudentCenteredOverview() {
                                     className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-purple-700 transition-colors"
                                   >
                                     Edit Study Plan Template
+                                  </button>
+                                  <button
+                                    onClick={() => handleStudyPlanManager(selectedStudent)}
+                                    className="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-indigo-700 transition-colors"
+                                  >
+                                    Manage Study Plan
                                   </button>
                                 </>
                               );
@@ -895,6 +941,29 @@ export default function StudentCenteredOverview() {
           studentId={selectedStudentForStudyPlan.id}
           overviewId={selectedStudentForStudyPlan.active_goals?.[0]?.id || 0}
           studentName={selectedStudentForStudyPlan.name}
+        />
+      )}
+
+      {/* Study Plan Manager */}
+      {showStudyPlanCalendar && selectedStudentForCalendar && (
+        <StudyPlanCalendar
+          studentId={selectedStudentForCalendar.id}
+          studentName={selectedStudentForCalendar.name}
+          onClose={() => {
+            setShowStudyPlanCalendar(false);
+            setSelectedStudentForCalendar(null);
+          }}
+        />
+      )}
+
+      {showStudyPlanManager && selectedStudentForManager && (
+        <StudyPlanManager
+          studentId={selectedStudentForManager.id}
+          studentName={selectedStudentForManager.name}
+          onClose={() => {
+            setShowStudyPlanManager(false);
+            setSelectedStudentForManager(null);
+          }}
         />
       )}
     </div>

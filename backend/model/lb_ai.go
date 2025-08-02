@@ -84,6 +84,7 @@ type ExamQuizAssessment struct {
 	AssessSuggestions       string          `gorm:"column:assess_suggestions" json:"assess_suggestions"`
 	AssessWritingEvaluation string          `gorm:"column:assess_writing_evaluation" json:"assess_writing_evaluation"`
 	StudyPlanTpl            string          `gorm:"column:study_plan_tpl" json:"study_plan_tpl"`
+	LearningTags            string          `gorm:"column:learning_tags" json:"learning_tags"`
 }
 
 func (ExamQuizAssessment) TableName() string {

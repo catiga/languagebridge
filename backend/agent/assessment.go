@@ -270,6 +270,9 @@ func HandleAssessment(quiz *model.ExamQuizRecord) error {
 			}
 			return ""
 		}(),
+		LearningTags: func() string {
+			return strings.Join(assessment.CourseTags, "|")
+		}(),
 	}
 
 	// 序列化学习计划
