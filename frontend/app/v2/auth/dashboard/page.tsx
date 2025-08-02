@@ -6,7 +6,7 @@ import WelcomeSection from './components/WelcomeSection';
 import StudentCenteredOverview from './components/StudentCenteredOverview';
 import RecommendedCourses from './components/RecommendedCourses';
 import QuickActions from './components/QuickActions';
-import LearningStats from './components/LearningStats';
+import RealLearningStats from './components/RealLearningStats';
 import FeatureUnlock from './components/FeatureUnlock';
 import Navigation from './components/Navigation';
 
@@ -77,7 +77,7 @@ export default function V2Dashboard() {
           <StudentCenteredOverview />
 
           {/* Learning Stats - 学习统计 */}
-          <LearningStats />
+          <RealLearningStats />
 
           {/* Quick Actions - 快捷操作 */}
           <QuickActions />

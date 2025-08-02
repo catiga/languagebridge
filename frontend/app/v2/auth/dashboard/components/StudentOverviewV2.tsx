@@ -6,6 +6,7 @@ import { apiClient } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
 import StudyPlanStats from './StudyPlanStats';
+import StudyPlanManagerV3 from './StudyPlanManagerV3';
 
 interface Student {
   id: number;
@@ -33,6 +34,8 @@ export default function StudentOverviewV2() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [selectedStudentForGoal, setSelectedStudentForGoal] = useState<Student | null>(null);
+  const [showStudyPlanManager, setShowStudyPlanManager] = useState(false);
+  const [selectedStudentForManager, setSelectedStudentForManager] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -103,6 +106,11 @@ export default function StudentOverviewV2() {
   const handleSetGoal = (student: Student) => {
     setSelectedStudentForGoal(student);
     setShowGoalModal(true);
+  };
+
+  const handleStudyPlanManager = (student: Student) => {
+    setSelectedStudentForManager(student);
+    setShowStudyPlanManager(true);
   };
 
   const handleGoalSaved = (goal: any) => {
@@ -250,6 +258,14 @@ export default function StudentOverviewV2() {
                     <div className="text-lg font-semibold text-gray-900">{selectedStudent.upcoming_lessons || 0}</div>
                     <div className="text-sm text-gray-600">Upcoming</div>
                   </div>
+                </div>
+                <div className="flex justify-center mt-4">
+                  <button
+                    onClick={() => handleStudyPlanManager(selectedStudent)}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View Study Plan
+                  </button>
                 </div>
               </div>
             )}
@@ -496,13 +512,22 @@ export default function StudentOverviewV2() {
         </div>
       </div>
 
-      {/* Learning Goal Modal */}
-      <LearningGoalModal
-        isOpen={showGoalModal}
-        onClose={() => setShowGoalModal(false)}
-        student={selectedStudentForGoal}
-        onGoalSaved={handleGoalSaved}
-      />
-    </div>
-  );
-} 
+                        {/* Learning Goal Modal */}
+                  <LearningGoalModal
+                    isOpen={showGoalModal}
+                    onClose={() => setShowGoalModal(false)}
+                    student={selectedStudentForGoal}
+                    onGoalSaved={handleGoalSaved}
+                  />
+
+                  {/* Study Plan Manager V3 */}
+                  {showStudyPlanManager && selectedStudentForManager && (
+                    <StudyPlanManagerV3
+                      studentId={selectedStudentForManager.id}
+                      studentName={selectedStudentForManager.name}
+                      onClose={() => setShowStudyPlanManager(false)}
+                    />
+                  )}
+                </div>
+              );
+            } 
