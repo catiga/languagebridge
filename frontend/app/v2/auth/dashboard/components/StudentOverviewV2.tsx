@@ -5,81 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
-import AssessmentResultModal from './AssessmentResultModal';
-import StudyPlanTemplateModal from './StudyPlanTemplateModal';
-import StudyPlanManager from './StudyPlanManager';
-import StudyPlanCalendar from './StudyPlanCalendar';
 import StudyPlanStats from './StudyPlanStats';
-
-// 等级映射
-const LEVEL_MAP: { [key: number]: string } = {
-  1: "Beginner (KET)",
-  2: "Intermediate (PET)", 
-  3: "TOEFL Junior",
-  4: "IELTS Practice",
-  5: "Advanced"
-};
-
-// 格式化等级显示
-const formatLevel = (level: number): string => {
-  if (level === 0) return "Needs Assessment";
-  return LEVEL_MAP[level] || `Level ${level}`;
-};
-
-// 获取状态显示文本
-const getStatusText = (status: string): string => {
-  switch (status) {
-    case '00': return 'Not Started';
-    case '01': return 'Assessment Error';
-    case '02': return 'Waiting AI Assessment';
-    case '05': return 'AI Processing';
-    case '06': return 'Assessment Complete';
-    case '10': return 'In Progress';
-    case '20': return 'Finished';
-    default: return 'Unknown';
-  }
-};
-
-// 获取状态颜色
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case '00': return 'bg-gray-100 text-gray-800';
-    case '01': return 'bg-red-100 text-red-800';
-    case '02': return 'bg-orange-100 text-orange-800';
-    case '05': return 'bg-yellow-100 text-yellow-800';
-    case '06': return 'bg-green-100 text-green-800';
-    case '10': return 'bg-blue-100 text-blue-800';
-    case '20': return 'bg-green-100 text-green-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
-};
-
-interface Quiz {
-  score: string;
-  result: string;
-  category_path: string;
-  category_level: string;
-  agent_record_id: number;
-  overview_id: number;
-  add_time: string;
-}
-
-interface LearningGoal {
-  id: number;
-  student_id: number;
-  title: string;
-  description: string;
-  goal: string;
-  add_time: string;
-  start_date: string;
-  end_date: string;
-  tasks: any[] | null;
-  goal_period_type: string;
-  target_level: number;
-  init_level: number;
-  status: string;
-  quizs: Quiz[];
-}
 
 interface Student {
   id: number;
@@ -98,99 +24,46 @@ interface Student {
   upcoming_lessons?: number;
   completed_tasks?: number;
   total_tasks?: number;
-  active_goals?: LearningGoal[];
+  active_goals?: any[];
 }
 
-export default function StudentCenteredOverview() {
+export default function StudentOverviewV2() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [selectedStudentForGoal, setSelectedStudentForGoal] = useState<Student | null>(null);
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
-  const [selectedStudentForAssessment, setSelectedStudentForAssessment] = useState<Student | null>(null);
-  const [showStudyPlanModal, setShowStudyPlanModal] = useState(false);
-  const [selectedStudentForStudyPlan, setSelectedStudentForStudyPlan] = useState<Student | null>(null);
-  const [showStudyPlanManager, setShowStudyPlanManager] = useState(false);
-  const [selectedStudentForManager, setSelectedStudentForManager] = useState<Student | null>(null);
-  const [showStudyPlanCalendar, setShowStudyPlanCalendar] = useState(false);
-  const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState<Student | null>(null);
-  const [showStatsModal, setShowStatsModal] = useState(false);
-  const [selectedStudentForStats, setSelectedStudentForStats] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     fetchStudents();
-    
-    // 监听来自考试窗口的消息
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'ASSESSMENT_COMPLETED') {
-        // 考试完成，刷新学生数据
-        fetchStudents();
-        toast.success('Assessment completed! Student data has been updated.');
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
   }, []);
 
   const fetchStudents = async () => {
     try {
-      // 使用现有的member list接口
       const res = await apiClient.post('/spwapi/auth/profile/member/list') as any;
       if (res && res.code === 0 && res.data) {
         const studentList = await Promise.all(res.data.map(async (member: any) => {
-          // 为每个学生获取Study Planner数据
-          let stageGoals: any[] = [];
+          let learningGoals: any[] = [];
           let tasks: any[] = [];
-          let stats: any = null;
-          let learningGoals: LearningGoal[] = [];
           
           try {
             const plannerRes = await apiClient.get(`/spwapi/auth/planner/pull?student_id=${member.id}`) as any;
             if (plannerRes && plannerRes.code === 0 && Array.isArray(plannerRes.data)) {
-              stageGoals = plannerRes.data;
-              // 合并所有任务
+              learningGoals = plannerRes.data;
               for (const goal of plannerRes.data) {
                 if (Array.isArray(goal.tasks)) {
                   tasks.push(...goal.tasks);
                 }
-              }
-              
-              // 获取详细数据
-              if (stageGoals.length > 0) {
-                learningGoals = stageGoals.map((goal: any) => ({
-                  id: goal.id,
-                  student_id: goal.student_id,
-                  title: goal.title,
-                  description: goal.description,
-                  goal: goal.goal,
-                  add_time: goal.add_time,
-                  start_date: goal.start_date,
-                  end_date: goal.end_date,
-                  tasks: goal.tasks || [],
-                  goal_period_type: goal.goal_period_type,
-                  target_level: goal.target_level,
-                  init_level: goal.init_level,
-                  status: goal.status,
-                  quizs: goal.quizs || []
-                }));
               }
             }
           } catch (error) {
             console.error('Failed to fetch planner data for student:', member.id, error);
           }
 
-          // 计算进度百分比
           const completedTasks = tasks.filter((task: any) => task.status === 'done').length;
           const totalTasks = tasks.length;
           const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-          const startDate = new Date().toISOString().slice(0, 10);
           
           return {
             id: member.id,
@@ -204,7 +77,7 @@ export default function StudentCenteredOverview() {
               (member.goal_status === '06' ? 'completed' : 
                member.goal_status === '05' ? 'in_progress' : 'not_started') : 'not_started',
             progress_percentage: progressPercentage,
-            last_study_date: startDate,
+            last_study_date: new Date().toISOString().slice(0, 10),
             total_study_hours: 0,
             upcoming_lessons: 0,
             completed_tasks: completedTasks,
@@ -223,121 +96,8 @@ export default function StudentCenteredOverview() {
     }
   };
 
-  const handleAddStudent = () => {
-    // TODO: Implement add student functionality
-    console.log('Add student clicked');
-  };
-
   const handleStudentClick = (student: Student) => {
     setSelectedStudent(student);
-  };
-
-  const handleAssessment = (studentId: number) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-
-    // 检查是否有学习目标
-    if (!student.has_goal) {
-      toast.error('Please set a learning goal first');
-      return;
-    }
-
-    // 检查评估状态
-    if (student.assessment_status === 'completed') {
-      // 如果已完成，显示结果
-      setSelectedStudentForAssessment(student);
-      setShowAssessmentModal(true);
-    } else if (student.assessment_status === 'in_progress') {
-      // 如果正在进行中，显示进度
-      toast.info('Assessment is in progress. Please wait for completion.');
-    } else {
-      // 如果未开始，开始新的评估
-      const assessmentUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/spwapi/auth/assessment/start?student_id=${studentId}`;
-      
-      // 打开新窗口进行评估
-      const assessmentWindow = window.open(assessmentUrl, '_blank', 'width=1200,height=800');
-      
-      if (assessmentWindow) {
-        // 监听窗口关闭事件
-        const checkClosed = setInterval(() => {
-          if (assessmentWindow.closed) {
-            clearInterval(checkClosed);
-            // 刷新学生数据
-            fetchStudents();
-          }
-        }, 1000);
-      } else {
-        toast.error('Please allow pop-ups to start the assessment');
-      }
-    }
-  };
-
-  const handleManualAIAssessment = async (studentId: number) => {
-    try {
-      const response = await apiClient.post('/spwapi/auth/aiagent/assessment', {
-        student_id: studentId
-      }) as any;
-      
-      if (response && response.code === 0) {
-        toast.success('AI assessment started successfully');
-        // 刷新学生数据
-        fetchStudents();
-      } else {
-        toast.error(response?.msg || 'Failed to start AI assessment');
-      }
-    } catch (error) {
-      console.error('Failed to start AI assessment:', error);
-      toast.error('Failed to start AI assessment');
-    }
-  };
-
-  const handleGenerateStudyPlan = async (studentId: number) => {
-    try {
-      const response = await apiClient.post('/spwapi/auth/aiagent/generate-study-plan', {
-        student_id: studentId
-      }) as any;
-      
-      if (response && response.code === 0) {
-        toast.success('Study plan generation started successfully');
-        // 刷新学生数据
-        fetchStudents();
-      } else {
-        toast.error(response?.msg || 'Failed to generate study plan');
-      }
-    } catch (error) {
-      console.error('Failed to generate study plan:', error);
-      toast.error('Failed to generate study plan');
-    }
-  };
-
-  const handleStudyPlanner = (studentId: number) => {
-    setSelectedStudentForStudyPlan(students.find(s => s.id === studentId) || null);
-    setShowStudyPlanModal(true);
-  };
-
-  const handleStudyPlanManager = (student: Student) => {
-    setSelectedStudentForManager(student);
-    setShowStudyPlanManager(true);
-  };
-
-  const handleStudyPlanCalendar = (student: Student) => {
-    setSelectedStudentForCalendar(student);
-    setShowStudyPlanCalendar(true);
-  };
-
-  const handleProgress = (studentId: number) => {
-    // 跳转到Progress页面
-    router.push(`/v2/auth/progress?student_id=${studentId}`);
-  };
-
-  const handleViewStats = (student: Student) => {
-    if (student.active_goals && student.active_goals.length > 0) {
-      const goal = student.active_goals[0];
-      setSelectedStudentForStats(student);
-      setShowStatsModal(true);
-    } else {
-      toast.error('No active study plan found for this student');
-    }
   };
 
   const handleSetGoal = (student: Student) => {
@@ -346,7 +106,6 @@ export default function StudentCenteredOverview() {
   };
 
   const handleGoalSaved = (goal: any) => {
-    // 更新学生数据，添加新的学习目标
     setStudents(prev => prev.map(student => 
       student.id === goal.student_id 
         ? { 
@@ -358,7 +117,6 @@ export default function StudentCenteredOverview() {
         : student
     ));
     
-    // 如果当前选中的学生就是设置目标的学生，也更新选中状态
     if (selectedStudent?.id === goal.student_id) {
       setSelectedStudent(prev => prev ? {
         ...prev,
@@ -369,23 +127,6 @@ export default function StudentCenteredOverview() {
     }
   };
 
-  const getAssessmentStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getAssessmentStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      default: return 'Not Started';
-    }
-  };
-
-  // 新增：获取学习计划状态的颜色和文本
   const getPlanStatusColor = (status: string) => {
     switch (status) {
       case '20': return 'bg-green-100 text-green-800';
@@ -413,7 +154,6 @@ export default function StudentCenteredOverview() {
     const activeGoals = selectedStudent.active_goals || [];
 
     if (!hasGoal) {
-      // 没有学习目标 - 显示设置目标组件
       return (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
           <div className="text-center">
@@ -437,7 +177,6 @@ export default function StudentCenteredOverview() {
       case '00': // 需要评估
         return (
           <div className="space-y-6">
-            {/* 评估组件 */}
             <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-6 border border-orange-200">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -449,23 +188,8 @@ export default function StudentCenteredOverview() {
                   <div className="text-sm text-gray-500">Progress</div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleAssessment(selectedStudent.id)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Take Assessment
-                </button>
-                <button
-                  onClick={() => handleManualAIAssessment(selectedStudent.id)}
-                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
-                >
-                  AI Assessment
-                </button>
-              </div>
             </div>
 
-            {/* 推荐课程 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommended Courses</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -497,7 +221,6 @@ export default function StudentCenteredOverview() {
       case '10': // 进行中
         return (
           <div className="space-y-6">
-            {/* 学习计划概览 */}
             {activeGoals.length > 0 && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
                 <div className="flex items-center justify-between mb-4">
@@ -528,24 +251,9 @@ export default function StudentCenteredOverview() {
                     <div className="text-sm text-gray-600">Upcoming</div>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleStudyPlanCalendar(selectedStudent)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    View Calendar
-                  </button>
-                  <button
-                    onClick={() => handleStudyPlanManager(selectedStudent)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Manage Plan
-                  </button>
-                </div>
               </div>
             )}
 
-            {/* 统计信息 */}
             {activeGoals.length > 0 && (
               <StudyPlanStats 
                 overviewId={activeGoals[0].id} 
@@ -553,7 +261,6 @@ export default function StudentCenteredOverview() {
               />
             )}
 
-            {/* 最近活动 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
               <div className="space-y-3">
@@ -580,7 +287,6 @@ export default function StudentCenteredOverview() {
       case '20': // 已完成
         return (
           <div className="space-y-6">
-            {/* 完成状态 */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
               <div className="text-center">
                 <div className="text-4xl mb-4">🎉</div>
@@ -606,24 +312,9 @@ export default function StudentCenteredOverview() {
                     <div className="text-sm text-gray-600">Final Grade</div>
                   </div>
                 </div>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => handleAssessment(selectedStudent.id)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    View Final Report
-                  </button>
-                  <button
-                    onClick={() => handleProgress(selectedStudent.id)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Download Certificate
-                  </button>
-                </div>
               </div>
             </div>
 
-            {/* 最终统计 */}
             {activeGoals.length > 0 && (
               <StudyPlanStats 
                 overviewId={activeGoals[0].id} 
@@ -631,7 +322,6 @@ export default function StudentCenteredOverview() {
               />
             )}
 
-            {/* 推荐下一步 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">What's Next?</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -701,10 +391,7 @@ export default function StudentCenteredOverview() {
             Manage your students' learning journey and track their progress
           </p>
         </div>
-        <button
-          onClick={handleAddStudent}
-          className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition-colors"
-        >
+        <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition-colors">
           + Add Student
         </button>
       </div>
@@ -816,93 +503,6 @@ export default function StudentCenteredOverview() {
         student={selectedStudentForGoal}
         onGoalSaved={handleGoalSaved}
       />
-
-      {/* Assessment Result Modal */}
-      {selectedStudentForAssessment && (
-        <AssessmentResultModal
-          isOpen={showAssessmentModal}
-          onClose={() => {
-            setShowAssessmentModal(false);
-            setSelectedStudentForAssessment(null);
-          }}
-          studentId={selectedStudentForAssessment.id}
-          overviewId={selectedStudentForAssessment.active_goals?.[0]?.id || 0}
-          studentName={selectedStudentForAssessment.name}
-        />
-      )}
-
-      {/* Edit Study Plan Template Modal */}
-      {selectedStudentForStudyPlan && (
-        <StudyPlanTemplateModal
-          isOpen={showStudyPlanModal}
-          onClose={() => {
-            setShowStudyPlanModal(false);
-            setSelectedStudentForStudyPlan(null);
-          }}
-          studentId={selectedStudentForStudyPlan.id}
-          overviewId={selectedStudentForStudyPlan.active_goals?.[0]?.id || 0}
-          studentName={selectedStudentForStudyPlan.name}
-        />
-      )}
-
-      {/* Study Plan Manager */}
-      {showStudyPlanCalendar && selectedStudentForCalendar && (
-        <StudyPlanCalendar
-          studentId={selectedStudentForCalendar.id}
-          studentName={selectedStudentForCalendar.name}
-          onClose={() => {
-            setShowStudyPlanCalendar(false);
-            setSelectedStudentForCalendar(null);
-          }}
-        />
-      )}
-
-      {showStudyPlanManager && selectedStudentForManager && (
-        <StudyPlanManager
-          studentId={selectedStudentForManager.id}
-          studentName={selectedStudentForManager.name}
-          onClose={() => {
-            setShowStudyPlanManager(false);
-            setSelectedStudentForManager(null);
-          }}
-        />
-      )}
-
-      {/* Study Plan Statistics Modal */}
-      {showStatsModal && selectedStudentForStats && selectedStudentForStats.active_goals && selectedStudentForStats.active_goals.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Study Plan Statistics</h2>
-                  <p className="text-teal-100">{selectedStudentForStats.name}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowStatsModal(false);
-                    setSelectedStudentForStats(null);
-                  }}
-                  className="text-white hover:text-teal-100 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-              <StudyPlanStats 
-                overviewId={selectedStudentForStats.active_goals[0].id} 
-                studentName={selectedStudentForStats.name} 
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-}
+} 

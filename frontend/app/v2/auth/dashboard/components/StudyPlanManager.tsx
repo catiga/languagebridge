@@ -23,9 +23,11 @@ import {
   FaDownload,
   FaShare,
   FaBookmark,
-  FaStar
+  FaStar,
+  FaChartBar
 } from 'react-icons/fa';
 import TaskEditModal from './TaskEditModal';
+import StudyPlanStats from './StudyPlanStats';
 
 interface Task {
   id: number;
@@ -125,7 +127,7 @@ const taskStatusLabels = {
 export default function StudyPlanManager({ studentId, studentName, onClose }: StudyPlanManagerProps) {
   const [learningGoal, setLearningGoal] = useState<LearningGoal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'progress' | 'assessment'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'progress' | 'assessment' | 'stats'>('overview');
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'kanban'>('calendar');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -333,6 +335,7 @@ export default function StudyPlanManager({ studentId, studentName, onClose }: St
                 { key: 'overview', label: 'Overview', icon: FaChartLine },
                 { key: 'tasks', label: 'Tasks', icon: FaCalendarAlt },
                 { key: 'progress', label: 'Progress', icon: FaFlag },
+                { key: 'stats', label: 'Statistics', icon: FaChartBar },
                 { key: 'assessment', label: 'Assessment', icon: FaStar }
               ].map(({ key, label, icon: Icon }) => (
                 <button
@@ -685,6 +688,15 @@ export default function StudyPlanManager({ studentId, studentName, onClose }: St
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'stats' && (
+              <div className="p-6">
+                <StudyPlanStats 
+                  overviewId={learningGoal.id} 
+                  studentName={studentName} 
+                />
               </div>
             )}
 

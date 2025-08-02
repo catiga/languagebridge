@@ -825,24 +825,6 @@ func GenerateStudyPlan(c *gin.Context) {
 	// Calculate total weeks needed based on duration
 	totalWeeks := (assessment.EstimatedDurationDays + 6) / 7 // Round up to nearest week
 
-	// Calculate end date based on duration
-	endDate := startDate.AddDate(0, 0, assessment.EstimatedDurationDays-1)
-	endDateStr := endDate.Format("2006-01-02")
-
-	// Update overview with start date, end date, and status
-	overviewUpdates := map[string]interface{}{
-		"start_date": req.StartDate,
-		"end_date":   endDateStr,
-		"status":     common.StudyPlannerOverviewStatusOngoing,
-	}
-
-	if err := db.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).Updates(overviewUpdates).Error; err != nil {
-		res.Code = codes.CODE_ERR_DB_ERROR
-		res.Msg = "failed to update overview"
-		c.JSON(http.StatusOK, res)
-		return
-	}
-
 	// Generate actual study plan with dates - repeat weekly template
 	var actualStudyPlan []map[string]interface{}
 	var scheduleRecords []model.UserPlanSchedule
@@ -910,6 +892,16 @@ func GenerateStudyPlan(c *gin.Context) {
 		}
 	}
 
+	// Calculate end date based on duration
+	endDate := startDate.AddDate(0, 0, assessment.EstimatedDurationDays-1)
+	endDateStr := endDate.Format("2006-01-02")
+
+	// Update overview with start date, end date, and status
+	overviewUpdates := map[string]interface{}{
+		"start_date": req.StartDate,
+		"end_date":   endDateStr,
+		"status":     common.StudyPlannerOverviewStatusOngoing,
+	}
 	// Save all schedule records to database
 	if len(scheduleRecords) > 0 {
 		tx := db.Begin() // 开启事务
@@ -919,14 +911,23 @@ func GenerateStudyPlan(c *gin.Context) {
 			c.JSON(http.StatusOK, res)
 			return
 		}
-		if err := tx.Where("overview_id = ?", req.OverviewID).Delete(&model.UserAgentPrompt{}).Error; err != nil {
+
+		// 使用事务对象进行所有数据库操作
+		if err := tx.Model(&model.UserPlanOverview{}).Where("id = ?", req.OverviewID).Updates(overviewUpdates).Error; err != nil {
+			tx.Rollback()
+			res.Code = codes.CODE_ERR_DB_ERROR
+			res.Msg = "failed to update overview"
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		if err := tx.Where("overview_id = ?", req.OverviewID).Delete(&model.UserPlanSchedule{}).Error; err != nil {
 			tx.Rollback()
 			res.Code = codes.CODE_ERR_DB_ERROR
 			res.Msg = "failed to delete old study plan schedule"
 			c.JSON(http.StatusOK, res)
 			return
 		}
-		if err := db.Create(&scheduleRecords).Error; err != nil {
+		if err := tx.Create(&scheduleRecords).Error; err != nil {
 			tx.Rollback()
 			res.Code = codes.CODE_ERR_DB_ERROR
 			res.Msg = "failed to save study plan schedule"
