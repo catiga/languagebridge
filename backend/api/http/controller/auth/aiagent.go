@@ -726,6 +726,18 @@ func ViewAssessment(c *gin.Context) {
 	for i := range quizRecord {
 		for j := range quizAssessment {
 			if quizRecord[i].ID == quizAssessment[j].QuizRecordID {
+				var studyPlanTpl []agent.DailyPlan
+				if err := json.Unmarshal([]byte(quizAssessment[j].StudyPlanTpl), &studyPlanTpl); err != nil {
+					for weekday := 1; weekday <= 7; weekday++ {
+						studyPlanTpl = append(studyPlanTpl, agent.DailyPlan{
+							Week:      weekday,
+							Objective: "",
+							Tasks:     []agent.TaskItem{},
+						})
+					}
+				}
+				formatedStudyPlanTpl, _ := json.Marshal(studyPlanTpl)
+				quizAssessment[j].StudyPlanTpl = string(formatedStudyPlanTpl)
 				quizRecord[i].Assessments = append(quizRecord[i].Assessments, quizAssessment[j])
 			}
 		}
