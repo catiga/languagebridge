@@ -84,6 +84,9 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showTaskListModal, setShowTaskListModal] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchStudyPlan();
@@ -104,6 +107,7 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   };
 
   const updateTaskStatus = async (taskId: number, newStatus: string, note?: string) => {
+    setIsSaving(true);
     try {
       const response = await apiClient.post('/spwapi/auth/planner/task/update', {
         id: taskId,
@@ -122,6 +126,8 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
     } catch (error) {
       console.error('Failed to update task status:', error);
       toast.error('Failed to update task');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -248,6 +254,53 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setShowEditModal(true);
+  };
+
+  const handleQuickComplete = async (task: Task) => {
+    const note = prompt('Add a completion note (optional):', task.note || '');
+    if (note !== null) {
+      await updateTaskStatus(task.id, '50', note || 'Task completed');
+    }
+  };
+
+  const handleDateClick = (date: Date) => {
+    const tasks = getTasksForDate(date);
+    if (tasks.length > 0) {
+      // 如果有任务，显示任务列表模态框
+      setSelectedDate(date);
+      setShowTaskListModal(true);
+      setSelectedTasks(new Set()); // 重置选择
+    } else {
+      // 如果没有任务，显示提示
+      toast.info(`No tasks scheduled for ${date.toLocaleDateString()}`);
+    }
+  };
+
+  const handleBulkAction = async (action: 'complete' | 'status', status?: string) => {
+    if (selectedTasks.size === 0) {
+      toast.warning('Please select at least one task');
+      return;
+    }
+
+    const tasks = getTasksForDate(selectedDate!);
+    const selectedTaskList = tasks.filter(task => selectedTasks.has(task.id));
+
+    if (action === 'complete') {
+      const note = prompt('Add a completion note for all selected tasks (optional):', '');
+      if (note !== null) {
+        for (const task of selectedTaskList) {
+          await updateTaskStatus(task.id, '50', note || 'Task completed');
+        }
+        setSelectedTasks(new Set());
+        toast.success(`${selectedTaskList.length} tasks marked as completed`);
+      }
+    } else if (action === 'status' && status) {
+      for (const task of selectedTaskList) {
+        await updateTaskStatus(task.id, status, task.note);
+      }
+      setSelectedTasks(new Set());
+      toast.success(`${selectedTaskList.length} tasks status updated`);
+    }
   };
 
   if (loading) {
@@ -648,13 +701,24 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                       </div>
                       <div className="flex items-center space-x-2 ml-4">
                         {canEditTask(task.exe_date) && (
-                          <button
-                            onClick={() => handleEditTask(task)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit task"
-                          >
-                            <FaEdit size={16} />
-                          </button>
+                          <div className="flex items-center space-x-1">
+                            {task.status !== '50' && (
+                              <button
+                                onClick={() => handleQuickComplete(task)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Mark as completed"
+                              >
+                                <FaCheck size={16} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleEditTask(task)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit task"
+                            >
+                              <FaEdit size={16} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -683,9 +747,10 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                       return (
                         <div
                           key={index}
-                          className={`min-h-[140px] p-2 border-r border-b border-gray-200 ${
+                          className={`min-h-[140px] p-2 border-r border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
                             isCurrentMonth ? 'bg-white' : 'bg-gray-50'
                           } ${isToday ? 'bg-blue-50' : ''}`}
+                          onClick={() => handleDateClick(date)}
                         >
                           <div className={`text-sm font-medium mb-1 ${
                             isToday ? 'text-blue-600' : isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
@@ -748,9 +813,10 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                       return (
                         <div
                           key={date.toDateString()}
-                          className={`p-3 border-r border-gray-200 ${
+                          className={`p-3 border-r border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
                             isToday ? 'bg-blue-50' : 'bg-white'
                           }`}
+                          onClick={() => handleDateClick(date)}
                         >
                           <div className="space-y-2 max-h-[450px] overflow-y-auto">
                             {tasks.map(task => (
@@ -943,28 +1009,48 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={editingTask.status}
-                  onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
+                <div className="grid grid-cols-2 gap-2">
                   {Object.entries(statusConfig).map(([value, config]) => (
-                    <option key={value} value={value}>
-                      {config.label}
-                    </option>
+                    <button
+                      key={value}
+                      onClick={() => setEditingTask({ ...editingTask, status: value })}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        editingTask.status === value
+                          ? `${config.color} border-blue-500`
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{config.label}</div>
+                      <div className="text-xs opacity-75 mt-1">
+                        {value === '00' && 'Task has been created'}
+                        {value === '10' && 'Task is currently in progress'}
+                        {value === '20' && 'Task was not completed'}
+                        {value === '50' && 'Task is fully completed'}
+                        {value === '51' && 'Task is partially completed (few items)'}
+                        {value === '52' && 'Task is mostly completed'}
+                        {value === '53' && 'Task is partially completed'}
+                        {value === '54' && 'Task was completed recently'}
+                      </div>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Note</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Note <span className="text-gray-500">(Optional)</span>
+                </label>
                 <textarea
                   value={editingTask.note || ''}
                   onChange={(e) => setEditingTask({ ...editingTask, note: e.target.value })}
-                  placeholder="Add a note about this task..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add notes about task completion, difficulties encountered, or any other relevant information..."
+                  rows={4}
+                  maxLength={500}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {(editingTask.note || '').length}/500 characters
+                </div>
               </div>
 
               <div className="flex space-x-3">
@@ -973,17 +1059,218 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                     setShowEditModal(false);
                     setEditingTask(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => updateTaskStatus(editingTask.id, editingTask.status, editingTask.note)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Save Changes
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 任务列表模态框 */}
+      {showTaskListModal && selectedDate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                  Tasks for {selectedDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowTaskListModal(false);
+                    setSelectedDate(null);
+                  }}
+                  className="text-white hover:text-blue-100 transition-colors"
+                >
+                  <FaTimes size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              {/* 批量操作工具栏 */}
+              {getTasksForDate(selectedDate).length > 0 && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {selectedTasks.size} of {getTasksForDate(selectedDate).length} tasks selected
+                      </span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleBulkAction('complete')}
+                        disabled={selectedTasks.size === 0}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Complete Selected
+                      </button>
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleBulkAction('status', e.target.value);
+                          }
+                        }}
+                        disabled={selectedTasks.size === 0}
+                        className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Bulk Status</option>
+                        {Object.entries(statusConfig).map(([value, config]) => (
+                          <option key={value} value={value}>
+                            {config.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                                  {getTasksForDate(selectedDate).map(task => (
+                    <div
+                      key={task.id}
+                      className={`p-4 rounded-lg border ${
+                        statusConfig[task.status as keyof typeof statusConfig]?.color || 'bg-gray-100 border-gray-200'
+                      } ${selectedTasks.has(task.id) ? 'ring-2 ring-blue-500' : ''}`}
+                    >
+                      {/* 任务选择框 */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedTasks.has(task.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedTasks);
+                              if (e.target.checked) {
+                                newSelected.add(task.id);
+                              } else {
+                                newSelected.delete(task.id);
+                              }
+                              setSelectedTasks(newSelected);
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-600">Select for bulk action</span>
+                        </div>
+                      </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm">{priorityConfig[task.priority as keyof typeof priorityConfig].icon}</span>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${priorityConfig[task.priority as keyof typeof priorityConfig].color}`}>
+                          {priorityConfig[task.priority as keyof typeof priorityConfig].label}
+                        </div>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${statusConfig[task.status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}`}>
+                          {statusConfig[task.status as keyof typeof statusConfig]?.label || task.status}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {task.start_time} - {task.end_time}
+                      </div>
+                    </div>
+                    
+                    <div className="font-medium text-gray-900 mb-2">{task.content}</div>
+                    
+                    {task.note && (
+                      <div className="text-sm text-gray-600 mb-3 p-2 bg-gray-50 rounded">
+                        <strong>Note:</strong> {task.note}
+                      </div>
+                    )}
+                    
+                    {canEditTask(task.exe_date) && (
+                      <div className="flex space-x-2">
+                        {/* 快速状态切换下拉菜单 */}
+                        <div className="relative">
+                          <select
+                            value={task.status}
+                            onChange={(e) => {
+                              const newStatus = e.target.value;
+                              updateTaskStatus(task.id, newStatus, task.note);
+                            }}
+                            className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors appearance-none pr-8 cursor-pointer"
+                          >
+                            {Object.entries(statusConfig).map(([value, config]) => (
+                              <option key={value} value={value}>
+                                {config.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* 快速完成按钮 */}
+                        {task.status !== '50' && (
+                          <button
+                            onClick={() => handleQuickComplete(task)}
+                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                          >
+                            Complete
+                          </button>
+                        )}
+
+                        {/* 快速添加笔记按钮 */}
+                        <button
+                          onClick={() => {
+                            const note = prompt('Add a note for this task:', task.note || '');
+                            if (note !== null) {
+                              updateTaskStatus(task.id, task.status, note);
+                            }
+                          }}
+                          className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
+                        >
+                          Add Note
+                        </button>
+
+                        {/* 详细编辑按钮 */}
+                        <button
+                          onClick={() => {
+                            setShowTaskListModal(false);
+                            setEditingTask(task);
+                            setShowEditModal(true);
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {getTasksForDate(selectedDate).length === 0 && (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-2xl mb-2">📅</div>
+                  <div>No tasks scheduled for this day</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
