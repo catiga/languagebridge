@@ -327,7 +327,7 @@ export default function StudentOverviewV2() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">Assessment Completed</h3>
-                  <p className="text-gray-600">Your assessment has been evaluated. You can now view results and generate your study plan.</p>
+                  <p className="text-gray-600">Your assessment has been evaluated. You can now view results and manage your study plan.</p>
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-bold text-purple-600">Complete</span>
@@ -345,7 +345,7 @@ export default function StudentOverviewV2() {
                   onClick={() => handleStudyPlanManager(selectedStudent)}
                   className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Generate Study Plan
+                  Monitor Study Plan
                 </button>
               </div>
             </div>
