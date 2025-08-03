@@ -257,11 +257,10 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   };
 
   const handleQuickComplete = async (task: Task) => {
-    const note = prompt('Add a completion note (max 50 characters, optional):', task.note || '');
-    if (note !== null) {
-      const trimmedNote = note.slice(0, 50); // 限制50字
-      await updateTaskStatus(task.id, '50', trimmedNote || 'Task completed');
-    }
+    // 获取最新的note值
+    const currentTask = learningGoal.tasks.find(t => t.id === task.id);
+    const note = currentTask?.note || task.note || 'Task completed';
+    await updateTaskStatus(task.id, '50', note);
   };
 
   const handleDateClick = (date: Date) => {
@@ -1115,44 +1114,7 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-              {/* 批量操作工具栏 */}
-              {getTasksForDate(selectedDate).length > 0 && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        {selectedTasks.size} of {getTasksForDate(selectedDate).length} tasks selected
-                      </span>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleBulkAction('complete')}
-                        disabled={selectedTasks.size === 0}
-                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Complete Selected
-                      </button>
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleBulkAction('status', e.target.value);
-                          }
-                        }}
-                        disabled={selectedTasks.size === 0}
-                        className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Bulk Status</option>
-                        {Object.entries(statusConfig).map(([value, config]) => (
-                          <option key={value} value={value}>
-                            {config.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)] relative">
 
               <div className="space-y-4">
                                   {getTasksForDate(selectedDate).map(task => (
@@ -1160,28 +1122,8 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                       key={task.id}
                       className={`p-4 rounded-lg border ${
                         statusConfig[task.status as keyof typeof statusConfig]?.color || 'bg-gray-100 border-gray-200'
-                      } ${selectedTasks.has(task.id) ? 'ring-2 ring-blue-500' : ''}`}
+                      }`}
                     >
-                      {/* 任务选择框 */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedTasks.has(task.id)}
-                            onChange={(e) => {
-                              const newSelected = new Set(selectedTasks);
-                              if (e.target.checked) {
-                                newSelected.add(task.id);
-                              } else {
-                                newSelected.delete(task.id);
-                              }
-                              setSelectedTasks(newSelected);
-                            }}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-600">Select for bulk action</span>
-                        </div>
-                      </div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <span className="text-sm">{priorityConfig[task.priority as keyof typeof priorityConfig].icon}</span>
@@ -1197,17 +1139,41 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                       </div>
                     </div>
                     
-                    <div className="font-medium text-gray-900 mb-2">{task.content}</div>
+                    <div className="font-medium text-gray-900 mb-3">{task.content}</div>
                     
-                    {task.note && (
-                      <div className="text-sm text-gray-600 mb-3 p-2 bg-gray-50 rounded">
-                        <strong>Note:</strong> {task.note}
+                    {/* 可编辑的笔记区域 */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-sm font-medium text-gray-700">Note:</label>
+                        <span className="text-xs text-gray-500">
+                          {(task.note || '').length}/50
+                        </span>
                       </div>
-                    )}
+                      <textarea
+                        value={task.note || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 50); // 限制50字
+                          // 直接更新本地状态，不立即调用API
+                          const updatedTasks = learningGoal.tasks.map(t => 
+                            t.id === task.id ? { ...t, note: value } : t
+                          );
+                          setLearningGoal({ ...learningGoal, tasks: updatedTasks });
+                        }}
+                        onBlur={(e) => {
+                          // 失去焦点时才调用API保存
+                          const value = e.target.value.slice(0, 50);
+                          updateTaskStatus(task.id, task.status, value);
+                        }}
+                        placeholder="Add a note for this task..."
+                        rows={2}
+                        maxLength={50}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                      />
+                    </div>
                     
                     {canEditTask(task.exe_date) && (
                       <div className="flex space-x-2">
-                        {/* 快速状态切换按钮组 */}
+                        {/* 状态选择器 */}
                         <div className="relative group">
                           <button
                             className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors flex items-center space-x-1"
@@ -1217,7 +1183,30 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                               const currentIndex = statusEntries.findIndex(([value]) => value === currentStatus);
                               const nextIndex = (currentIndex + 1) % statusEntries.length;
                               const nextStatus = statusEntries[nextIndex][0];
-                              updateTaskStatus(task.id, nextStatus, task.note);
+                              // 获取最新的note值
+                              const currentTask = learningGoal.tasks.find(t => t.id === task.id);
+                              updateTaskStatus(task.id, nextStatus, currentTask?.note || task.note);
+                            }}
+                            onMouseEnter={(e) => {
+                              const button = e.currentTarget;
+                              const rect = button.getBoundingClientRect();
+                              const dropdown = button.parentElement?.querySelector('.status-dropdown') as HTMLElement;
+                              if (dropdown) {
+                                // 计算下拉菜单位置
+                                const spaceBelow = window.innerHeight - rect.bottom;
+                                const spaceAbove = rect.top;
+                                const dropdownHeight = 320; // 估算下拉菜单高度
+                                
+                                if (spaceBelow >= dropdownHeight || spaceBelow > spaceAbove) {
+                                  // 向下展开
+                                  dropdown.style.top = `${rect.bottom + 4}px`;
+                                  dropdown.style.left = `${rect.left}px`;
+                                } else {
+                                  // 向上展开
+                                  dropdown.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+                                  dropdown.style.left = `${rect.left}px`;
+                                }
+                              }
                             }}
                           >
                             <span>{statusConfig[task.status as keyof typeof statusConfig]?.label || task.status}</span>
@@ -1227,11 +1216,15 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                           </button>
                           
                           {/* 状态选择下拉菜单 */}
-                          <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                          <div className="status-dropdown fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                             {Object.entries(statusConfig).map(([value, config]) => (
                               <button
                                 key={value}
-                                onClick={() => updateTaskStatus(task.id, value, task.note)}
+                                onClick={() => {
+                                  // 获取最新的note值
+                                  const currentTask = learningGoal.tasks.find(t => t.id === task.id);
+                                  updateTaskStatus(task.id, value, currentTask?.note || task.note);
+                                }}
                                 className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
                                   task.status === value ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                                 } ${value === '00' ? 'rounded-t-lg' : ''} ${value === '54' ? 'rounded-b-lg' : ''}`}
@@ -1261,32 +1254,6 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                             Complete
                           </button>
                         )}
-
-                        {/* 快速添加笔记按钮 */}
-                        <button
-                          onClick={() => {
-                            const note = prompt('Add a note for this task (max 50 characters):', task.note || '');
-                            if (note !== null) {
-                              const trimmedNote = note.slice(0, 50); // 限制50字
-                              updateTaskStatus(task.id, task.status, trimmedNote);
-                            }
-                          }}
-                          className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
-                        >
-                          {task.note ? 'Edit Note' : 'Add Note'}
-                        </button>
-
-                        {/* 详细编辑按钮 */}
-                        <button
-                          onClick={() => {
-                            setShowTaskListModal(false);
-                            setEditingTask(task);
-                            setShowEditModal(true);
-                          }}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-                        >
-                          Edit
-                        </button>
                       </div>
                     )}
                   </div>

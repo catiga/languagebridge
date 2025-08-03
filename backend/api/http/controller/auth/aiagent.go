@@ -1049,3 +1049,67 @@ func UpdateStudyPlanTemplate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, res)
 }
+
+func PlannerCourseRecommend(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	assessmentIdStr, exist := c.GetQuery("assessment_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	assessmentId, err := strconv.ParseUint(assessmentIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var db = system.GetDb()
+	var assessment model.ExamQuizAssessment
+	db.Model(&model.ExamQuizAssessment{}).Where("id = ?", assessmentId).First(&assessment)
+	if assessment.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "assessment data not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	var overviewPlan model.UserPlanOverview
+	db.Model(&model.UserPlanOverview{}).Where("id = ? and user_id = ?", assessment.OverviewID, userID).First(&overviewPlan)
+	if overviewPlan.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "overview plan data not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var learningTags = assessment.LearningTags
+	_ = learningTags
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = nil
+	c.JSON(http.StatusOK, res)
+}
