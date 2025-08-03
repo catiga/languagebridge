@@ -14,7 +14,8 @@ import {
   FaEdit,
   FaPlus,
   FaTrash,
-  FaStar
+  FaStar,
+  FaSave
 } from 'react-icons/fa';
 
 interface AssessmentFlowModalProps {
@@ -47,13 +48,10 @@ interface Assessment {
 interface StudyPlanTemplate {
   week: number;
   objective: string;
-  days: {
-    day: number;
-    tasks: {
-      content: string;
-      id: string;
-      priority: string;
-    }[];
+  tasks: {
+    content: string;
+    id: string;
+    priority: string;
   }[];
 }
 
@@ -290,33 +288,64 @@ export default function AssessmentFlowModal({
       // 获取评估结果
       const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/view?overview_id=${student.active_goals?.[0]?.id}`) as any;
       
-      if (response && response.code === 0 && response.data) {
-        console.log('Assessment result:', response.data);
-        setAssessmentResult(response.data);
+      if (response && response.code === 0 && response.data && response.data.length > 0) {
+        console.log('Assessment result:', response.data[0]);
+        const assessmentData = response.data[0];
+        setAssessmentResult(assessmentData);
+        
+        // 解析评估结果中的题目数据
+        if (assessmentData.result) {
+          try {
+            const questions = JSON.parse(assessmentData.result);
+            console.log('Parsed questions:', questions);
+            setAssessmentResult({ ...assessmentData, questions });
+          } catch (e) {
+            console.error('Failed to parse assessment result:', e);
+            setAssessmentResult(assessmentData);
+          }
+        }
+        
+        // 从评估数据中获取学习计划模板
+        if (assessmentData.assessments && assessmentData.assessments.length > 0) {
+          const assessment = assessmentData.assessments[0];
+          console.log('Assessment details:', assessment);
+          
+          // 设置学习目标信息
+          setLearningGoal({
+            title: student.active_goals?.[0]?.title || 'Learning Goal',
+            description: student.active_goals?.[0]?.description || '',
+            start_date: student.active_goals?.[0]?.start_date || '',
+            end_date: student.active_goals?.[0]?.end_date || '',
+            init_level: assessment.init_level || 1,
+            target_level: assessment.init_level + 2 || 3,
+            assess_score: assessment.assess_score || 0,
+            assess_max_score: assessment.assess_max_score || 15,
+            assess_level_estimate: assessment.assess_level_estimate || 'Beginner',
+            estimated_duration_days: assessment.estimated_duration_days || 49,
+            assess_over_all_comment: assessment.assess_over_all_comment || '',
+            assess_strengths: assessment.assess_strengths || '',
+            assess_weaknesses: assessment.assess_weaknesses || '',
+            assess_suggestions: assessment.assess_suggestions || '',
+            learning_tags: assessment.learning_tags || ''
+          });
+          
+          // 解析学习计划模板
+          if (assessment.study_plan_tpl) {
+            try {
+              const template = JSON.parse(assessment.study_plan_tpl);
+              console.log('Study plan template:', template);
+              setStudyPlanTemplate(template);
+            } catch (e) {
+              console.error('Failed to parse study plan template:', e);
+              setStudyPlanTemplate([]);
+            }
+          } else {
+            setStudyPlanTemplate([]);
+          }
+        }
       } else {
         toast.error('Failed to load assessment result');
         return;
-      }
-      
-      // 获取学习目标和模板
-      const plannerResponse = await apiClient.get(`/spwapi/auth/planner/pull?student_id=${student.id}`) as any;
-      if (plannerResponse && plannerResponse.code === 0 && plannerResponse.data.length > 0) {
-        const goal = plannerResponse.data[0];
-        console.log('Learning goal:', goal);
-        setLearningGoal(goal);
-        
-        if (goal.studyplantpl) {
-          try {
-            const template = JSON.parse(goal.studyplantpl);
-            console.log('Study plan template:', template);
-            setStudyPlanTemplate(template);
-          } catch (e) {
-            console.error('Failed to parse study plan template:', e);
-            setStudyPlanTemplate([]);
-          }
-        } else {
-          setStudyPlanTemplate([]);
-        }
       }
       
       setCurrentStep('result');
@@ -707,171 +736,266 @@ export default function AssessmentFlowModal({
         </div>
       )}
 
-      {/* 评估结果 */}
-      {assessmentResult && (
+      {/* 评估结果摘要 */}
+      {learningGoal && (
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">Assessment Results</h4>
-          <div className="space-y-4">
-            {assessmentResult.questions && assessmentResult.questions.map((question: any, index: number) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-900">Question {index + 1}</span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    question.correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {question.correct ? 'Correct' : 'Incorrect'}
-                  </span>
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Assessment Summary</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{learningGoal.assess_score}/{learningGoal.assess_max_score}</div>
+              <div className="text-sm text-gray-600">Score</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{learningGoal.assess_level_estimate}</div>
+              <div className="text-sm text-gray-600">Level Estimate</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{learningGoal.estimated_duration_days || 49}</div>
+              <div className="text-sm text-gray-600">Days to Target</div>
+            </div>
+          </div>
+          
+          {learningGoal.assess_over_all_comment && (
+            <div className="mb-4">
+              <h5 className="font-medium text-gray-900 mb-2">Overall Assessment</h5>
+              <p className="text-gray-700 bg-gray-50 p-3 rounded">{learningGoal.assess_over_all_comment}</p>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {learningGoal.assess_strengths && (
+              <div>
+                <h5 className="font-medium text-green-700 mb-2">Strengths</h5>
+                <div className="text-sm text-gray-700">
+                  {learningGoal.assess_strengths.split('|').map((strength: string, index: number) => (
+                    <div key={index} className="flex items-center mb-1">
+                      <span className="text-green-500 mr-2">✓</span>
+                      {strength.trim()}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-gray-700 mb-2">{question.question}</p>
-                <div className="text-sm text-gray-600">
-                  <div><span className="font-medium">Your Answer:</span> {question.user_answer || 'No answer'}</div>
-                  <div><span className="font-medium">Correct Answer:</span> {question.answer}</div>
-                  {question.explanation && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded">
-                      <span className="font-medium">Explanation:</span> {question.explanation}
+              </div>
+            )}
+            
+            {learningGoal.assess_weaknesses && (
+              <div>
+                <h5 className="font-medium text-orange-700 mb-2">Areas for Improvement</h5>
+                <div className="text-sm text-gray-700">
+                  {learningGoal.assess_weaknesses.split('|').map((weakness: string, index: number) => (
+                    <div key={index} className="flex items-center mb-1">
+                      <span className="text-orange-500 mr-2">•</span>
+                      {weakness.trim()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {learningGoal.assess_suggestions && (
+            <div className="mt-4">
+              <h5 className="font-medium text-blue-700 mb-2">Recommendations</h5>
+              <div className="text-sm text-gray-700">
+                {learningGoal.assess_suggestions.split('|').map((suggestion: string, index: number) => (
+                  <div key={index} className="flex items-center mb-1">
+                    <span className="text-blue-500 mr-2">→</span>
+                    {suggestion.trim()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 学习计划模板预览 */}
+      {studyPlanTemplate && studyPlanTemplate.length > 0 && (
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Study Plan Template</h4>
+          <div className="space-y-4">
+            {studyPlanTemplate.slice(0, 3).map((week: any, weekIndex: number) => (
+              <div key={weekIndex} className="border border-gray-200 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-900 mb-2">Week {week.week}</h5>
+                <p className="text-gray-600 mb-3 text-sm">{week.objective}</p>
+                <div className="space-y-2">
+                  {week.tasks && week.tasks.slice(0, 2).map((task: any, taskIndex: number) => (
+                    <div key={taskIndex} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
+                      <span className="text-sm text-gray-900 flex-1">{task.content}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                  ))}
+                  {week.tasks && week.tasks.length > 2 && (
+                    <div className="text-sm text-gray-500 italic">
+                      +{week.tasks.length - 2} more tasks...
                     </div>
                   )}
                 </div>
               </div>
             ))}
+            {studyPlanTemplate.length > 3 && (
+              <div className="text-center text-gray-500 italic">
+                +{studyPlanTemplate.length - 3} more weeks...
+              </div>
+            )}
           </div>
         </div>
       )}
       
       {/* 操作按钮 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex justify-center">
         <button
           onClick={() => setCurrentStep('template')}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <FaEye className="inline mr-2" />
-          View Study Plan Template
-        </button>
-        
-        <button
-          onClick={() => setCurrentStep('template')}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+          className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <FaEdit className="inline mr-2" />
-          Edit Template
+          View & Edit Study Plan Template
         </button>
       </div>
     </div>
   );
 
   const renderTemplateStep = () => {
-    const handleEditTask = (weekIndex: number, dayIndex: number, taskIndex: number, content: string) => {
-      setEditingTask({ weekIndex, dayIndex, taskIndex });
+    const handleEditTask = (weekIndex: number, taskIndex: number, content: string) => {
+      setEditingTask({ weekIndex, dayIndex: 0, taskIndex });
       setEditingContent(content);
     };
 
     const handleSaveTask = () => {
       if (editingTask) {
         const newTemplate = [...studyPlanTemplate];
-        newTemplate[editingTask.weekIndex].days[editingTask.dayIndex].tasks[editingTask.taskIndex].content = editingContent;
+        newTemplate[editingTask.weekIndex].tasks[editingTask.taskIndex].content = editingContent;
         setStudyPlanTemplate(newTemplate);
         setEditingTask(null);
         setEditingContent('');
       }
     };
 
-    const handleAddTask = (weekIndex: number, dayIndex: number) => {
+    const handleAddTask = (weekIndex: number) => {
       const newTemplate = [...studyPlanTemplate];
       const newTask = {
         id: `task-${Date.now()}`,
         content: 'New task',
         priority: 'medium'
       };
-      newTemplate[weekIndex].days[dayIndex].tasks.push(newTask);
+      newTemplate[weekIndex].tasks.push(newTask);
       setStudyPlanTemplate(newTemplate);
     };
 
-    const handleDeleteTask = (weekIndex: number, dayIndex: number, taskIndex: number) => {
+    const handleDeleteTask = (weekIndex: number, taskIndex: number) => {
       const newTemplate = [...studyPlanTemplate];
-      newTemplate[weekIndex].days[dayIndex].tasks.splice(taskIndex, 1);
+      newTemplate[weekIndex].tasks.splice(taskIndex, 1);
       setStudyPlanTemplate(newTemplate);
+    };
+
+    const handleUpdateTemplate = async () => {
+      try {
+        const response = await apiClient.post('/spwapi/auth/aiagent/assessment/studyplan/template/update', {
+          overview_id: student.active_goals?.[0]?.id,
+          study_plan_tpl: JSON.stringify(studyPlanTemplate)
+        }) as any;
+        
+        if (response && response.code === 0) {
+          toast.success('Study plan template updated successfully!');
+        } else {
+          toast.error(response?.msg || 'Failed to update template');
+        }
+      } catch (error) {
+        console.error('Failed to update template:', error);
+        toast.error('Failed to update template');
+      }
     };
 
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Study Plan Template</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Study Plan Template</h3>
+            <button
+              onClick={handleUpdateTemplate}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <FaSave className="inline mr-2" />
+              Update Template
+            </button>
+          </div>
           
           <div className="space-y-6">
             {studyPlanTemplate && studyPlanTemplate.length > 0 ? (
               studyPlanTemplate.map((week, weekIndex) => (
                 <div key={weekIndex} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Week {week.week}</h4>
-                  <p className="text-gray-600 mb-4">{week.objective}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Week {week.week}</h4>
+                      <p className="text-gray-600 text-sm">{week.objective}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddTask(weekIndex)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    >
+                      <FaPlus className="inline mr-1" />
+                      Add Task
+                    </button>
+                  </div>
                   
-                  <div className="space-y-4">
-                    {week.days && week.days.map((day, dayIndex) => (
-                      <div key={dayIndex} className="border border-gray-200 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-3">
-                          <h5 className="font-medium text-gray-900">Day {dayIndex + 1}</h5>
-                          <button
-                            onClick={() => handleAddTask(weekIndex, dayIndex)}
-                            className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                          >
-                            <FaPlus className="inline mr-1" />
-                            Add Task
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {day.tasks && day.tasks.map((task, taskIndex) => (
-                            <div key={taskIndex} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
-                              {editingTask && 
-                               editingTask.weekIndex === weekIndex && 
-                               editingTask.dayIndex === dayIndex && 
-                               editingTask.taskIndex === taskIndex ? (
-                                <div className="flex-1 flex space-x-2">
-                                  <input
-                                    type="text"
-                                    value={editingContent}
-                                    onChange={(e) => setEditingContent(e.target.value)}
-                                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                                  />
-                                  <button
-                                    onClick={handleSaveTask}
-                                    className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                                  >
-                                    <FaCheck className="inline" />
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingTask(null)}
-                                    className="px-2 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                                  >
-                                    <FaTimes className="inline" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <>
-                                  <span className="flex-1 text-sm text-gray-900">{task.content}</span>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-green-100 text-green-800'
-                                  }`}>
-                                    {task.priority}
-                                  </span>
-                                  <button
-                                    onClick={() => handleEditTask(weekIndex, dayIndex, taskIndex, task.content)}
-                                    className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                                  >
-                                    <FaEdit className="inline" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteTask(weekIndex, dayIndex, taskIndex)}
-                                    className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                                  >
-                                    <FaTrash className="inline" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                  <div className="space-y-2">
+                    {week.tasks && week.tasks.map((task, taskIndex) => (
+                      <div key={taskIndex} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        {editingTask && 
+                         editingTask.weekIndex === weekIndex && 
+                         editingTask.taskIndex === taskIndex ? (
+                          <div className="flex-1 flex space-x-2">
+                            <input
+                              type="text"
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Enter task content..."
+                            />
+                            <button
+                              onClick={handleSaveTask}
+                              className="px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                            >
+                              <FaCheck className="inline" />
+                            </button>
+                            <button
+                              onClick={() => setEditingTask(null)}
+                              className="px-3 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700"
+                            >
+                              <FaTimes className="inline" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-sm text-gray-900">{task.content}</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {task.priority}
+                            </span>
+                            <button
+                              onClick={() => handleEditTask(weekIndex, taskIndex, task.content)}
+                              className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                              title="Edit task"
+                            >
+                              <FaEdit className="inline" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(weekIndex, taskIndex)}
+                              className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                              title="Delete task"
+                            >
+                              <FaTrash className="inline" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -901,21 +1025,13 @@ export default function AssessmentFlowModal({
               />
             </div>
             
-            <div className="flex space-x-4">
-              <button
-                onClick={handleUpdateTemplate}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-              >
-                Update Template
-              </button>
-              
-              <button
-                onClick={handleGenerateStudyPlan}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Generate Study Plan
-              </button>
-            </div>
+            <button
+              onClick={handleGenerateStudyPlan}
+              className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FaPlay className="inline mr-2" />
+              Generate Study Plan
+            </button>
           </div>
         </div>
       </div>
