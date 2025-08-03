@@ -38,28 +38,10 @@ const navItems: NavItem[] = [
     path: '/v2/auth/study-planner'
   },
   {
-    id: 'progress',
-    label: 'Progress',
-    icon: '📊',
-    path: '/v2/auth/progress'
-  },
-  {
     id: 'courses',
     label: 'Courses',
     icon: '📚',
     path: '/v2/auth/courses'
-  },
-  {
-    id: 'trial-lessons',
-    label: 'Trial Lessons',
-    icon: '🎯',
-    path: '/v2/auth/trial-lessons'
-  },
-  {
-    id: 'interests',
-    label: 'Interests',
-    icon: '🏷️',
-    path: '/v2/auth/interests'
   },
   {
     id: 'settings',

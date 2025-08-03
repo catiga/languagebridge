@@ -46,21 +46,6 @@ export default function V2Dashboard() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Navigation />
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => router.push('/v2/auth/profile')}
-                  className="text-white hover:text-blue-100 transition-colors text-sm font-medium"
-                >
-                  Profile
-                </button>
-                <div className="w-px h-4 bg-white bg-opacity-30"></div>
-                <button
-                  onClick={() => router.push('/logout')}
-                  className="text-white hover:text-blue-100 transition-colors text-sm font-medium"
-                >
-                  Logout
-                </button>
-              </div>
             </div>
           </div>
         </div>
