@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WelcomeSection from './components/WelcomeSection';
-import StudentCenteredOverview from './components/StudentCenteredOverview';
+import StudentOverviewV2 from './components/StudentOverviewV2';
 import RecommendedCourses from './components/RecommendedCourses';
 import QuickActions from './components/QuickActions';
 import RealLearningStats from './components/RealLearningStats';
@@ -73,8 +73,8 @@ export default function V2Dashboard() {
           {/* Welcome Section */}
           <WelcomeSection />
 
-          {/* Student Centered Overview - 核心功能 */}
-          <StudentCenteredOverview />
+          {/* Student Overview V2 - 核心功能 */}
+          <StudentOverviewV2 />
 
           {/* Learning Stats - 学习统计 */}
           <RealLearningStats />

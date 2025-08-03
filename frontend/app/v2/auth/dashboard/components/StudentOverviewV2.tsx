@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import LearningGoalModal from './LearningGoalModal';
 import StudyPlanStats from './StudyPlanStats';
 import StudyPlanManagerV3 from './StudyPlanManagerV3';
+import AssessmentFlowModal from './AssessmentFlowModal';
 
 interface Student {
   id: number;
@@ -36,6 +37,8 @@ export default function StudentOverviewV2() {
   const [selectedStudentForGoal, setSelectedStudentForGoal] = useState<Student | null>(null);
   const [showStudyPlanManager, setShowStudyPlanManager] = useState(false);
   const [selectedStudentForManager, setSelectedStudentForManager] = useState<Student | null>(null);
+  const [showAssessmentFlow, setShowAssessmentFlow] = useState(false);
+  const [selectedStudentForAssessment, setSelectedStudentForAssessment] = useState<Student | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,17 +71,24 @@ export default function StudentOverviewV2() {
           const totalTasks = tasks.length;
           const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
           
+          // 从学习目标中获取状态，如果有学习目标就使用第一个的状态
+          const currentGoal = learningGoals.length > 0 ? learningGoals[0] : null;
+          const goalStatus = currentGoal ? currentGoal.status : "";
+          const hasGoal = learningGoals.length > 0;
+          
           return {
             id: member.id,
             name: member.name,
             avatar: member.avatar,
             current_level: member.current_level || 0,
             target_level: member.target_level || 0,
-            has_goal: member.has_goal || false,
-            goal_status: member.goal_status || "",
-            assessment_status: member.has_goal ? 
-              (member.goal_status === '06' ? 'completed' : 
-               member.goal_status === '05' ? 'in_progress' : 'not_started') : 'not_started',
+            has_goal: hasGoal,
+            goal_status: goalStatus,
+            learning_goal: currentGoal ? currentGoal.title : "",
+            goal_description: currentGoal ? currentGoal.description : "",
+            assessment_status: hasGoal ? 
+              (goalStatus === '06' ? 'completed' : 
+               goalStatus === '05' ? 'in_progress' : 'not_started') : 'not_started',
             progress_percentage: progressPercentage,
             last_study_date: new Date().toISOString().slice(0, 10),
             total_study_hours: 0,
@@ -113,6 +123,11 @@ export default function StudentOverviewV2() {
     setShowStudyPlanManager(true);
   };
 
+  const handleAssessmentFlow = (student: Student) => {
+    setSelectedStudentForAssessment(student);
+    setShowAssessmentFlow(true);
+  };
+
   const handleGoalSaved = (goal: any) => {
     setStudents(prev => prev.map(student => 
       student.id === goal.student_id 
@@ -139,7 +154,11 @@ export default function StudentOverviewV2() {
     switch (status) {
       case '20': return 'bg-green-100 text-green-800';
       case '10': return 'bg-blue-100 text-blue-800';
-      case '00': return 'bg-orange-100 text-orange-800';
+      case '06': return 'bg-purple-100 text-purple-800';
+      case '05': return 'bg-yellow-100 text-yellow-800';
+      case '02': return 'bg-orange-100 text-orange-800';
+      case '01': return 'bg-red-100 text-red-800';
+      case '00': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -148,7 +167,11 @@ export default function StudentOverviewV2() {
     switch (status) {
       case '20': return 'Completed';
       case '10': return 'In Progress';
-      case '00': return 'Needs Assessment';
+      case '06': return 'Assessment Complete';
+      case '05': return 'AI Processing';
+      case '02': return 'Assessment Required';
+      case '01': return 'AI Error';
+      case '00': return 'AI Assessment Required';
       default: return 'Unknown';
     }
   };
@@ -182,45 +205,148 @@ export default function StudentOverviewV2() {
     }
 
     switch (goalStatus) {
-      case '00': // 需要评估
+      case '00': // 等待AI评估
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">AI Assessment Required</h3>
+                  <p className="text-gray-600 mb-2">
+                    {selectedStudent.learning_goal || "Start AI assessment to generate personalized questions for your learning plan."}
+                  </p>
+                  {selectedStudent.active_goals && selectedStudent.active_goals.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      <div>Target Level: {selectedStudent.active_goals[0].target_level}</div>
+                      <div>Duration: {selectedStudent.active_goals[0].start_date} to {selectedStudent.active_goals[0].end_date}</div>
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-blue-600">Ready</span>
+                  <div className="text-sm text-gray-500">Status</div>
+                </div>
+              </div>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => handleAssessmentFlow(selectedStudent)}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  AI Assessment
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case '01': // AI错误
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-lg p-6 border border-red-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">AI Processing Error</h3>
+                  <p className="text-gray-600">There was an error processing your assessment. Please try again.</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-red-600">Error</span>
+                  <div className="text-sm text-gray-500">Status</div>
+                </div>
+              </div>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => handleAssessmentFlow(selectedStudent)}
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Retry Assessment
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case '02': // 等待AI评估
         return (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-6 border border-orange-200">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">Assessment Required</h3>
-                  <p className="text-gray-600">Complete an assessment to generate a personalized study plan</p>
+                  <p className="text-gray-600 mb-2">
+                    {selectedStudent.learning_goal || "Complete an assessment to generate a personalized study plan"}
+                  </p>
+                  {selectedStudent.active_goals && selectedStudent.active_goals.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      <div>Target Level: {selectedStudent.active_goals[0].target_level}</div>
+                      <div>Duration: {selectedStudent.active_goals[0].start_date} to {selectedStudent.active_goals[0].end_date}</div>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-bold text-orange-600">0%</span>
                   <div className="text-sm text-gray-500">Progress</div>
                 </div>
               </div>
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => handleAssessmentFlow(selectedStudent)}
+                  className="bg-orange-600 text-white px-8 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                >
+                  AI Assessment
+                </button>
+              </div>
             </div>
+          </div>
+        );
 
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommended Courses</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Beginner English</h4>
-                  <p className="text-sm text-gray-600 mb-3">Start with basic vocabulary and grammar</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Duration: 4 weeks</span>
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                      Start
-                    </button>
-                  </div>
+      case '05': // AI处理中
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">AI Processing</h3>
+                  <p className="text-gray-600">Our AI is analyzing your assessment and generating a personalized study plan</p>
                 </div>
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">KET Preparation</h4>
-                  <p className="text-sm text-gray-600 mb-3">Prepare for Cambridge KET exam</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Duration: 8 weeks</span>
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                      Start
-                    </button>
-                  </div>
+                <div className="text-right">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto mb-2"></div>
+                  <div className="text-sm text-gray-500">Processing</div>
                 </div>
+              </div>
+              <div className="text-center text-sm text-gray-600">
+                This may take a few minutes. Please check back later.
+              </div>
+            </div>
+          </div>
+        );
+
+      case '06': // AI完成
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Assessment Completed</h3>
+                  <p className="text-gray-600">Your assessment has been evaluated. You can now view results and generate your study plan.</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-purple-600">Complete</span>
+                  <div className="text-sm text-gray-500">Status</div>
+                </div>
+              </div>
+              <div className="flex justify-center space-x-4 mt-4">
+                <button
+                  onClick={() => handleAssessmentFlow(selectedStudent)}
+                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  View Results & Template
+                </button>
+                <button
+                  onClick={() => handleStudyPlanManager(selectedStudent)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Generate Study Plan
+                </button>
               </div>
             </div>
           </div>
@@ -359,6 +485,14 @@ export default function StudentOverviewV2() {
                   </button>
                 </div>
               </div>
+            </div>
+            <div className="flex justify-center">
+              <button
+                onClick={() => handleStudyPlanManager(selectedStudent)}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                View Completed Plan
+              </button>
             </div>
           </div>
         );
@@ -526,6 +660,16 @@ export default function StudentOverviewV2() {
                       studentId={selectedStudentForManager.id}
                       studentName={selectedStudentForManager.name}
                       onClose={() => setShowStudyPlanManager(false)}
+                    />
+                  )}
+
+                  {/* Assessment Flow Modal */}
+                  {showAssessmentFlow && selectedStudentForAssessment && (
+                    <AssessmentFlowModal
+                      isOpen={showAssessmentFlow}
+                      onClose={() => setShowAssessmentFlow(false)}
+                      student={selectedStudentForAssessment}
+                      onStatusChange={fetchStudents}
                     />
                   )}
                 </div>

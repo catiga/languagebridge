@@ -8,8 +8,8 @@ import LearningGoalModal from './LearningGoalModal';
 import AssessmentResultModal from './AssessmentResultModal';
 import StudyPlanTemplateModal from './StudyPlanTemplateModal';
 import StudyPlanManager from './StudyPlanManager';
-import StudyPlanCalendar from './StudyPlanCalendar';
 import StudyPlanStats from './StudyPlanStats';
+import AssessmentFlowModal from './AssessmentFlowModal';
 
 // 等级映射
 const LEVEL_MAP: { [key: number]: string } = {
@@ -113,8 +113,7 @@ export default function StudentCenteredOverview() {
   const [selectedStudentForStudyPlan, setSelectedStudentForStudyPlan] = useState<Student | null>(null);
   const [showStudyPlanManager, setShowStudyPlanManager] = useState(false);
   const [selectedStudentForManager, setSelectedStudentForManager] = useState<Student | null>(null);
-  const [showStudyPlanCalendar, setShowStudyPlanCalendar] = useState(false);
-  const [selectedStudentForCalendar, setSelectedStudentForCalendar] = useState<Student | null>(null);
+
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [selectedStudentForStats, setSelectedStudentForStats] = useState<Student | null>(null);
   const router = useRouter();
@@ -320,10 +319,7 @@ export default function StudentCenteredOverview() {
     setShowStudyPlanManager(true);
   };
 
-  const handleStudyPlanCalendar = (student: Student) => {
-    setSelectedStudentForCalendar(student);
-    setShowStudyPlanCalendar(true);
-  };
+
 
   const handleProgress = (studentId: number) => {
     // 跳转到Progress页面
