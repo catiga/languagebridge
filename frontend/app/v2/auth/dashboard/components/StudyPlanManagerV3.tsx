@@ -247,8 +247,8 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   };
 
   const canEditTask = (taskDate: string): boolean => {
-    const today = new Date().toISOString().split('T')[0];
-    return taskDate <= today;
+    // 允许编辑今天和未来的任务
+    return true;
   };
 
   const handleEditTask = (task: Task) => {
@@ -257,9 +257,10 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
   };
 
   const handleQuickComplete = async (task: Task) => {
-    const note = prompt('Add a completion note (optional):', task.note || '');
+    const note = prompt('Add a completion note (max 50 characters, optional):', task.note || '');
     if (note !== null) {
-      await updateTaskStatus(task.id, '50', note || 'Task completed');
+      const trimmedNote = note.slice(0, 50); // 限制50字
+      await updateTaskStatus(task.id, '50', trimmedNote || 'Task completed');
     }
   };
 
@@ -286,10 +287,11 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
     const selectedTaskList = tasks.filter(task => selectedTasks.has(task.id));
 
     if (action === 'complete') {
-      const note = prompt('Add a completion note for all selected tasks (optional):', '');
+      const note = prompt('Add a completion note for all selected tasks (max 50 characters, optional):', '');
       if (note !== null) {
+        const trimmedNote = note.slice(0, 50); // 限制50字
         for (const task of selectedTaskList) {
-          await updateTaskStatus(task.id, '50', note || 'Task completed');
+          await updateTaskStatus(task.id, '50', trimmedNote || 'Task completed');
         }
         setSelectedTasks(new Set());
         toast.success(`${selectedTaskList.length} tasks marked as completed`);
@@ -1042,14 +1044,17 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                 </label>
                 <textarea
                   value={editingTask.note || ''}
-                  onChange={(e) => setEditingTask({ ...editingTask, note: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 50); // 限制50字
+                    setEditingTask({ ...editingTask, note: value });
+                  }}
                   placeholder="Add notes about task completion, difficulties encountered, or any other relevant information..."
-                  rows={4}
-                  maxLength={500}
+                  rows={3}
+                  maxLength={50}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
                 <div className="text-xs text-gray-500 mt-1 text-right">
-                  {(editingTask.note || '').length}/500 characters
+                  {(editingTask.note || '').length}/50 characters
                 </div>
               </div>
 
@@ -1202,26 +1207,48 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                     
                     {canEditTask(task.exe_date) && (
                       <div className="flex space-x-2">
-                        {/* 快速状态切换下拉菜单 */}
-                        <div className="relative">
-                          <select
-                            value={task.status}
-                            onChange={(e) => {
-                              const newStatus = e.target.value;
-                              updateTaskStatus(task.id, newStatus, task.note);
+                        {/* 快速状态切换按钮组 */}
+                        <div className="relative group">
+                          <button
+                            className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors flex items-center space-x-1"
+                            onClick={() => {
+                              const currentStatus = task.status;
+                              const statusEntries = Object.entries(statusConfig);
+                              const currentIndex = statusEntries.findIndex(([value]) => value === currentStatus);
+                              const nextIndex = (currentIndex + 1) % statusEntries.length;
+                              const nextStatus = statusEntries[nextIndex][0];
+                              updateTaskStatus(task.id, nextStatus, task.note);
                             }}
-                            className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors appearance-none pr-8 cursor-pointer"
                           >
-                            {Object.entries(statusConfig).map(([value, config]) => (
-                              <option key={value} value={value}>
-                                {config.label}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span>{statusConfig[task.status as keyof typeof statusConfig]?.label || task.status}</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
+                          </button>
+                          
+                          {/* 状态选择下拉菜单 */}
+                          <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                            {Object.entries(statusConfig).map(([value, config]) => (
+                              <button
+                                key={value}
+                                onClick={() => updateTaskStatus(task.id, value, task.note)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                  task.status === value ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                } ${value === '00' ? 'rounded-t-lg' : ''} ${value === '54' ? 'rounded-b-lg' : ''}`}
+                              >
+                                <div className="font-medium">{config.label}</div>
+                                <div className="text-xs opacity-75 mt-1">
+                                  {value === '00' && 'Task has been created'}
+                                  {value === '10' && 'Task is currently in progress'}
+                                  {value === '20' && 'Task was not completed'}
+                                  {value === '50' && 'Task is fully completed'}
+                                  {value === '51' && 'Task is partially completed (few items)'}
+                                  {value === '52' && 'Task is mostly completed'}
+                                  {value === '53' && 'Task is partially completed'}
+                                  {value === '54' && 'Task was completed recently'}
+                                </div>
+                              </button>
+                            ))}
                           </div>
                         </div>
 
@@ -1238,14 +1265,15 @@ export default function StudyPlanManagerV3({ studentId, studentName, onClose }: 
                         {/* 快速添加笔记按钮 */}
                         <button
                           onClick={() => {
-                            const note = prompt('Add a note for this task:', task.note || '');
+                            const note = prompt('Add a note for this task (max 50 characters):', task.note || '');
                             if (note !== null) {
-                              updateTaskStatus(task.id, task.status, note);
+                              const trimmedNote = note.slice(0, 50); // 限制50字
+                              updateTaskStatus(task.id, task.status, trimmedNote);
                             }
                           }}
                           className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
                         >
-                          Add Note
+                          {task.note ? 'Edit Note' : 'Add Note'}
                         </button>
 
                         {/* 详细编辑按钮 */}

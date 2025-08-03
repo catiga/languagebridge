@@ -723,12 +723,13 @@ func UpdateStageTask(c *gin.Context) {
 		return
 	}
 
-	var note string = stageTask.Note
-	if len(note) == 0 {
-		note = req.Note
-	} else {
-		note = stageTask.Note + "\n" + req.Note
-	}
+	// var note string = stageTask.Note
+	// if len(note) == 0 {
+	// 	note = req.Note
+	// } else {
+	// 	note = stageTask.Note + "\n" + req.Note
+	// }
+	var note string = req.Note
 	var updatesMap map[string]interface{} = map[string]interface{}{
 		"status": req.Status,
 		"note":   note,
