@@ -1108,8 +1108,67 @@ func PlannerCourseRecommend(c *gin.Context) {
 	var learningTags = assessment.LearningTags
 	_ = learningTags
 
+	var courseList []model.CourseInfo
+	err = db.Model(&model.CourseInfo{}).
+		Where("status = ? AND flag != ?", "100", -1).
+		Order("id ASC").
+		Find(&courseList).Error
+
 	res.Code = codes.CODE_SUCCESS
 	res.Msg = "success"
-	res.Data = nil
+	res.Data = courseList
+	c.JSON(http.StatusOK, res)
+}
+
+func LatestAssessment(c *gin.Context) {
+	res := common.Response{}
+	res.Timestamp = time.Now().Unix()
+
+	currentUser, exist := c.Get("user_id")
+
+	if !exist {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	currentUserStr, _ := currentUser.(string)
+	userID, err := strconv.ParseInt(currentUserStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_AUTHTOKEN_FAIL
+		res.Msg = "token invalid, please relogin"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	studentIdStr, exist := c.GetQuery("student_id")
+	if !exist {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	studentId, err := strconv.ParseUint(studentIdStr, 10, 64)
+	if err != nil {
+		res.Code = codes.CODE_ERR_BAD_PARAMS
+		res.Msg = "Please select study plan to confirm"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	var db = system.GetDb()
+	var assessment model.ExamQuizAssessment
+	db.Model(&model.ExamQuizAssessment{}).Where("user_id = ? and student_id = ?", userID, studentId).Order("id DESC").First(&assessment)
+	if assessment.ID == 0 {
+		res.Code = codes.CODE_ERR_OBJ_NOT_FOUND
+		res.Msg = "assessment data not found"
+		c.JSON(http.StatusOK, res)
+		return
+	}
+
+	res.Code = codes.CODE_SUCCESS
+	res.Msg = "success"
+	res.Data = assessment
 	c.JSON(http.StatusOK, res)
 }

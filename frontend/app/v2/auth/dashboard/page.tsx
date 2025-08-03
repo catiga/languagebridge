@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WelcomeSection from './components/WelcomeSection';
 import StudentOverviewV2 from './components/StudentOverviewV2';
-import RecommendedCourses from './components/RecommendedCourses';
 import QuickActions from './components/QuickActions';
 import RealLearningStats from './components/RealLearningStats';
 import FeatureUnlock from './components/FeatureUnlock';
@@ -81,9 +80,6 @@ export default function V2Dashboard() {
 
           {/* Quick Actions - 快捷操作 */}
           <QuickActions />
-
-          {/* Recommended Courses - 推荐课程 */}
-          <RecommendedCourses showRecommendations={false} />
 
           {/* Feature Unlock - 功能解锁提示 */}
           <FeatureUnlock />

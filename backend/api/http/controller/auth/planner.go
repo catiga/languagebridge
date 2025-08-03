@@ -199,7 +199,7 @@ func PullStageGoal(c *gin.Context) {
 		err = db.Table("exam_quiz_record eqr").
 			Joins("JOIN user_agent_record uar ON eqr.agent_record_id = uar.id").
 			Where("uar.overview_id IN ?", overIds).
-			Select("eqr.score, eqr.result, uar.category_path, uar.category_level, uar.id as agent_record_id, uar.overview_id, eqr.add_time").
+			Select("eqr.id as quiz_id, eqr.score, eqr.result, uar.category_path, uar.category_level, uar.id as agent_record_id, uar.overview_id, eqr.add_time").
 			Scan(&scoreSchedules).Error
 		if err != nil {
 			log.Error(err)

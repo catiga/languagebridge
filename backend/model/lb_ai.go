@@ -101,6 +101,7 @@ type UserAgentRecordHistorical struct {
 }
 
 type UserAgentRecordOverview struct {
+	QuizID        uint64          `gorm:"column:quiz_id" json:"quiz_id"`
 	Score         decimal.Decimal `gorm:"column:score" json:"score"`
 	Result        string          `gorm:"column:result" json:"result"`
 	CategoryPath  string          `gorm:"category_path" json:"category_path"`

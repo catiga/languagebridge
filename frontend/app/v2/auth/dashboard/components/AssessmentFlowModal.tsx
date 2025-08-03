@@ -100,23 +100,12 @@ export default function AssessmentFlowModal({
     }
   }, [isOpen, student]);
 
-  // 根据学生状态决定初始步骤
+  // 根据学生状态决定初始步骤并执行相应操作
   useEffect(() => {
-    if (student && student.active_goals?.[0]) {
-      const goal = student.active_goals[0];
-      if (goal.status === '00') {
-        setCurrentStep('generating');
-      } else if (goal.status === '05') {
-        setCurrentStep('evaluating');
-      } else if (goal.status === '06') {
-        setCurrentStep('result');
-        loadAssessmentResult();
-      } else if (goal.status === '10') {
-        setCurrentStep('template');
-        loadAssessmentResult();
-      }
+    if (isOpen && student && student.active_goals?.[0]) {
+      handleStatusBasedAction();
     }
-  }, [student]);
+  }, [isOpen, student]);
 
   const handleStatusBasedAction = async () => {
     if (!student || !student.active_goals?.[0]) return;
@@ -155,13 +144,25 @@ export default function AssessmentFlowModal({
     setGenerationProgress(0);
 
     try {
-      const response = await apiClient.get('/spwapi/auth/aiagent/assessment/generate', {
-        overview_id: student.active_goals[0].id
-      }) as any;
+      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/generate?overview_id=${student.active_goals[0].id}`) as any;
 
       if (response && response.code === 0) {
-        setExamId(response.data.exam_id);
-        setQuestions(response.data.ai_reply.questions);
+        // 根据后端返回的数据结构进行处理
+        const examId = response.data.exam_id;
+        const questionsData = response.data.ai_reply?.questions || [];
+        
+        // 为每个问题添加id字段（如果后端没有提供）
+        const processedQuestions = questionsData.map((q: any, index: number) => ({
+          ...q,
+          id: q.id || (index + 1), // 如果没有id，使用索引+1
+          points: q.points || 1, // 默认分值
+          time_limit: q.time_limit || 60 // 默认时间限制
+        }));
+
+        console.log('Generated questions:', processedQuestions);
+        
+        setExamId(examId);
+        setQuestions(processedQuestions);
         setCurrentStep('exam');
         setIsGenerating(false);
       } else {
@@ -181,9 +182,7 @@ export default function AssessmentFlowModal({
     setCurrentStep('evaluating');
     
     try {
-      const response = await apiClient.get('/spwapi/auth/aiagent/assessment/evaluate', {
-        overview_id: student.active_goals[0].id
-      }) as any;
+      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/evaluate?overview_id=${student.active_goals[0].id}`) as any;
 
       if (response && response.code === 0) {
         // 开始轮询状态变化
@@ -260,9 +259,7 @@ export default function AssessmentFlowModal({
     if (!student || !student.active_goals?.[0]) return;
 
     try {
-      const response = await apiClient.get('/spwapi/auth/aiagent/assessment/view', {
-        overview_id: student.active_goals[0].id
-      }) as any;
+      const response = await apiClient.get(`/spwapi/auth/aiagent/assessment/view?overview_id=${student.active_goals[0].id}`) as any;
 
       if (response && response.code === 0) {
         const assessmentData = response.data[0];
@@ -321,9 +318,16 @@ export default function AssessmentFlowModal({
   };
 
   const handleAnswerChange = (questionId: number, answer: string) => {
+    // 确保questionId是字符串类型，避免undefined
+    const questionIdStr = questionId?.toString();
+    if (!questionIdStr) {
+      console.error('Invalid question ID:', questionId);
+      return;
+    }
+    
     setAnswers(prev => ({
       ...prev,
-      [questionId]: answer
+      [questionIdStr]: answer
     }));
   };
 
@@ -333,12 +337,30 @@ export default function AssessmentFlowModal({
       return;
     }
 
+    // 将answers转换为后端期望的questions格式
+    const questionsData = questions.map(question => {
+      const userAnswer = answers[question.id.toString()] || '';
+      const isCorrect = userAnswer === question.answer;
+      
+      return {
+        type: question.type,
+        question: question.question,
+        options: question.options || [],
+        answer: question.answer || '',
+        explanation: question.explanation || '',
+        user_answer: userAnswer,
+        correct: isCorrect
+      };
+    });
+
+    console.log('Submitting questions data:', questionsData);
+
     setIsSubmitted(true);
 
     try {
       const response = await apiClient.post('/spwapi/auth/aiagent/selfassessment/exam/mark', {
         exam_id: examId,
-        answers: answers
+        questions: questionsData
       }) as any;
 
       if (response && response.code === 0) {
@@ -541,7 +563,7 @@ export default function AssessmentFlowModal({
                     type="radio"
                     name={`question-${currentQuestion.id}`}
                     value={option}
-                    checked={answers[currentQuestion.id] === option}
+                    checked={answers[currentQuestion.id.toString()] === option}
                     onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
@@ -558,9 +580,9 @@ export default function AssessmentFlowModal({
                   <input
                     type="checkbox"
                     value={option}
-                    checked={answers[currentQuestion.id]?.includes(option) || false}
+                    checked={answers[currentQuestion.id.toString()]?.includes(option) || false}
                     onChange={(e) => {
-                      const currentAnswers = answers[currentQuestion.id]?.split(';').filter(Boolean) || [];
+                      const currentAnswers = answers[currentQuestion.id.toString()]?.split(';').filter(Boolean) || [];
                       if (e.target.checked) {
                         currentAnswers.push(option);
                       } else {
@@ -583,7 +605,7 @@ export default function AssessmentFlowModal({
             <div className="space-y-3">
               <input
                 type="text"
-                value={answers[currentQuestion.id] || ''}
+                value={answers[currentQuestion.id.toString()] || ''}
                 onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                 placeholder="Enter your answer..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -594,7 +616,7 @@ export default function AssessmentFlowModal({
           {currentQuestion.type === 'writing' && (
             <div className="space-y-3">
               <textarea
-                value={answers[currentQuestion.id] || ''}
+                value={answers[currentQuestion.id.toString()] || ''}
                 onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                 placeholder="Write your answer here..."
                 rows={4}

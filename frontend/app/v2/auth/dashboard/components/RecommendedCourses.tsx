@@ -10,13 +10,14 @@ interface Course {
   description: string;
   teacher_name: string;
   teacher_avatar?: string;
-  level: number;
-  duration: number; // in minutes
+  level: string;
+  duration: string;
   rating?: number;
   price?: number;
   is_trial_available: boolean;
   category: string;
   thumbnail?: string;
+  student_count?: number;
 }
 
 interface RecommendedCoursesProps {
@@ -35,75 +36,45 @@ export default function RecommendedCourses({ showRecommendations = true }: Recom
 
   const fetchRecommendedCourses = async () => {
     try {
-      // 使用现有的course fetch接口
-      const res = await apiClient.get('/spwapi/course/fetch', { pn: 1, ps: 6 }) as any;
-      if (res && res.code === 0 && res.data && res.data.list) {
-        const courseList = res.data.list.map((course: any) => ({
-          id: course.id,
-          title: course.title,
-          description: course.description || 'Learn with our expert teachers',
-          teacher_name: course.teacher_name || 'Expert Teacher',
-          teacher_avatar: course.teacher_avatar,
-          level: course.level || Math.floor(Math.random() * 5) + 1,
-          duration: course.duration || Math.floor(Math.random() * 60) + 30,
-          rating: typeof course.rating === 'number' ? course.rating : Number((Math.random() * 2 + 3).toFixed(1)), // 3-5星
-          price: course.price || Math.floor(Math.random() * 100) + 50,
-          is_trial_available: course.is_trial_available !== false,
-          category: course.category || 'english',
-          thumbnail: course.thumbnail
-        }));
-        setCourses(courseList);
+      // 首先获取当前学生的ID（这里需要从context或props获取）
+      // 暂时使用假数据，实际应该从用户context获取
+      const studentId = 1; // 这里需要从用户context获取
+      
+      // 获取学生的最新评估ID
+      const assessmentResponse = await apiClient.get(`/spwapi/auth/aiagent/assessment/latest?student_id=${studentId}`) as any;
+      if (assessmentResponse && assessmentResponse.code === 0 && assessmentResponse.data) {
+        const assessmentId = assessmentResponse.data.id;
+        
+        // 使用评估ID获取推荐课程
+        const coursesResponse = await apiClient.get(`/spwapi/auth/aiagent/planner/course/recommend?assessment_id=${assessmentId}`) as any;
+        if (coursesResponse && coursesResponse.code === 0) {
+          const courseList = coursesResponse.data.map((course: any) => ({
+            id: course.id,
+            title: course.title,
+            description: course.description,
+            teacher_name: course.teacher_name,
+            teacher_avatar: course.teacher_avatar,
+            level: course.level,
+            duration: course.duration,
+            rating: course.rating,
+            price: course.price,
+            is_trial_available: true,
+            category: 'english',
+            thumbnail: course.image_url,
+            student_count: course.student_count
+          }));
+          setCourses(courseList);
+        } else {
+          console.error('Failed to fetch recommended courses:', coursesResponse?.msg);
+          setCourses([]);
+        }
       } else {
-        // 如果没有推荐课程数据，设置为空数组
+        console.error('Failed to fetch assessment:', assessmentResponse?.msg);
         setCourses([]);
       }
     } catch (error) {
       console.error('Failed to fetch recommended courses:', error);
-      // 使用假数据作为fallback
-      setCourses([
-        {
-          id: 1,
-          title: 'English Conversation for Beginners',
-          description: 'Start your English learning journey with basic conversations',
-          teacher_name: 'Sarah Wilson',
-          teacher_avatar: '',
-          level: 1,
-          duration: 45,
-          rating: 4.8,
-          price: 89,
-          is_trial_available: true,
-          category: 'english',
-          thumbnail: ''
-        },
-        {
-          id: 2,
-          title: 'Python Programming Fundamentals',
-          description: 'Learn the basics of Python programming language',
-          teacher_name: 'David Chen',
-          teacher_avatar: '',
-          level: 2,
-          duration: 60,
-          rating: 4.6,
-          price: 120,
-          is_trial_available: true,
-          category: 'programming',
-          thumbnail: ''
-        },
-        {
-          id: 3,
-          title: 'Business Chinese for Professionals',
-          description: 'Master Chinese for business communication',
-          teacher_name: 'Li Wei',
-          teacher_avatar: '',
-          level: 3,
-          duration: 50,
-          rating: 4.9,
-          price: 95,
-          is_trial_available: false,
-          category: 'chinese',
-          thumbnail: ''
-        }
-      ]);
+      setCourses([]);
     } finally {
       setLoading(false);
     }
@@ -164,19 +135,35 @@ export default function RecommendedCourses({ showRecommendations = true }: Recom
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Recommended for You</h2>
-          <p className="text-gray-600 text-sm mt-1">
-            Personalized courses based on your interests and level
+          <h2 className="text-xl font-bold text-gray-900 mb-1">🎯 Personalized Course Recommendations</h2>
+          <p className="text-gray-600 text-sm">
+            Curated based on your current learning level and assessment results
           </p>
         </div>
-        <button
-          onClick={() => router.push('/v2/auth/courses')}
-          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-        >
-          View All →
-        </button>
+        <div className="flex items-center space-x-2">
+          <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+            AI-Powered
+          </div>
+          <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+            Personalized
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-100 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="text-blue-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">Smart Learning Path</p>
+            <p className="text-xs text-gray-600">These courses are specifically selected to help you progress efficiently in your English learning journey</p>
+          </div>
+        </div>
       </div>
 
       {/* Category Filter */}
@@ -211,87 +198,90 @@ export default function RecommendedCourses({ showRecommendations = true }: Recom
           {filteredCourses.map((course) => (
             <div
               key={course.id}
-              className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => handleCourseClick(course.id)}
+              className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
             >
-              {/* Course Thumbnail */}
-              <div className="h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                {course.thumbnail ? (
-                  <img
-                    src={course.thumbnail}
+              {/* 课程图片 */}
+              {course.thumbnail && (
+                <div className="relative h-48 bg-gradient-to-br from-blue-500 to-purple-600 rounded-t-xl overflow-hidden">
+                  <img 
+                    src={course.thumbnail} 
                     alt={course.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
-                ) : (
-                  <div className="text-4xl">📖</div>
-                )}
-              </div>
-
-              {/* Course Info */}
-              <div className="p-4">
-                <div className="flex items-center mb-2">
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    Level {course.level}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-2">
-                    {course.duration}min
-                  </span>
+                  <div className="absolute top-3 right-3">
+                    <div className="bg-white bg-opacity-90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-700">
+                      {course.level}
+                    </div>
+                  </div>
+                  <div className="absolute bottom-3 left-3">
+                    <div className="bg-black bg-opacity-50 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-white">
+                      {course.duration}
+                    </div>
+                  </div>
                 </div>
-
-                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                  {course.title}
-                </h3>
+              )}
+              
+              <div className="p-5">
+                {/* 课程标题和描述 */}
+                <div className="mb-4">
+                  <h4 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 leading-tight">{course.title}</h4>
+                  <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{course.description}</p>
+                </div>
                 
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  {course.description}
-                </p>
-
-                {/* Teacher Info */}
-                <div className="flex items-center mb-3">
-                  <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                    {course.teacher_avatar ? (
-                      <img
-                        src={course.teacher_avatar}
-                        alt={course.teacher_name}
-                        className="w-6 h-6 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs">👤</span>
+                {/* 教师信息 */}
+                {course.teacher_name && (
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {course.teacher_name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">{course.teacher_name}</p>
+                      <p className="text-xs text-gray-500">Expert Instructor</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* 评分和学员数 */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    {course.rating && (
+                      <div className="flex items-center">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <svg key={i} className={`w-4 h-4 ${i < Math.floor(course.rating!) ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 ml-1">{course.rating}</span>
+                      </div>
+                    )}
+                    {course.student_count && (
+                      <div className="flex items-center text-gray-500">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        <span className="text-sm">{course.student_count.toLocaleString()}</span>
+                      </div>
                     )}
                   </div>
-                  <span className="text-sm text-gray-600">{course.teacher_name}</span>
                 </div>
-
-                {/* Rating */}
-                {course.rating && (
-                  <div className="flex items-center mb-3">
-                    <div className="flex text-yellow-400">
-                                           {[1, 2, 3, 4, 5].map((star) => (
-                       <span key={star}>
-                         {star <= (typeof course.rating === 'number' ? course.rating : 0) ? '★' : '☆'}
-                       </span>
-                     ))}
-                    </div>
-                                     <span className="text-sm text-gray-600 ml-2">
-                   {typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating}
-                 </span>
+                
+                {/* 价格和按钮 */}
+                <div className="flex items-center justify-between">
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-green-600">${course.price}</div>
+                    <div className="text-xs text-gray-500">One-time payment</div>
                   </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => handleTrialClick(course.id, e)}
-                    disabled={!course.is_trial_available}
-                    className="flex-1 bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  <button 
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-6 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-md"
+                    onClick={() => handleCourseClick(course.id)}
                   >
-                    {course.is_trial_available ? 'Try Free' : 'Not Available'}
+                    Enroll Now
                   </button>
-                  {course.price && (
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50">
-                      ${course.price}
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
