@@ -19,12 +19,13 @@ import {
   FaBook,
   FaTrophy,
   FaLightbulb,
-  FaTarget,
   FaList,
   FaStar,
   FaChartLine,
   FaCog,
-  FaArrowLeft
+  FaArrowLeft,
+  FaSearch,
+  FaFilter
 } from 'react-icons/fa';
 import LearningGoalModal from '../dashboard/components/LearningGoalModal';
 import StudyPlanManagerV3 from '../dashboard/components/StudyPlanManagerV3';
@@ -80,6 +81,8 @@ export default function StudentsPage() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [recommendedCourses, setRecommendedCourses] = useState<RecommendedCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   
   // Modals
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -173,14 +176,12 @@ export default function StudentsPage() {
     
     setCoursesLoading(true);
     try {
-      // 首先获取assessment_id
       const assessmentUrl = `/spwapi/auth/aiagent/assessment/latest?student_id=${selectedStudent.id}`;
       const assessmentResponse = await apiClient.get(assessmentUrl) as any;
       
       if (assessmentResponse && assessmentResponse.code === 0 && assessmentResponse.data) {
         const assessmentId = assessmentResponse.data.id;
         
-        // 然后获取推荐课程
         const coursesUrl = `/spwapi/auth/aiagent/planner/course/recommend?assessment_id=${assessmentId}`;
         const coursesResponse = await apiClient.get(coursesUrl) as any;
         
@@ -280,7 +281,7 @@ export default function StudentsPage() {
       return [
         ...baseTabs,
         { id: 'assessment', label: 'Assessment', icon: FaPlay },
-        { id: 'goals', label: 'Learning Goals', icon: FaTarget }
+        { id: 'goals', label: 'Learning Goals', icon: FaBullseye }
       ];
     } else if (student.assessment_status === 'in_progress') {
       return [
@@ -294,22 +295,21 @@ export default function StudentsPage() {
         ...baseTabs,
         { id: 'achievement', label: 'Achievement', icon: FaTrophy },
         { id: 'courses', label: 'Recommended Courses', icon: FaStar },
-        { id: 'goals', label: 'New Goals', icon: FaTarget }
+        { id: 'goals', label: 'New Goals', icon: FaBullseye }
       ];
     }
 
     return baseTabs;
   };
 
-  const stats = {
-    total: students.length,
-    active: students.filter(s => s.status === 'active').length,
-    withGoals: students.filter(s => s.has_goal).length,
-    completed: students.filter(s => s.assessment_status === 'completed').length,
-    averageProgress: students.length > 0 
-      ? Math.round(students.reduce((sum, s) => sum + (s.progress_percentage || 0), 0) / students.length)
-      : 0
-  };
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.learning_goal.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'active' && student.status === 'active') ||
+                         (filterStatus === 'inactive' && student.status === 'inactive');
+    return matchesSearch && matchesFilter;
+  });
 
   if (loading) {
     return (
@@ -325,116 +325,96 @@ export default function StudentsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg">
+      {/* Page Header */}
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-white text-xl font-bold">Student Management</h1>
+          <div className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Student Management</h1>
+                <p className="mt-1 text-sm text-gray-500">Manage your students' learning journeys and progress</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                  <FaUserPlus size={16} />
+                  <span>Add Student</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FaGraduationCap className="text-blue-600" size={20} />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <FaCheckCircle className="text-green-600" size={20} />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <FaBullseye className="text-purple-600" size={20} />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">With Goals</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.withGoals}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <FaChartBar className="text-orange-600" size={20} />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <FaClock className="text-indigo-600" size={20} />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Avg Progress</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.averageProgress}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
         <div className="flex gap-6">
           {/* Left Sidebar - Student List */}
           <div className="w-1/3">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Students</h2>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {students.map((student) => (
-                  <div
-                    key={student.id}
-                    className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                      selectedStudent?.id === student.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handleStudentSelect(student)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                        student.assessment_status === 'completed' ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
-                        student.assessment_status === 'in_progress' ? 'bg-gradient-to-br from-blue-500 to-purple-600' :
-                        'bg-gradient-to-br from-gray-500 to-gray-600'
-                      }`}>
-                        {student.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                        <p className="text-sm text-gray-500">Level {student.current_level || 0}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAssessmentStatusColor(student.assessment_status)}`}>
-                        {getAssessmentStatusText(student.assessment_status)}
-                      </span>
-                    </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {/* Search and Filter */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="space-y-3">
+                  <div className="relative">
+                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search students..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                   </div>
-                ))}
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Students</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Student List */}
+              <div className="max-h-96 overflow-y-auto">
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <div
+                      key={student.id}
+                      className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
+                        selectedStudent?.id === student.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => handleStudentSelect(student)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          student.assessment_status === 'completed' ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
+                          student.assessment_status === 'in_progress' ? 'bg-gradient-to-br from-blue-500 to-purple-600' :
+                          'bg-gradient-to-br from-gray-500 to-gray-600'
+                        }`}>
+                          {student.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate">{student.name}</h3>
+                          <p className="text-sm text-gray-500">Level {student.current_level || 0}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAssessmentStatusColor(student.assessment_status)}`}>
+                          {getAssessmentStatusText(student.assessment_status)}
+                        </span>
+                      </div>
+                      {student.learning_goal && (
+                        <p className="text-sm text-gray-600 mt-2 truncate">{student.learning_goal}</p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <div className="text-4xl mb-4">👥</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
+                    <p className="text-gray-600">Try adjusting your search criteria</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -442,7 +422,7 @@ export default function StudentsPage() {
           {/* Right Side - Student Details */}
           <div className="flex-1">
             {selectedStudent ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 {/* Student Header */}
                 <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
                   <div className="flex items-center justify-between">
@@ -468,7 +448,7 @@ export default function StudentsPage() {
                 {/* Tabs */}
                 <div className="border-b border-gray-200">
                   <div className="flex space-x-1 px-6">
-                    {getTabsForStudent(selectedStudent).map((tab) => {
+                    {selectedStudent && getTabsForStudent(selectedStudent).map((tab) => {
                       const Icon = tab.icon;
                       return (
                         <button
@@ -843,7 +823,7 @@ export default function StudentsPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                 <div className="text-4xl mb-4">👥</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Student</h3>
                 <p className="text-gray-600">Choose a student from the list to view their details and manage their learning journey.</p>
